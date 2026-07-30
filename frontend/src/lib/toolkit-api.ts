@@ -1,14 +1,6 @@
-import { authFetch } from "./auth";
+import { authFetch, API_BASE } from "./auth";
 
-const getApiBase = () => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname || 'localhost';
-    return `http://${host}:8000/api`;
-  }
-  return 'http://localhost:8000/api';
-};
-
-const BASE = `${getApiBase()}/toolkit`;
+const BASE = `${API_BASE}/toolkit`;
 
 export interface ToolkitCategory {
   id: number;

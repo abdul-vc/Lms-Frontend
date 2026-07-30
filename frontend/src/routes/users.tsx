@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 
-import { authFetch } from '@/lib/auth'
+import { authFetch, API_BASE } from '@/lib/auth'
 
 export const Route = createFileRoute('/users')({
   component: UsersComponent,
@@ -13,7 +13,7 @@ function UsersComponent() {
 
   useEffect(() => {
     // Fetch users from the Django backend
-    authFetch('http://127.0.0.1:8000/api/users/')
+    authFetch(`${API_BASE}/users/`)
       .then((res) => {
         if (!res.ok) {
           throw new Error('Network response was not ok')

@@ -2,13 +2,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Settings, Shield, Bell, User, Loader2, Save, AlertCircle, CheckCircle2, UserPlus, ShieldCheck, Mail, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { authFetch, useAuth } from '@/lib/auth';
+import { authFetch, useAuth, API_BASE } from '@/lib/auth';
 
 export const Route = createFileRoute('/super-admin/settings')({
   component: SettingsPage,
 });
 
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_URL = API_BASE;
 
 function GeneralTab() {
   const [data, setData] = useState<any>({

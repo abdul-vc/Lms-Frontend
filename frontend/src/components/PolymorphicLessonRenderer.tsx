@@ -1,5 +1,6 @@
 import React from "react";
 import { RestrictedVideoPlayer } from "@/components/RestrictedVideoPlayer";
+import { API_BASE } from "@/lib/auth";
 import {
   Video, FileText, Puzzle, CheckSquare, GitBranch, Sparkles,
   Heading, AlignLeft, Image as ImageIcon, Music, Table, Quote, Code, AlertTriangle, HelpCircle
@@ -176,7 +177,7 @@ function BlockTreeRenderer({ blocks }: { blocks: any[] }) {
   const handleEvaluate = async (qId: number | string, blockId: string) => {
     const choices = selectedChoices[qId] || [];
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/authoring/kc-questions/${qId}/evaluate/`, {
+      const res = await fetch(`${API_BASE}/authoring/kc-questions/${qId}/evaluate/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ selected_choices: choices }),

@@ -8,17 +8,9 @@
  */
 
 import type { Course, Module, Lesson, InteractionKind } from "@/lib/mock";
-import { authFetch } from "@/lib/auth";
+import { authFetch, API_BASE, BACKEND_BASE } from "@/lib/auth";
 
-const getApiBase = () => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname || 'localhost';
-    return `http://${host}:8000/api`;
-  }
-  return 'http://localhost:8000/api';
-};
-
-const BASE = getApiBase();
+const BASE = API_BASE;
 
 // ─── API Types (mirror Django models) ────────────────────────────────────────
 
@@ -76,8 +68,6 @@ export interface ApiCourse {
 // ─── Adapter: ApiCourse → frontend Course type ────────────────────────────────
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3";
-
-const BACKEND_BASE = "http://127.0.0.1:8000";
 
 function resolveVideoUrl(l: ApiLesson): string | undefined {
   // 1. Prefer video_url (uploaded file)

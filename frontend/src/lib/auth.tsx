@@ -10,7 +10,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-const getApiBase = () => {
+export const getApiBase = (): string => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+  }
   if (typeof window !== 'undefined') {
     const host = window.location.hostname || 'localhost';
     return `http://${host}:8000/api`;
@@ -19,6 +22,25 @@ const getApiBase = () => {
 };
 
 export const API_BASE = getApiBase();
+
+export const getBackendBase = (): string => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BACKEND_URL) {
+    return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+  }
+  return API_BASE.replace(/\/api\/?$/, '');
+};
+
+export const BACKEND_BASE = getBackendBase();
+
+export function normalizeUrl(url: string): string {
+  if (url.startsWith('http://127.0.0.1:8000/api') || url.startsWith('http://localhost:8000/api')) {
+    return url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000\/api/, API_BASE);
+  }
+  if (url.startsWith('http://127.0.0.1:8000') || url.startsWith('http://localhost:8000')) {
+    return url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, BACKEND_BASE);
+  }
+  return url;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,11 +157,12 @@ export function handleFrozenAccount() {
 // Attaches Authorization header; retries once after refreshing on 401.
 
 export async function authFetch(url: string, opts: RequestInit = {}): Promise<Response> {
+  const normalizedUrl = normalizeUrl(url);
   const token = getAccessToken();
   const headers = new Headers(opts.headers ?? {});
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const res = await fetch(url, { ...opts, headers });
+  const res = await fetch(normalizedUrl, { ...opts, headers });
 
   if (res.status === 403 || res.status === 401) {
     const clone = res.clone();
@@ -164,7 +187,7 @@ export async function authFetch(url: string, opts: RequestInit = {}): Promise<Re
       throw new Error('Session expired. Please log in again.');
     }
     headers.set('Authorization', `Bearer ${newToken}`);
-    const retryRes = await fetch(url, { ...opts, headers });
+    const retryRes = await fetch(normalizedUrl, { ...opts, headers });
     if (retryRes.status === 403 || retryRes.status === 401) {
       const retryClone = retryRes.clone();
       try {

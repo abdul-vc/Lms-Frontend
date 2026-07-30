@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { User, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, BarChart3, Users, AlertCircle, Loader2, KeyRound, CheckCircle2 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, API_BASE } from "@/lib/auth";
 
 interface BrandingData {
   organization_name?: string;
@@ -40,7 +40,7 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
     async function loadBranding() {
       if (!orgSlug) {
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/public/platform-branding/');
+          const res = await fetch(`${API_BASE}/public/platform-branding/`);
           if (!res.ok) throw new Error('platform branding fetch failed');
           const data = await res.json();
           if (!cancelled) setBranding(data);
@@ -51,7 +51,7 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
       }
 
       try {
-        const res = await fetch(`http://127.0.0.1:8000/api/public/organization-branding/${orgSlug}/`);
+        const res = await fetch(`${API_BASE}/public/organization-branding/${orgSlug}/`);
         const data = await res.json();
 
         if (res.ok && data.found) {
@@ -59,7 +59,7 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
           return;
         }
 
-        const fallbackRes = await fetch('http://127.0.0.1:8000/api/public/platform-branding/');
+        const fallbackRes = await fetch(`${API_BASE}/public/platform-branding/`);
         const fallbackData = await fallbackRes.json();
         if (!cancelled) setBranding(fallbackData);
       } catch {
@@ -112,7 +112,7 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
     setError(null);
     setForgotLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/users/auth/forgot-password/', {
+      const res = await fetch(`${API_BASE}/users/auth/forgot-password/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail.trim() }),

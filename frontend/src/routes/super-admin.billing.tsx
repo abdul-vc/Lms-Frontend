@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { Search, Filter, Download, CreditCard, Clock, MoreVertical, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { DataTableRow } from '@/components/DataTableRow';
 import { StatusBadge } from '@/components/StatusBadge';
 
@@ -17,8 +17,8 @@ function BillingPage() {
 
   useEffect(() => {
     Promise.all([
-      authFetch('http://127.0.0.1:8000/api/billing/').then(r => r.json()),
-      authFetch('http://127.0.0.1:8000/api/plans/').then(r => r.json())
+      authFetch(`${API_BASE}/billing/`).then(r => r.json()),
+      authFetch(`${API_BASE}/plans/`).then(r => r.json())
     ])
     .then(([billingData, plansData]) => {
       setBillingRecords(Array.isArray(billingData) ? billingData : []);

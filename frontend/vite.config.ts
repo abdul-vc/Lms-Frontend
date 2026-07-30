@@ -6,20 +6,24 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+const proxyTarget = process.env.VITE_BACKEND_URL || (process.env.VITE_API_URL ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'http://127.0.0.1:8000');
+
 export default defineConfig({
-  server: {
-    port: 8080,
-    host: true,
-    proxy: {
-      '/media': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
+  vite: {
+    server: {
+      port: 8080,
+      host: true,
+      proxy: {
+        '/media': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/api': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
   },

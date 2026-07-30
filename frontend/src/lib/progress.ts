@@ -1,4 +1,4 @@
-import { authFetch } from "./auth";
+import { authFetch, API_BASE } from "./auth";
 import { useState, useEffect } from "react";
 
 function parseNumericId(id: string | number | undefined | null): number | null {
@@ -12,7 +12,7 @@ export async function markLessonComplete(courseId: string | number, lessonId: st
   const lId = parseNumericId(lessonId);
   if (!lId) return;
   try {
-    await authFetch(`http://127.0.0.1:8000/api/lessons/${lId}/progress/`, {
+    await authFetch(`${API_BASE}/lessons/${lId}/progress/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: true }),
@@ -26,7 +26,7 @@ export async function isLessonComplete(courseId: string | number, lessonId: stri
   const lId = parseNumericId(lessonId);
   if (!lId) return false;
   try {
-    const res = await authFetch(`http://127.0.0.1:8000/api/lessons/${lId}/progress/`);
+    const res = await authFetch(`${API_BASE}/lessons/${lId}/progress/`);
     if (res.ok) {
       const data = await res.json();
       return Boolean(data.completed);
@@ -43,7 +43,7 @@ export async function getCourseProgress(courseId: string | number) {
     return { percent: 0, completed_lessons: 0, total_lessons: 0, completed_lesson_ids: [], last_active_lesson_id: null };
   }
   try {
-    const res = await authFetch(`http://127.0.0.1:8000/api/courses/${cId}/progress/`);
+    const res = await authFetch(`${API_BASE}/courses/${cId}/progress/`);
     if (res.ok) {
       return await res.json();
     }
@@ -57,7 +57,7 @@ export async function setLastActive(courseId: string | number, lessonId: string 
   const lId = parseNumericId(lessonId);
   if (!lId) return;
   try {
-    await authFetch(`http://127.0.0.1:8000/api/lessons/${lId}/progress/`, {
+    await authFetch(`${API_BASE}/lessons/${lId}/progress/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ last_position_seconds: positionSeconds || 0 }),
@@ -71,7 +71,7 @@ export async function getLessonProgress(lessonId: string | number) {
   const lId = parseNumericId(lessonId);
   if (!lId) return null;
   try {
-    const res = await authFetch(`http://127.0.0.1:8000/api/lessons/${lId}/progress/`);
+    const res = await authFetch(`${API_BASE}/lessons/${lId}/progress/`);
     if (res.ok) {
       return await res.json();
     }

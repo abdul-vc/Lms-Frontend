@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState, useCallback } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 
 export const Route = createFileRoute('/super-admin/dashboard')({
   component: SuperAdminDashboard,
@@ -29,8 +29,8 @@ function SuperAdminDashboard() {
 
     try {
       const [statsRes, activityRes] = await Promise.all([
-        authFetch('http://127.0.0.1:8000/api/organizations/platform-stats/'),
-        authFetch('http://127.0.0.1:8000/api/activity-log/recent/?limit=5'),
+        authFetch(`${API_BASE}/organizations/platform-stats/`),
+        authFetch(`${API_BASE}/activity-log/recent/?limit=5`),
       ]);
 
       if (!statsRes.ok) {
