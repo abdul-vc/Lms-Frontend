@@ -1,0 +1,12 @@
+TOTAL_ORGS: 2
+ACTIVE_ORGS: 1
+ORG id=7 name='arv' status='Inactive' sub='vtravelofficials'
+ORG id=10 name='lotus developers' status='Active' sub='ldpltd'
+TOTAL_USERS: 7
+USER id=1 username='superadmin' email='superadmin@platform.com' superadmin=1 org_id=None
+USER id=9 username='vtravelofficials@gmail.com' email='vtravelofficials@gmail.com' superadmin=0 org_id=7
+USER id=11 username='abdul' email='abdul@gmail.com' superadmin=0 org_id=None
+USER id=12 username='kashsharma8591@gmail.com' email='kashsharma8591@gmail.com' superadmin=0 org_id=7
+USER id=13 username='arholidays87@gmail.com' email='arholidays87@gmail.com' superadmin=0 org_id=7
+USER id=17 username='arvohra87@gmail.com' email='arvohra87@gmail.com' superadmin=0 org_id=10
+USER id=18 username='gaurav' email='riyazanilv@gmail.com' superadmin=0 org_id=10
