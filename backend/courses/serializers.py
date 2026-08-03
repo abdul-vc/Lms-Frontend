@@ -32,7 +32,7 @@ class LessonSerializer(serializers.ModelSerializer):
                 if request is not None:
                     ret['video_url'] = request.build_absolute_uri(ret['video_url'])
                 else:
-                    ret['video_url'] = f'http://127.0.0.1:8000{ret["video_url"]}'
+                    ret['video_url'] = request.build_absolute_uri(ret['video_url'])
         return ret
 
 class ModuleSerializer(serializers.ModelSerializer):
@@ -98,12 +98,15 @@ class CourseSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
-        if ret.get('hero_url'):
-            if not (ret['hero_url'].startswith('http://') or ret['hero_url'].startswith('https://')):
-                if request is not None:
-                    ret['hero_url'] = request.build_absolute_uri(ret['hero_url'])
-                else:
-                    ret['hero_url'] = f'http://127.0.0.1:8000{ret["hero_url"]}'
+        if request:
+           if ret.get("hero_url"):
+              if not (
+                ret["hero_url"].startswith("http://")
+                or ret["hero_url"].startswith("https://")
+              ):
+                ret["hero_url"] = request.build_absolute_uri(ret["hero_url"])
+              else:
+                    ret['hero_url'] = request.build_absolute_uri(ret["hero_url"])
 
         if hasattr(instance, 'scorm_package') and instance.scorm_package:
             sp = instance.scorm_package
@@ -112,7 +115,7 @@ class CourseSerializer(serializers.ModelSerializer):
                 if request is not None:
                     launch_url = request.build_absolute_uri(launch_url)
                 else:
-                    launch_url = f'http://127.0.0.1:8000{launch_url}'
+                    launch_url = f"http://127.0.0.1:8000{launch_url}"
             ret['scorm_package'] = {
                 'id': sp.id,
                 'version': sp.version,

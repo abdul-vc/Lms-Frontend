@@ -162,7 +162,8 @@ STATIC_URL = 'static/'
 # Note: Video streaming uses its own VIDEO_DIR in urls.py (unaffected by this).
 import os
 MEDIA_URL = '/media/'
-MEDIA_ROOT = r'C:\Users\Abdul Rehman\OneDrive\Desktop\LMS\media'
+from pathlib import Path
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

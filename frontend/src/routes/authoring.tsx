@@ -1348,16 +1348,23 @@ function HeroImageField({ value, onChange, onUploadError, onUploadSuccess }: Her
     try {
       const formData = new FormData();
       formData.append("hero", file);
-      const res = await authFetch("http://127.0.0.1:8000/api/upload/hero/", {
-        method: "POST",
-        body: formData,
+      const res = await authFetch(`${API_BASE}/upload/hero/`, {
+   	 method: "POST",
+    	body: formData,
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error ?? "Upload failed");
       }
       const data = await res.json();
-      onChange(data.url);
+
+      // Save relative path instead of absolute URL
+      if (data.path) {
+        onChange(`/media/${data.path}`);
+      } else {
+         onChange(data.url);
+      }
+
       onUploadSuccess("Hero image uploaded ✓");
     } catch (e: unknown) {
       onUploadError((e as Error).message ?? "Upload failed");
@@ -1499,12 +1506,20 @@ function VideoUploadField({ value, onChange, onUploadError, onUploadSuccess }: V
     setUploading(true);
     try {
       const res = await uploadLessonVideo(file);
+
       if (res.error) {
-        onUploadError(res.error);
-      } else if (res.url) {
-        onChange(res.url);
-        onUploadSuccess("Video uploaded successfully ✓");
+         throw new Error(res.error);
       }
+
+    // Save relative path instead of absolute URL
+      if (res.path) {
+         onChange(`/media/${res.path}`);
+     } else {
+         onChange(res.url);
+     }
+
+     onUploadSuccess("Video uploaded ✓");
+     
     } catch (err: any) {
       onUploadError(err.message || "Failed to upload video");
     } finally {
