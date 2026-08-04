@@ -18,18 +18,92 @@ class BillingConfigurationSerializer(serializers.ModelSerializer):
 
 class SiteSerializer(serializers.ModelSerializer):
     organization_name = serializers.CharField(source='organization.name', read_only=True)
-    
+    url = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+    contact_email = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+
     class Meta:
         model = Site
         fields = '__all__'
+        extra_kwargs = {
+            'url': {'validators': []}
+        }
+
+    def validate_url(self, value):
+        if not value:
+            return ""
+        import re
+        val = str(value).strip()
+        cleaned = re.sub(r'^https?:?\/*', '', val)
+        if cleaned:
+            return f"https://{cleaned}"
+        return ""
 
 class OrganizationSerializer(serializers.ModelSerializer):
     billing = BillingConfigurationSerializer(read_only=True)
     sites = SiteSerializer(many=True, read_only=True)
+    company_name = serializers.CharField(required=False, allow_blank=True, default='')
+    entity_name = serializers.CharField(required=False, allow_blank=True, default='')
+    sub_domain = serializers.CharField(required=False, allow_blank=True, default='')
 
     class Meta:
         model = Organization
         fields = '__all__'
+
+    def validate(self, attrs):
+        if not attrs.get('company_name'):
+            attrs['company_name'] = attrs.get('name', 'Organization')
+        if not attrs.get('entity_name'):
+            attrs['entity_name'] = attrs.get('name', 'Organization')
+        if not attrs.get('sub_domain'):
+            import re, time
+            name_val = attrs.get('name', '')
+            base_slug = re.sub(r'[^a-z0-9]+', '-', name_val.lower()).strip('-')
+            if not base_slug:
+                base_slug = f"org-{int(time.time())}"
+            slug = base_slug
+            counter = 1
+            qs = Organization.objects.filter(sub_domain=slug)
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            while qs.exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+                qs = Organization.objects.filter(sub_domain=slug)
+                if self.instance:
+                    qs = qs.exclude(id=self.instance.id)
+            attrs['sub_domain'] = slug
+        return attrs
+
+    def create(self, validated_data):
+        billing_data = self.initial_data.get('billing')
+        initial_admin_email = self.initial_data.get('initial_admin_email') or self.initial_data.get('admin_email') or validated_data.get('contact_email')
+        initial_admin_password = self.initial_data.get('initial_admin_password') or self.initial_data.get('admin_password')
+
+        instance = super().create(validated_data)
+
+        if billing_data and isinstance(billing_data, dict):
+            billing, _ = BillingConfiguration.objects.get_or_create(organization=instance)
+            plan_id = billing_data.get('plan') or billing_data.get('plan_id')
+            if plan_id:
+                from master_setup.models import Plan
+                billing.plan = Plan.objects.filter(id=plan_id).first()
+            for key in ['billing_cycle', 'rate', 'solution_type', 'solution_for', 'billing_term', 'duration_type', 'start_date', 'end_date', 'billing_date']:
+                if key in billing_data:
+                    setattr(billing, key, billing_data[key])
+            billing.save()
+
+        if initial_admin_email:
+            from .services import provision_org_admin_user
+            request = self.context.get('request')
+            provision_org_admin_user(
+                org=instance,
+                admin_email=initial_admin_email,
+                raw_password=initial_admin_password,
+                contact_name=instance.contact_name,
+                request=request
+            )
+
+        return instance
 
     def update(self, instance, validated_data):
         billing_data = self.initial_data.get('billing')

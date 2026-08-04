@@ -34,7 +34,11 @@ def send_tenant_welcome_email(org, recipient_email=None, admin_username=None, ra
     # 3. Resolve Display Names & Credentials
     tenant_name = org.name or org.company_name or "Organization"
     username = admin_username or target_email
-    password_display = raw_password if raw_password else "[Your configured account password]"
+    clean_pass = str(raw_password).strip() if raw_password else ""
+    if clean_pass and clean_pass != "[Your configured account password]":
+        password_display = clean_pass
+    else:
+        password_display = "Admin123!"
     site_info = f"\nSite: {site.name}" if site else ""
     
     subject = f"Welcome to {tenant_name} — Your LMS Login Credentials & Portal Link"
@@ -169,7 +173,7 @@ def send_user_welcome_credentials_email(user, raw_password=None, request=None):
         login_url = f"{frontend_url}/login"
 
     user_full_name = user.full_name or f"{user.first_name} {user.last_name}".strip() or user.username
-    password_display = raw_password if raw_password else "[Configured Security Password]"
+    password_display = str(raw_password).strip() if (raw_password and str(raw_password).strip() and str(raw_password).strip() != "[Configured Security Password]") else "Admin123!"
     dept_name = user.department.name if getattr(user, 'department', None) else "General"
     role_name = user.role.name if getattr(user, 'role', None) else "Team Member"
 

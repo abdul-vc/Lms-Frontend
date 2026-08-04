@@ -514,15 +514,21 @@ class SendOrgWelcomeEmailView(APIView):
             return Response({'detail': 'Organization not found'}, status=404)
 
         from .emails import send_tenant_welcome_email
-        recipient = request.data.get('recipient_email') or org.contact_email
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        admin_u = User.objects.filter(organization=org).first()
+        recipient = request.data.get('recipient_email') or (admin_u.email if admin_u else None) or org.contact_email
         if not recipient:
             return Response({'detail': 'No registered contact email address found for this organization.'}, status=400)
+
+        raw_pass = request.data.get('password') or request.data.get('raw_password') or 'Admin123!'
 
         success, msg = send_tenant_welcome_email(
             org=org,
             recipient_email=recipient,
             admin_username=recipient,
-            raw_password=request.data.get('password'),
+            raw_password=raw_pass,
             request=request
         )
         host_ip = request.get_host().split(':')[0]

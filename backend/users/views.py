@@ -17,24 +17,34 @@ class UserListCreateView(generics.ListCreateAPIView):
     required_permission = 'can_manage_users'
 
     def get_queryset(self):
+        qs = User.objects.all()
+        org_id = self.request.query_params.get('organization') or self.request.query_params.get('organization_id')
+        if org_id:
+            return qs.filter(organization_id=org_id)
         if self.request.user.is_platform_super_admin:
-            return User.objects.all()
-        return User.objects.filter(organization_id=self.request.user.organization_id)
+            return qs
+        return qs.filter(organization_id=self.request.user.organization_id)
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
         from organizations.emails import send_user_welcome_credentials_email
 
         raw_password = self.request.data.get('password')
+        target_email = self.request.data.get('email') or self.request.data.get('username')
+
+        if target_email:
+            clean_em = str(target_email).strip()
+            existing = User.objects.filter(email__iexact=clean_em).first() or User.objects.filter(username__iexact=clean_em).first()
+            if existing and existing.is_platform_super_admin:
+                raise ValidationError({'email': f"The email address '{clean_em}' is reserved for the Platform Super Admin account and cannot be assigned to an organization user."})
 
         if self.request.user.is_platform_super_admin:
-            # Super-admin must explicitly specify which org this user belongs to
             org_id = self.request.data.get('organization')
             if not org_id:
                 raise ValidationError({'organization': 'organization is required when creating a user as super-admin.'})
-            user = serializer.save()  # organization comes from the serializer's validated data directly
+            user = serializer.save(is_platform_super_admin=False)
         else:
-            user = serializer.save(organization=self.request.user.organization)
+            user = serializer.save(organization=self.request.user.organization, is_platform_super_admin=False)
         
         log_activity(self.request, 'user_created', target=user, organization=user.organization)
 

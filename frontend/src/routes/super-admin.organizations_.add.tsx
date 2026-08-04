@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Eye, EyeOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
+import { ComplianceBadgeListEditor } from '@/components/ComplianceBadgeListEditor';
 import { BackButton } from '@/components/BackButton';
 
 export const Route = createFileRoute('/super-admin/organizations_/add')({
@@ -26,7 +27,7 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (url: s
     const form = new FormData();
     form.append('logo', file);
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/upload/org-logo/', {
+      const res = await authFetch(`${API_BASE}/upload/org-logo/`, {
         method: 'POST',
         body: form,
       });
@@ -70,62 +71,98 @@ function AddOrganizationPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [plans, setPlans] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/plans/')
+    authFetch(`${API_BASE}/plans/`)
       .then(res => res.json())
-      .then(data => setPlans(data))
+      .then(data => setPlans(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
   }, []);
 
   const [formData, setFormData] = useState({
+    // 1. General Information
     name: '',
-    status: 'Active',
+    status: '',
     company_name: '',
     entity_name: '',
-    site_location: '',
+    company_address: '',
     country: '',
     region: '',
     state: '',
     city: '',
     zone: '',
+
+    // 2. Contact Person
     contact_name: '',
     contact_email: '',
+    contact_phone: '',
+
+    // 3. Login Credentials
+    initial_admin_email: '',
+    initial_admin_password: '',
+
+    // 4. White Labeling Configuration
     enable_white_label: false,
     sub_domain: '',
-    plan_id: '',
-    billing_cycle: 'Monthly',
+
+    // 5. Branding
+    logo_url: '',
+    primary_color: '#10b981',
+    tagline: '',
+    login_hero_description: '',
+    login_welcome_message: '',
+    compliance_badges: [] as string[],
+
+    // 6. Billing Information
+    solution_type: '',
+    solution_for: '',
+    plan: '',
     billing_term: '',
     rate: '',
-    custom_limits: {
-      users: '',
-      courses: '',
-      storage_gb: '',
-    },
-    payment_method: 'Invoice',
-    primary_color: '#10b981',
-    logo_url: '',
-    fav_icon: '',
+    billing_cycle: '',
+    duration_type: '',
+    start_date: '',
+    end_date: '',
+    billing_date: '',
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-  };
+    const checked = (e.target as HTMLInputElement).checked;
 
-  const handleCustomLimitChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      custom_limits: {
-        ...prev.custom_limits,
-        [field]: value,
-      },
-    }));
+    setFormData(prev => {
+      const next = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+
+      if ((name === 'duration_type' || name === 'start_date') && next.start_date) {
+        if (next.duration_type === '6_months' || next.duration_type === '1_year') {
+          const [yyyy, mm, dd] = next.start_date.split('-').map(Number);
+          if (yyyy && mm && dd) {
+            const d = new Date(yyyy, mm - 1, dd);
+            if (next.duration_type === '6_months') {
+              d.setMonth(d.getMonth() + 6);
+            } else if (next.duration_type === '1_year') {
+              d.setFullYear(d.getFullYear() + 1);
+            }
+            const endY = d.getFullYear();
+            const endM = String(d.getMonth() + 1).padStart(2, '0');
+            const endD = String(d.getDate()).padStart(2, '0');
+            next.end_date = `${endY}-${endM}-${endD}`;
+          }
+        } else if (next.duration_type === 'custom' && name === 'duration_type') {
+          next.end_date = '';
+        }
+      }
+
+      if (name === 'start_date' && next.start_date && !next.billing_date) {
+        next.billing_date = next.start_date;
+      }
+
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,42 +171,53 @@ function AddOrganizationPage() {
     setError('');
 
     try {
+      const slugify = (str: string) =>
+        str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `org-${Date.now()}`;
+
+      const orgName = formData.name.trim();
       const payload: any = {
-        name: formData.name,
-        company_name: formData.company_name,
-        entity_name: formData.entity_name,
-        site_location: formData.site_location,
-        country: formData.country,
-        region: formData.region,
-        state: formData.state,
-        city: formData.city,
-        zone: formData.zone,
-        contact_name: formData.contact_name,
-        contact_email: formData.contact_email,
-        status: formData.status,
-        enable_white_label: formData.enable_white_label,
-        sub_domain: formData.sub_domain || undefined,
-        primary_color: formData.primary_color,
-        logo_url: formData.logo_url,
-        fav_icon: formData.fav_icon,
-        solution_type: 'Enterprise',
-        solution_for: 'Corporate',
+        name: orgName,
+        company_name: formData.company_name.trim() || orgName,
+        entity_name: formData.entity_name.trim() || orgName,
+        company_address: formData.company_address || null,
+        country: formData.country || null,
+        region: formData.region || null,
+        state: formData.state || null,
+        city: formData.city || null,
+        zone: formData.zone || null,
+        contact_name: formData.contact_name || null,
+        contact_email: formData.contact_email || null,
+        contact_phone: formData.contact_phone || null,
+        initial_admin_email: formData.initial_admin_email.trim() || formData.contact_email.trim() || null,
+        initial_admin_password: formData.initial_admin_password.trim() || null,
+        status: formData.status || 'Active',
+        subdomain_routing_enabled: formData.enable_white_label,
+        sub_domain: (formData.enable_white_label && formData.sub_domain.trim())
+          ? formData.sub_domain.trim()
+          : slugify(orgName),
+        primary_color: formData.primary_color || '#10b981',
+        logo_url: formData.logo_url || '',
+        tagline: formData.tagline || '',
+        login_hero_description: formData.login_hero_description || '',
+        login_welcome_message: formData.login_welcome_message || '',
+        compliance_badges: formData.compliance_badges || [],
+        solution_type: formData.solution_type || null,
+        solution_for: formData.solution_for || null,
+        billing: {
+          plan: formData.plan ? parseInt(formData.plan, 10) : null,
+          solution_type: formData.solution_type || null,
+          solution_for: formData.solution_for || null,
+          billing_term: formData.billing_term || null,
+          rate: formData.rate ? parseFloat(formData.rate) : 0,
+          billing_cycle: formData.billing_cycle || null,
+          duration_type: formData.duration_type || null,
+          start_date: formData.start_date || null,
+          end_date: formData.end_date || null,
+          billing_date: formData.billing_date || null,
+        }
       };
 
-      if (formData.plan_id) {
-        payload.plan_id = parseInt(formData.plan_id, 10);
-      }
-      if (formData.rate) {
-        payload.rate = parseFloat(formData.rate);
-      }
-      if (formData.billing_term) {
-        payload.billing_term = formData.billing_term;
-      }
-      if (formData.billing_cycle) {
-        payload.billing_cycle = formData.billing_cycle.toLowerCase();
-      }
-
-      const res = await authFetch('http://127.0.0.1:8000/api/organizations/', {
+      const res = await authFetch(`${API_BASE}/organizations/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -177,7 +225,19 @@ function AddOrganizationPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || Object.values(data).flat().join(', ') || 'Failed to create organization.');
+        let errMsg = 'Failed to create organization.';
+        if (data.detail) {
+          errMsg = data.detail;
+        } else if (typeof data === 'object') {
+          errMsg = Object.entries(data)
+            .map(([field, msgs]) => {
+              const label = field.replace(/_/g, ' ');
+              const msgList = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${label}: ${msgList}`;
+            })
+            .join(' | ');
+        }
+        throw new Error(errMsg);
       }
 
       navigate({ to: '/super-admin/organizations' });
@@ -189,8 +249,8 @@ function AddOrganizationPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6 max-w-4xl mx-auto py-4">
+      <div className="flex items-center gap-4 border-b border-border pb-4">
         <BackButton fallbackPath="/super-admin/organizations" />
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Organization</h1>
@@ -204,10 +264,11 @@ function AddOrganizationPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-card/90 border border-border rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-lg font-bold text-foreground border-b border-border pb-3">Basic Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-8" autoComplete="off">
+        {/* 1. General Information */}
+        <section>
+          <h2 className="text-lg font-bold text-foreground mb-4">General Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Organization Name *</label>
               <input 
@@ -228,127 +289,248 @@ function AddOrganizationPage() {
                 onChange={handleChange} 
                 className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
               >
+                <option value="">-- Please choose an option --</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Initial Admin Email</label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Company Name</label>
+              <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} placeholder="Legal company name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Entity Name</label>
+              <input type="text" name="entity_name" value={formData.entity_name} onChange={handleChange} placeholder="Legal entity name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-foreground mb-1">Company Address</label>
+              <input type="text" name="company_address" value={formData.company_address} onChange={handleChange} placeholder="Street address, building, suite" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Country</label>
+              <input type="text" name="country" value={formData.country} onChange={handleChange} placeholder="Country" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Region</label>
+              <input type="text" name="region" value={formData.region} onChange={handleChange} placeholder="Region" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">State / Province</label>
+              <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State or province" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">City</label>
+              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Zone</label>
+              <input type="text" name="zone" value={formData.zone} onChange={handleChange} placeholder="Timezone / Location Zone" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+          </div>
+        </section>
+
+        {/* 2. Contact Person */}
+        <section>
+          <h2 className="text-lg font-bold text-foreground mb-4">Contact Person</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
+              <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="Primary contact full name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
+              <input type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="contact@example.com" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Phone Number</label>
+              <input type="text" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+            </div>
+          </div>
+        </section>
+
+        {/* 3. Login Credentials */}
+        <section>
+          <h2 className="text-lg font-bold text-foreground mb-1">Login Credentials</h2>
+          <p className="text-sm text-muted-foreground mb-4">Administrator login credentials for this organization.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Initial Admin Email / Username</label>
               <input 
-                type="email" name="initial_admin_email" value={(formData as any).initial_admin_email || ''} onChange={handleChange}
+                type="email"
+                name="initial_admin_email"
+                value={formData.initial_admin_email}
+                onChange={handleChange}
+                autoComplete="off"
                 placeholder="admin@example.com" 
                 className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Password</label>
-              <input 
-                type="password" name="initial_admin_password" value={(formData as any).initial_admin_password || ''} onChange={handleChange}
-                placeholder="Secure password" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Branding Options */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Branding & Login Page</h2>
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl space-y-6">
-            <LogoUploadField 
-              value={(formData as any).logo_url || ''} 
-              onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))} 
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Logo URL (Or Paste Link)</label>
+              <div className="relative">
                 <input 
-                  type="url" name="logo_url" value={(formData as any).logo_url || ''} onChange={handleChange}
-                  placeholder="https://example.com/logo.png" 
-                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                  type={showPassword ? "text" : "password"} 
+                  name="initial_admin_password" 
+                  value={formData.initial_admin_password} 
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  placeholder="Secure password" 
+                  className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Primary Color</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="color" name="primary_color" value={(formData as any).primary_color || '#10b981'} onChange={handleChange}
-                    className="h-9 w-12 rounded bg-background border border-border cursor-pointer" 
-                  />
-                  <input 
-                    type="text" name="primary_color" value={(formData as any).primary_color || '#10b981'} onChange={handleChange}
-                    className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground uppercase font-mono focus:outline-none focus:border-emerald-500/50" 
-                  />
-                </div>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">Tagline</label>
-                <input 
-                  type="text" name="tagline" value={(formData as any).tagline || ''} onChange={handleChange}
-                  placeholder="e.g. Excellence in Patient Care" 
-                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">Welcome Message</label>
-                <input 
-                  type="text" name="login_welcome_message" value={(formData as any).login_welcome_message || ''} onChange={handleChange}
-                  placeholder="e.g. Welcome back! Please sign in to continue." 
-                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">Login Hero Description</label>
-                <textarea 
-                  name="login_hero_description" value={(formData as any).login_hero_description || ''} onChange={handleChange} rows={2}
-                  placeholder="Optional longer paragraph to show on the login page hero section." 
-                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Advanced Options */}
+        {/* 4. White Labeling Configuration */}
         <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Advanced Options</h2>
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-foreground mb-2">White Label Platform</h3>
-            
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" name="enable_white_label" checked={formData.enable_white_label} onChange={handleChange} className="rounded border-border bg-background text-emerald-500 focus:ring-emerald-500/50 size-4" />
-              <span className="text-xs text-foreground font-medium">Enable white labeling</span>
-            </label>
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-foreground">White Labeling Configuration</h2>
+            <p className="text-sm text-muted-foreground">Configure custom domain mapping for this organization.</p>
+          </div>
+          
+          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="enable_white_label"
+                  checked={formData.enable_white_label}
+                  onChange={handleChange}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+              <span className="text-xs font-semibold text-foreground">Enable Sub-domain Routing</span>
+            </div>
 
             {formData.enable_white_label && (
-              <div className="pt-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">Sub - Domain</label>
-                <input 
-                  type="text" name="sub_domain" value={formData.sub_domain} onChange={handleChange}
-                  placeholder="www.acme.workhub.com" 
-                  className="w-full max-w-md bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-                />
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Subdomain Slug</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      name="sub_domain" 
+                      value={formData.sub_domain} 
+                      onChange={handleChange} 
+                      placeholder="acme" 
+                      className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" 
+                    />
+                    <span className="text-xs text-muted-foreground font-mono">.lamsportal.com</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </section>
 
-        {/* Billing Configuration */}
+        {/* 5. Branding */}
         <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Billing Configuration</h2>
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl grid grid-cols-2 md:grid-cols-3 gap-6">
+          <h2 className="text-lg font-bold text-foreground mb-1">Branding</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Controls what this organization's employees see on their branded login page.
+          </p>
+          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl space-y-6">
+            <LogoUploadField 
+              value={formData.logo_url} 
+              onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))} 
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Primary Color</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    name="primary_color" 
+                    value={formData.primary_color} 
+                    onChange={handleChange} 
+                    className="size-10 rounded-xl border border-border cursor-pointer bg-background" 
+                  />
+                  <input 
+                    type="text" 
+                    name="primary_color" 
+                    value={formData.primary_color} 
+                    onChange={handleChange} 
+                    className="w-32 bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground font-mono uppercase focus:outline-none focus:border-emerald-500/50" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Tagline</label>
+                <input 
+                  type="text" name="tagline" value={formData.tagline} onChange={handleChange}
+                  placeholder="e.g. Excellence in patient care." 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Login Hero Description</label>
+              <textarea 
+                name="login_hero_description" value={formData.login_hero_description} onChange={handleChange} rows={3}
+                placeholder="Optional — shown under the tagline. Leave blank to omit." 
+                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Login Welcome Message</label>
+              <input 
+                type="text" name="login_welcome_message" value={formData.login_welcome_message} onChange={handleChange}
+                placeholder="Leave blank to use the platform default" 
+                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Compliance Badges</label>
+              <ComplianceBadgeListEditor
+                value={formData.compliance_badges}
+                onChange={(badges) => setFormData(prev => ({ ...prev, compliance_badges: badges }))}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 6. Billing Information */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-foreground">Billing Information</h2>
+            <p className="text-sm text-muted-foreground">Configure subscription and billing details.</p>
+          </div>
+
+          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Solution Type</label>
-              <select name="solution_type" value={formData.solution_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+              <select name="solution_type" value={formData.solution_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
                 <option value="">-- Please choose an option --</option>
+                <option value="SaaS">SaaS Cloud</option>
+                <option value="On-Premise">On-Premise</option>
+                <option value="Hybrid">Hybrid</option>
                 <option value="Enterprise">Enterprise</option>
                 <option value="Professional">Professional</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Solution For</label>
-              <select name="solution_for" value={formData.solution_for} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+              <select name="solution_for" value={formData.solution_for} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
                 <option value="">-- Please choose an option --</option>
                 <option value="B2B">B2B</option>
                 <option value="B2C">B2C</option>
@@ -356,27 +538,28 @@ function AddOrganizationPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Billing Term</label>
-              <select name="billing_term" value={formData.billing_term} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+              <select name="billing_term" value={formData.billing_term} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
                 <option value="">-- Please choose an option --</option>
                 <option value="Net 30">Net 30</option>
                 <option value="Net 60">Net 60</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Rate of Billing</label>
-              <input type="number" name="rate" value={formData.rate} onChange={handleChange} placeholder="Enter billing rate" className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
+              <label className="block text-xs font-semibold text-foreground mb-1">Rate (₹)</label>
+              <input type="number" name="rate" value={formData.rate} onChange={handleChange} placeholder="0.00" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Billing Cycle</label>
-              <select name="billing_cycle" value={formData.billing_cycle} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+              <select name="billing_cycle" value={formData.billing_cycle} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
                 <option value="">-- Please choose an option --</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Annually">Annually</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Annually</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Start Date</label>
-              <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Project Duration</label>
@@ -389,11 +572,11 @@ function AddOrganizationPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">End Date</label>
-              <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} disabled={formData.duration_type === '6_months' || formData.duration_type === '1_year'} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground disabled:opacity-50 focus:outline-none focus:border-emerald-500/50" />
+              <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} disabled={formData.duration_type === '6_months' || formData.duration_type === '1_year'} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground disabled:opacity-50 focus:outline-none focus:border-emerald-500/50" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Billing Date</label>
-              <input type="date" name="billing_date" value={formData.billing_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              <input type="date" name="billing_date" value={formData.billing_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
             </div>
           </div>
         </section>
