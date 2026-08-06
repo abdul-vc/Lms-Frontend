@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/auth';
-import { PolymorphicLessonRenderer, PolymorphicLesson } from '@/components/PolymorphicLessonRenderer';
+import { PolymorphicLessonRenderer, type PolymorphicLessonProps } from '@/components/PolymorphicLessonRenderer';
 import { Monitor, Tablet, Smartphone, ArrowLeft, PlayCircle, FileText, Sparkles, HelpCircle, GitFork, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +15,7 @@ interface Module {
   id: number;
   title: string;
   order: number;
-  lessons: PolymorphicLesson[];
+  lessons: PolymorphicLessonProps['lesson'][];
 }
 
 interface Course {
@@ -33,7 +33,7 @@ const DEVICE_CONFIG: Record<DeviceMode, { label: string; icon: typeof Monitor; w
   mobile:  { label: 'Mobile', icon: Smartphone, width: '375px', frameClass: 'w-[375px]' },
 };
 
-const LESSON_ICONS: Record<string, JSX.Element> = {
+const LESSON_ICONS: Record<string, React.ReactElement> = {
   video:          <PlayCircle className="size-3.5 text-emerald-400 shrink-0" />,
   interactive:    <Sparkles className="size-3.5 text-purple-400 shrink-0" />,
   knowledge_check:<HelpCircle className="size-3.5 text-amber-400 shrink-0" />,
@@ -46,7 +46,7 @@ function CoursePreviewPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeLesson, setActiveLesson] = useState<PolymorphicLesson | null>(null);
+  const [activeLesson, setActiveLesson] = useState<PolymorphicLessonProps['lesson'] | null>(null);
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop');
 
   useEffect(() => { fetchCourseData(); }, [courseId]);

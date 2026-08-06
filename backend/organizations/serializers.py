@@ -54,7 +54,19 @@ class OrganizationSerializer(serializers.ModelSerializer):
             attrs['company_name'] = attrs.get('name', 'Organization')
         if not attrs.get('entity_name'):
             attrs['entity_name'] = attrs.get('name', 'Organization')
-        if not attrs.get('sub_domain'):
+
+        sub_domain = attrs.get('sub_domain')
+        if sub_domain:
+            sub_domain = str(sub_domain).lower().strip()
+            qs = Organization.objects.filter(sub_domain=sub_domain)
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            if qs.exists():
+                raise serializers.ValidationError({
+                    'sub_domain': f"The subdomain '{sub_domain}' is already taken. Please enter a unique subdomain."
+                })
+            attrs['sub_domain'] = sub_domain
+        else:
             import re, time
             name_val = attrs.get('name', '')
             base_slug = re.sub(r'[^a-z0-9]+', '-', name_val.lower()).strip('-')
@@ -158,9 +170,15 @@ class RoleSerializer(serializers.ModelSerializer):
         model = Role
         fields = [
             'id', 'organization', 'name', 'is_default', 'is_admin_role', 'user_count',
+            'can_view_users', 'can_create_users', 'can_edit_users', 'can_delete_users',
+            'can_view_roles', 'can_create_roles', 'can_edit_roles', 'can_delete_roles',
+            'can_view_courses', 'can_create_courses', 'can_edit_courses', 'can_delete_courses',
+            'can_view_certificates', 'can_create_certificates', 'can_edit_certificates', 'can_delete_certificates',
+            'can_view_reports', 'can_create_reports', 'can_edit_reports', 'can_delete_reports',
+            'can_view_module_access', 'can_create_module_access', 'can_edit_module_access', 'can_delete_module_access',
+            'can_view_activity_log', 'can_create_activity_log', 'can_edit_activity_log', 'can_delete_activity_log',
             'can_manage_users', 'can_manage_departments', 'can_manage_roles',
-            'can_create_courses', 'can_edit_courses', 'can_publish_courses',
-            'can_manage_module_access', 'can_view_reports', 'can_manage_certificates',
+            'can_publish_courses', 'can_manage_module_access', 'can_manage_certificates',
             'created_at',
         ]
         read_only_fields = ['organization', 'is_admin_role']
@@ -170,10 +188,18 @@ class RoleSerializer(serializers.ModelSerializer):
 
 from .models import CertificateTemplate
 class CertificateTemplateSerializer(serializers.ModelSerializer):
+    assigned_courses = serializers.SerializerMethodField()
+
     class Meta:
         model = CertificateTemplate
-        fields = '__all__'
-        read_only_fields = ['organization']
+        fields = ['id', 'organization', 'title', 'body_html', 'created_at', 'assigned_courses']
+        read_only_fields = ['organization', 'assigned_courses']
+
+    def get_assigned_courses(self, obj):
+        return [
+            {'id': c.id, 'title': c.title, 'status': c.status}
+            for c in obj.courses.all()
+        ]
 
 from .models import ActivityLog
 class ActivityLogActorSerializer(serializers.ModelSerializer):

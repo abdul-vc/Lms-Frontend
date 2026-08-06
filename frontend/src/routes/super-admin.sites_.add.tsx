@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { BackButton } from '@/components/BackButton';
 
 export const Route = createFileRoute('/super-admin/sites_/add')({
@@ -13,6 +13,8 @@ function AddSitePage() {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [features, setFeatures] = useState<any[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<Record<number, boolean>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     organization: '',
@@ -30,18 +32,20 @@ function AddSitePage() {
   });
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/')
+    authFetch(`${API_BASE}/organizations/`)
       .then(res => res.json())
-      .then(data => setOrganizations(data))
+      .then(data => setOrganizations(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
 
-    authFetch('http://127.0.0.1:8000/api/features/')
+    authFetch(`${API_BASE}/features/`)
       .then(res => res.json())
       .then(data => {
-        setFeatures(data);
-        const initialSelected: Record<number, boolean> = {};
-        data.forEach((f: any) => initialSelected[f.id] = f.is_active);
-        setSelectedFeatures(initialSelected);
+        if (Array.isArray(data)) {
+          setFeatures(data);
+          const initialSelected: Record<number, boolean> = {};
+          data.forEach((f: any) => initialSelected[f.id] = f.is_active);
+          setSelectedFeatures(initialSelected);
+        }
       })
       .catch(err => console.error(err));
   }, []);
@@ -57,49 +61,76 @@ function AddSitePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setError('');
     try {
-      const siteRes = await authFetch('http://127.0.0.1:8000/api/sites/', {
+      const sanitizeUrl = (input: string) => {
+        let val = input.trim();
+        if (!val) return '';
+        val = val.replace(/^https?:?\/*/, '');
+        return val ? `https://${val}` : '';
+      };
+
+      const formattedUrl = sanitizeUrl(formData.url);
+
+      const siteRes = await authFetch(`${API_BASE}/sites/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organization_id: formData.organization,
-          organization: formData.organization,
-          name: formData.name,
-          url: formData.url,
-          site_code: formData.site_code,
-          product_type: formData.product_type,
-          country: formData.country,
-          location_address: formData.location_address,
+          organization: formData.organization ? parseInt(formData.organization, 10) : null,
+          name: formData.name.trim(),
+          url: formattedUrl || null,
+          site_code: formData.site_code.trim() || null,
+          product_type: formData.product_type || null,
+          country: formData.country || null,
+          location_address: formData.location_address || null,
           activate_date: formData.activate_date || null,
-          status: formData.status,
-          contact_name: formData.contact_name,
-          contact_phone: formData.contact_phone,
-          contact_email: formData.contact_email,
+          status: formData.status || 'Active',
+          contact_name: formData.contact_name || null,
+          contact_phone: formData.contact_phone || null,
+          contact_email: formData.contact_email || null,
         }),
       });
 
-      if (siteRes.ok) {
-        const newSite = await siteRes.json();
-        
-        // Create SiteFeatureAccess records
-        for (const [featureId, enabled] of Object.entries(selectedFeatures)) {
-          if (enabled) {
-            await authFetch('http://127.0.0.1:8000/api/site-feature-access/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                site: newSite.id,
-                feature: parseInt(featureId),
-                enabled: true
-              })
-            });
-          }
+      if (!siteRes.ok) {
+        const errData = await siteRes.json();
+        let errMsg = 'Failed to create site.';
+        if (errData.detail) {
+          errMsg = errData.detail;
+        } else if (typeof errData === 'object') {
+          errMsg = Object.entries(errData)
+            .map(([field, msgs]) => {
+              const label = field.replace(/_/g, ' ');
+              const msgList = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${label}: ${msgList}`;
+            })
+            .join(' | ');
         }
-        
-        navigate({ to: '/super-admin/sites' });
+        throw new Error(errMsg);
       }
-    } catch (err) {
-      console.error(err);
+
+      const newSite = await siteRes.json();
+      
+      // Create SiteFeatureAccess records
+      for (const [featureId, enabled] of Object.entries(selectedFeatures)) {
+        if (enabled) {
+          await authFetch(`${API_BASE}/site-feature-access/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              site: newSite.id,
+              feature: parseInt(featureId, 10),
+              enabled: true
+            })
+          }).catch(err => console.warn('Failed to set feature access:', err));
+        }
+      }
+      
+      navigate({ to: '/super-admin/sites' });
+    } catch (err: any) {
+      setError(err.message || 'Error creating site.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -112,6 +143,12 @@ function AddSitePage() {
           <p className="text-sm text-muted-foreground mt-1">Create a new operational site and configure module access.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         

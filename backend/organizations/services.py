@@ -8,6 +8,14 @@ from master_setup.models import Workspace
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+def seed_org_feature_access(org):
+    """Seed OrganizationFeatureAccess for all features with enabled=True (default-allow)."""
+    from master_setup.models import Feature, OrganizationFeatureAccess
+    for feature in Feature.objects.all():
+        OrganizationFeatureAccess.objects.get_or_create(
+            organization=org, feature=feature, defaults={'enabled': True}
+        )
+
 def provision_org_admin_user(org, admin_email, raw_password=None, contact_name=None, request=None):
     """
     Safely provisions an Organization Admin user for the given tenant and sends welcome email.
@@ -49,19 +57,38 @@ def provision_org_admin_user(org, admin_email, raw_password=None, contact_name=N
                 name='Organization Admin',
                 is_default=True,
                 is_admin_role=True,
-                can_manage_users=True,
-                can_manage_departments=True,
-                can_manage_roles=True,
+                can_view_users=True,
+                can_create_users=True,
+                can_edit_users=True,
+                can_delete_users=True,
+                can_view_roles=True,
+                can_create_roles=True,
+                can_edit_roles=True,
+                can_delete_roles=True,
+                can_view_courses=True,
                 can_create_courses=True,
                 can_edit_courses=True,
-                can_publish_courses=True,
-                can_manage_module_access=True,
+                can_delete_courses=True,
+                can_view_certificates=True,
+                can_create_certificates=True,
+                can_edit_certificates=True,
+                can_delete_certificates=True,
                 can_view_reports=True,
-                can_manage_certificates=True
+                can_create_reports=True,
+                can_edit_reports=True,
+                can_delete_reports=True,
+                can_view_module_access=True,
+                can_create_module_access=True,
+                can_edit_module_access=True,
+                can_delete_module_access=True,
+                can_view_activity_log=True,
+                can_create_activity_log=True,
+                can_edit_activity_log=True,
+                can_delete_activity_log=True,
             )
         
-        # Assign workspaces to role
-        admin_role.workspaces.add(*Workspace.objects.all())
+        # Assign all workspaces to role (set is idempotent, ensures completeness)
+        admin_role.workspaces.set(Workspace.objects.all())
 
     # 3. Create or update user cleanly
     if existing_user and org_id_val and existing_user.organization_id == org_id_val:

@@ -1,12 +1,14 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
+import { fetchCourses, createCourse } from '@/lib/courses-api';
 import {
   BookOpen, Plus, Pencil, Loader2, Settings, ShieldCheck,
   CheckCircle2, AlertCircle, Sparkles, Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/org-admin/courses')({
   component: OrgAdminCoursesPage,
@@ -21,9 +23,14 @@ interface Course {
 }
 
 function OrgAdminCoursesPage() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { user } = useAuth();
+
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [videoControls, setVideoControls] = useState({
@@ -38,24 +45,43 @@ function OrgAdminCoursesPage() {
   });
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  useEffect(() => { fetchCourses(); }, []);
+  useEffect(() => { loadCourses(); }, []);
 
-  const fetchCourses = async () => {
+  const loadCourses = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/courses/');
-      if (res.ok) { setCourses(await res.json()); }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      const data = await fetchCourses();
+      setCourses(data);
+    } catch (e) {
+      console.error("Failed to fetch courses:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateDraft = async () => {
+    setIsCreating(true);
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/courses/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: "Untitled Course", status: "draft" })
+      const newCourse = await createCourse({
+        title: "Untitled Course",
+        subtitle: "",
+        category: "General",
+        level: "Foundational",
+        status: "draft",
+        hero_url: "",
+        accent: "",
+        duration_hrs: 1,
+        passing_score: 80
       });
-      if (res.ok) { await fetchCourses(); }
-    } catch (e) { console.error("Failed to create course", e); }
+      if (newCourse && newCourse.id) {
+        navigate({ to: "/authoring", search: { courseId: newCourse.id } });
+      } else {
+        await loadCourses();
+      }
+    } catch (e) {
+      console.error("Failed to create course", e);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleSaveVideoControls = (e: React.FormEvent) => {
@@ -92,8 +118,8 @@ function OrgAdminCoursesPage() {
             <span className="hidden sm:inline">Video Controls</span>
           </button>
           {canCreate && (
-            <button onClick={handleCreateDraft} className="btn-primary gap-2">
-              <Plus className="size-4" />
+            <button onClick={handleCreateDraft} disabled={isCreating} className="btn-primary gap-2">
+              {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
               New Course
             </button>
           )}
@@ -112,8 +138,8 @@ function OrgAdminCoursesPage() {
               Create your first course to begin building your organization's learning catalog.
             </p>
             {canCreate && (
-              <button onClick={handleCreateDraft} className="btn-primary mt-5">
-                <Plus className="size-4" /> Create First Course
+              <button onClick={handleCreateDraft} disabled={isCreating} className="btn-primary mt-5 gap-2">
+                {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Create First Course
               </button>
             )}
           </div>
@@ -132,7 +158,7 @@ function OrgAdminCoursesPage() {
                 </tr>
               </thead>
               <tbody className="data-table-tbody">
-                {courses.map((c) => (
+                {courses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
                   <tr key={c.id} className="data-table-row">
                     <td className="data-table-td">
                       <div className="flex items-center gap-3">
@@ -152,33 +178,43 @@ function OrgAdminCoursesPage() {
                       <span className="text-muted-foreground text-xs">{c.duration_hrs}h</span>
                     </td>
                     <td className="data-table-td text-right">
-                      {canEdit ? (
-                        <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1">
+                        {canEdit && (
                           <Link
-                            to="/org-admin/courses/$courseId/builder"
-                            params={{ courseId: String(c.id) }}
+                            to="/authoring"
+                            search={{ courseId: c.id }}
                             className="btn-icon"
-                            title="Edit Course"
+                            title="Edit Course in Content Authoring"
                           >
                             <Pencil className="size-3.5" />
                           </Link>
-                          <Link
-                            to="/org-admin/courses/$courseId/preview"
-                            params={{ courseId: String(c.id) }}
-                            className="btn-icon"
-                            title="Preview Course"
-                          >
-                            <Eye className="size-3.5" />
-                          </Link>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">View Only</span>
-                      )}
+                        )}
+                        <Link
+                          to="/authoring"
+                          search={{ courseId: c.id, preview: true }}
+                          className="btn-icon"
+                          title="Preview Course in Content Authoring"
+                        >
+                          <Eye className="size-3.5" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {courses.length > 0 && (
+              <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalItems={courses.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

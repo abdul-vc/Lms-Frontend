@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
-import { Users, Building2, Plus, Pencil, Trash2, Loader2, AlertCircle, Search, Mail, Lock, User as UserIcon, Shield, Briefcase } from 'lucide-react';
+import { authFetch, useAuth, API_BASE } from '@/lib/auth';
+import { Users, Building2, Plus, Pencil, Trash2, Loader2, AlertCircle, Search, Mail, Lock, User as UserIcon, Shield, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/org-admin/departments')({
   component: UsersAndDepartmentsPage,
@@ -35,6 +36,11 @@ interface UserItem {
 }
 
 function UsersAndDepartmentsPage() {
+  const { user } = useAuth();
+  const isSuperOrAdmin = Boolean(user?.is_platform_super_admin || user?.role?.is_admin_role);
+  const canCreate = isSuperOrAdmin || Boolean(user?.role?.can_create_users || user?.role?.can_manage_users);
+  const canEdit = isSuperOrAdmin || Boolean(user?.role?.can_edit_users || user?.role?.can_manage_users);
+  const canDelete = isSuperOrAdmin || Boolean(user?.role?.can_delete_users || user?.role?.can_manage_users);
   const [activeTab, setActiveTab] = useState<'users' | 'departments'>('users');
   
   // Data state
@@ -48,6 +54,12 @@ function UsersAndDepartmentsPage() {
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('');
 
+  // Pagination state
+  const [userPage, setUserPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState(10);
+  const [deptPage, setDeptPage] = useState(1);
+  const [deptPageSize, setDeptPageSize] = useState(10);
+
   // Department Modal State
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
@@ -58,6 +70,7 @@ function UsersAndDepartmentsPage() {
   // User Modal State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [userFormData, setUserFormData] = useState({
     email: '',
     username: '',
@@ -80,9 +93,9 @@ function UsersAndDepartmentsPage() {
     setLoading(true);
     try {
       const [userRes, deptRes, roleRes] = await Promise.all([
-        authFetch('http://127.0.0.1:8000/api/users/'),
-        authFetch('http://127.0.0.1:8000/api/departments/'),
-        authFetch('http://127.0.0.1:8000/api/roles/')
+        authFetch(`${API_BASE}/users/`),
+        authFetch(`${API_BASE}/departments/`),
+        authFetch(`${API_BASE}/roles/`)
       ]);
 
       if (userRes.ok) setUsers(await userRes.json());
@@ -125,8 +138,8 @@ function UsersAndDepartmentsPage() {
 
     try {
       const url = editingDept 
-        ? `http://127.0.0.1:8000/api/departments/${editingDept.id}/` 
-        : 'http://127.0.0.1:8000/api/departments/';
+        ? `${API_BASE}/departments/${editingDept.id}/` 
+        : `${API_BASE}/departments/`;
       
       const res = await authFetch(url, {
         method: editingDept ? 'PATCH' : 'POST',
@@ -152,7 +165,7 @@ function UsersAndDepartmentsPage() {
     if (!window.confirm(`Are you sure you want to delete department "${d.name}"?`)) return;
     
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/departments/${d.id}/`, {
+      const res = await authFetch(`${API_BASE}/departments/${d.id}/`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -168,6 +181,7 @@ function UsersAndDepartmentsPage() {
   // --- USER CRUD ---
   const openAddUser = () => {
     setEditingUser(null);
+    setShowPassword(false);
     setUserFormData({
       email: '',
       username: '',
@@ -185,6 +199,7 @@ function UsersAndDepartmentsPage() {
 
   const openEditUser = (u: UserItem) => {
     setEditingUser(u);
+    setShowPassword(false);
     setUserFormData({
       email: u.email || '',
       username: u.username || '',
@@ -222,8 +237,8 @@ function UsersAndDepartmentsPage() {
 
     try {
       const url = editingUser 
-        ? `http://127.0.0.1:8000/api/users/${editingUser.id}/` 
-        : 'http://127.0.0.1:8000/api/users/';
+        ? `${API_BASE}/users/${editingUser.id}/` 
+        : `${API_BASE}/users/`;
       
       const res = await authFetch(url, {
         method: editingUser ? 'PATCH' : 'POST',
@@ -253,7 +268,7 @@ function UsersAndDepartmentsPage() {
     if (!window.confirm(`Are you sure you want to delete user "${u.full_name || u.username}"?`)) return;
     
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/users/${u.id}/`, {
+      const res = await authFetch(`${API_BASE}/users/${u.id}/`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -284,6 +299,9 @@ function UsersAndDepartmentsPage() {
 
     return queryMatch && deptMatch && roleMatch;
   });
+
+  const paginatedUsers = filteredUsers.slice((userPage - 1) * userPageSize, userPage * userPageSize);
+  const paginatedDepts = departments.slice((deptPage - 1) * deptPageSize, deptPage * deptPageSize);
 
   if (loading) {
     return (
@@ -340,16 +358,22 @@ function UsersAndDepartmentsPage() {
                   type="text"
                   placeholder="Search users by name, email..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setUserPage(1);
+                  }}
+                  className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
                 />
               </div>
 
               {/* Department Filter */}
               <select
                 value={selectedDeptFilter}
-                onChange={(e) => setSelectedDeptFilter(e.target.value)}
-                className="w-full sm:w-48 px-3 py-2 text-sm text-foreground font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-card"
+                onChange={(e) => {
+                  setSelectedDeptFilter(e.target.value);
+                  setUserPage(1);
+                }}
+                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
               >
                 <option value="">All Departments</option>
                 {departments.map((d) => (
@@ -360,8 +384,11 @@ function UsersAndDepartmentsPage() {
               {/* Role Filter */}
               <select
                 value={selectedRoleFilter}
-                onChange={(e) => setSelectedRoleFilter(e.target.value)}
-                className="w-full sm:w-48 px-3 py-2 text-sm text-foreground font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-card"
+                onChange={(e) => {
+                  setSelectedRoleFilter(e.target.value);
+                  setUserPage(1);
+                }}
+                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
               >
                 <option value="">All Roles</option>
                 {roles.map((r) => (
@@ -370,12 +397,14 @@ function UsersAndDepartmentsPage() {
               </select>
             </div>
 
-            <button
-              onClick={openAddUser}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shrink-0"
-            >
-              <Plus className="size-4" /> Add User
-            </button>
+            {canCreate && (
+              <button
+                onClick={openAddUser}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shrink-0"
+              >
+                <Plus className="size-4" /> Add User
+              </button>
+            )}
           </div>
 
           {/* User Table */}
@@ -399,7 +428,7 @@ function UsersAndDepartmentsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
+                  paginatedUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-muted/50/50">
                       <td className="px-6 py-4 font-medium">
                         <div className="flex items-center gap-3">
@@ -442,18 +471,34 @@ function UsersAndDepartmentsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => openEditUser(u)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
-                          <Pencil className="size-4" />
-                        </button>
-                        <button onClick={() => handleUserDelete(u)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 ml-1">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {canEdit && (
+                          <button onClick={() => openEditUser(u)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50" title="Edit User">
+                            <Pencil className="size-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => handleUserDelete(u)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 ml-1" title="Delete User">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+
+            {filteredUsers.length > 0 && (
+              <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={userPage}
+                  pageSize={userPageSize}
+                  totalItems={filteredUsers.length}
+                  onPageChange={setUserPage}
+                  onPageSizeChange={setUserPageSize}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -466,12 +511,14 @@ function UsersAndDepartmentsPage() {
               <h2 className="font-semibold text-foreground">Department Hierarchy</h2>
               <p className="text-xs text-muted-foreground">Organize your company structures and teams.</p>
             </div>
-            <button
-              onClick={openAddDept}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
-            >
-              <Plus className="size-4" /> Add Department
-            </button>
+            {canCreate && (
+              <button
+                onClick={openAddDept}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="size-4" /> Add Department
+              </button>
+            )}
           </div>
 
           <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
@@ -492,7 +539,7 @@ function UsersAndDepartmentsPage() {
                     </td>
                   </tr>
                 ) : (
-                  departments.map((d) => (
+                  paginatedDepts.map((d) => (
                     <tr key={d.id} className="hover:bg-muted/50/50">
                       <td className="px-6 py-4 font-bold text-foreground capitalize text-base">{d.name}</td>
                       <td className="px-6 py-4 text-muted-foreground font-medium">
@@ -504,18 +551,34 @@ function UsersAndDepartmentsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => openEditDept(d)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
-                          <Pencil className="size-4" />
-                        </button>
-                        <button onClick={() => handleDeptDelete(d)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 ml-1">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {canEdit && (
+                          <button onClick={() => openEditDept(d)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50" title="Edit Department">
+                            <Pencil className="size-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => handleDeptDelete(d)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 ml-1" title="Delete Department">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+
+            {departments.length > 0 && (
+              <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={deptPage}
+                  pageSize={deptPageSize}
+                  totalItems={departments.length}
+                  onPageChange={setDeptPage}
+                  onPageSizeChange={setDeptPageSize}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -528,7 +591,11 @@ function UsersAndDepartmentsPage() {
               <h2 className="font-semibold text-lg">{editingUser ? 'Edit User' : 'Add New User'}</h2>
             </div>
             
-            <form onSubmit={handleUserSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleUserSubmit} className="p-6 space-y-4" autoComplete="off">
+              {/* Hidden decoy fields to block aggressive browser autofill */}
+              <input type="text" name="fake_username_autofill" id="fake_username_autofill" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+              <input type="password" name="fake_password_autofill" id="fake_password_autofill" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+
               {userError && (
                 <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex gap-2 items-start">
                   <AlertCircle className="size-4 mt-0.5 shrink-0" />
@@ -541,6 +608,7 @@ function UsersAndDepartmentsPage() {
                   <label className="block text-xs font-medium text-muted-foreground mb-1">First Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     value={userFormData.first_name}
                     onChange={(e) => setUserFormData({ ...userFormData, first_name: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -550,6 +618,7 @@ function UsersAndDepartmentsPage() {
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Last Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     value={userFormData.last_name}
                     onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -563,8 +632,9 @@ function UsersAndDepartmentsPage() {
                   <input
                     required
                     type="email"
+                    autoComplete="off"
                     value={userFormData.email}
-                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value, username: userFormData.username || e.target.value })}
+                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>
@@ -573,6 +643,7 @@ function UsersAndDepartmentsPage() {
                   <input
                     required
                     type="text"
+                    autoComplete="off"
                     value={userFormData.username}
                     onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -584,14 +655,25 @@ function UsersAndDepartmentsPage() {
                 <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Password {editingUser ? '(Leave blank to keep unchanged)' : '*'}
                 </label>
-                <input
-                  required={!editingUser}
-                  type="password"
-                  value={userFormData.password}
-                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                  placeholder={editingUser ? '••••••••' : 'Password'}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
+                <div className="relative">
+                  <input
+                    required={!editingUser}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={userFormData.password}
+                    onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                    placeholder={editingUser ? '••••••••' : 'Password'}
+                    className="w-full px-3 py-2 pr-10 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-background text-foreground"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

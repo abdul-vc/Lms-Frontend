@@ -93,6 +93,8 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
       const user = await login(username.trim(), password);
       if (user.is_platform_super_admin) {
         navigate({ to: "/super-admin/dashboard" });
+      } else if (user.role?.is_admin_role) {
+        navigate({ to: "/org-admin" });
       } else {
         navigate({ to: "/dashboard" });
       }

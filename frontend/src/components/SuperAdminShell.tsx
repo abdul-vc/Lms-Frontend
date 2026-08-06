@@ -1,7 +1,7 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, Globe2, CreditCard, Settings,
-  BookOpen, LogOut, Search, Users, Activity, Menu, X,
+  BookOpen, Search, Activity, Menu, X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
@@ -9,6 +9,8 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserProfileDropdown } from "./UserProfileDropdown";
+import { Header } from "./AppShell";
 
 interface NavItem {
   to: string;
@@ -40,15 +42,8 @@ const NAV_GROUPS: { key: NavItem["group"]; label: string }[] = [
 
 export function SuperAdminShell({ children, maxWidth = "max-w-7xl" }: { children: ReactNode; maxWidth?: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  const displayName = user?.full_name || user?.username || "Super Admin";
-  const initials = user?.avatar_initials || "SA";
-  const email = user?.email || "";
-
-  const handleLogout = () => { logout(); navigate({ to: "/login" }); };
 
   useEffect(() => { setMobileSidebarOpen(false); }, [pathname]);
 
@@ -104,23 +99,6 @@ export function SuperAdminShell({ children, maxWidth = "max-w-7xl" }: { children
           );
         })}
       </div>
-
-      {/* User footer */}
-      <div className="px-3 py-3 border-t border-border/60 shrink-0">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors text-left"
-        >
-          <div className="size-8 rounded-full bg-accent border border-accent-foreground/20 flex items-center justify-center text-accent-foreground text-xs font-semibold shrink-0">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-foreground truncate">{displayName}</p>
-            <p className="text-[10px] text-muted-foreground truncate">{email}</p>
-          </div>
-          <LogOut className="size-3.5 text-muted-foreground shrink-0" />
-        </button>
-      </div>
     </>
   );
 
@@ -148,20 +126,7 @@ export function SuperAdminShell({ children, maxWidth = "max-w-7xl" }: { children
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0 bg-background">
         {/* Top Header */}
-        <header className="shell-header">
-          <button className="btn-icon mr-2 lg:hidden" onClick={() => setMobileSidebarOpen(true)} aria-label="Open navigation">
-            <Menu className="size-5" />
-          </button>
-          <div className="shell-search hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-            <input type="text" placeholder="Search anything…" className="pl-9" />
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <NotificationDropdown />
-          </div>
-        </header>
+        <Header activeWorkspaceKey="super_admin" />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto min-w-0">

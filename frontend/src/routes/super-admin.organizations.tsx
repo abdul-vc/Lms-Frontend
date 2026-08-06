@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Search, Plus, MoreVertical, Filter, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { DataTableRow } from '@/components/DataTableRow';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/super-admin/organizations')({
   component: OrganizationsPage,
@@ -15,11 +16,14 @@ function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     Promise.all([
-      authFetch('http://127.0.0.1:8000/api/organizations/').then(r => r.json()),
-      authFetch('http://127.0.0.1:8000/api/plans/').then(r => r.json())
+      authFetch(`${API_BASE}/organizations/`).then(r => r.json()),
+      authFetch(`${API_BASE}/plans/`).then(r => r.json())
     ])
     .then(([orgData, plansData]) => {
       setOrganizations(Array.isArray(orgData) ? orgData : []);
@@ -32,6 +36,18 @@ function OrganizationsPage() {
       setLoading(false);
     });
   }, []);
+
+  const filteredOrganizations = organizations.filter((org) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (org.name && org.name.toLowerCase().includes(q)) ||
+      (org.company_name && org.company_name.toLowerCase().includes(q)) ||
+      (org.entity_name && org.entity_name.toLowerCase().includes(q))
+    );
+  });
+
+  const paginatedOrgs = filteredOrganizations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -62,13 +78,14 @@ function OrganizationsPage() {
             <input 
               type="text" 
               placeholder="Search organizations..." 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-colors font-semibold text-xs">
-            <Filter className="size-4 text-muted-foreground" />
-            Filters
-          </button>
         </div>
         
         <div className="overflow-x-auto">
@@ -89,11 +106,11 @@ function OrganizationsPage() {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">Loading organizations...</td>
                 </tr>
-              ) : organizations.length === 0 ? (
+              ) : filteredOrganizations.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">No organizations found. Click "Add Organization" to create one.</td>
                 </tr>
-              ) : organizations.map((org) => (
+              ) : paginatedOrgs.map((org) => (
                 <DataTableRow
                   key={org.id}
                   summary={
@@ -152,7 +169,7 @@ function OrganizationsPage() {
                   onDelete={async () => {
                     if (confirm(`WARNING: Deleting "${org.name}" will CASCADE and delete all of its sites, users, courses, and data.\n\nAre you absolutely sure you want to proceed? This cannot be undone.`)) {
                       try {
-                        const res = await authFetch(`http://127.0.0.1:8000/api/organizations/${org.id}/`, { method: 'DELETE' });
+                        const res = await authFetch(`${API_BASE}/organizations/${org.id}/`, { method: 'DELETE' });
                         if (res.ok) {
                           setOrganizations(organizations.filter(o => o.id !== org.id));
                         } else {
@@ -169,7 +186,20 @@ function OrganizationsPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredOrganizations.length > 0 && (
+          <div className="px-4 py-2 border-t border-border">
+            <PaginationControls
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredOrganizations.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

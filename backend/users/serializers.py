@@ -9,15 +9,48 @@ class RoleSerializer(serializers.Serializer):
     name = serializers.CharField()
     is_default = serializers.BooleanField()
     is_admin_role = serializers.BooleanField()
-    can_manage_users = serializers.BooleanField()
-    can_manage_departments = serializers.BooleanField()
-    can_manage_roles = serializers.BooleanField()
-    can_create_courses = serializers.BooleanField()
-    can_edit_courses = serializers.BooleanField()
-    can_publish_courses = serializers.BooleanField()
-    can_manage_module_access = serializers.BooleanField()
-    can_view_reports = serializers.BooleanField()
-    can_manage_certificates = serializers.BooleanField()
+
+    can_view_users = serializers.BooleanField(required=False, default=False)
+    can_create_users = serializers.BooleanField(required=False, default=False)
+    can_edit_users = serializers.BooleanField(required=False, default=False)
+    can_delete_users = serializers.BooleanField(required=False, default=False)
+
+    can_view_roles = serializers.BooleanField(required=False, default=False)
+    can_create_roles = serializers.BooleanField(required=False, default=False)
+    can_edit_roles = serializers.BooleanField(required=False, default=False)
+    can_delete_roles = serializers.BooleanField(required=False, default=False)
+
+    can_view_courses = serializers.BooleanField(required=False, default=False)
+    can_create_courses = serializers.BooleanField(required=False, default=False)
+    can_edit_courses = serializers.BooleanField(required=False, default=False)
+    can_delete_courses = serializers.BooleanField(required=False, default=False)
+
+    can_view_certificates = serializers.BooleanField(required=False, default=False)
+    can_create_certificates = serializers.BooleanField(required=False, default=False)
+    can_edit_certificates = serializers.BooleanField(required=False, default=False)
+    can_delete_certificates = serializers.BooleanField(required=False, default=False)
+
+    can_view_reports = serializers.BooleanField(required=False, default=False)
+    can_create_reports = serializers.BooleanField(required=False, default=False)
+    can_edit_reports = serializers.BooleanField(required=False, default=False)
+    can_delete_reports = serializers.BooleanField(required=False, default=False)
+
+    can_view_module_access = serializers.BooleanField(required=False, default=False)
+    can_create_module_access = serializers.BooleanField(required=False, default=False)
+    can_edit_module_access = serializers.BooleanField(required=False, default=False)
+    can_delete_module_access = serializers.BooleanField(required=False, default=False)
+
+    can_view_activity_log = serializers.BooleanField(required=False, default=False)
+    can_create_activity_log = serializers.BooleanField(required=False, default=False)
+    can_edit_activity_log = serializers.BooleanField(required=False, default=False)
+    can_delete_activity_log = serializers.BooleanField(required=False, default=False)
+
+    can_manage_users = serializers.BooleanField(required=False, default=False)
+    can_manage_departments = serializers.BooleanField(required=False, default=False)
+    can_manage_roles = serializers.BooleanField(required=False, default=False)
+    can_publish_courses = serializers.BooleanField(required=False, default=False)
+    can_manage_module_access = serializers.BooleanField(required=False, default=False)
+    can_manage_certificates = serializers.BooleanField(required=False, default=False)
 
 
 class DepartmentSerializer(serializers.Serializer):

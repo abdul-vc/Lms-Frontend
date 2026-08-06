@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { authFetch, API_BASE } from '@/lib/auth';
 import { DataTableRow } from '@/components/DataTableRow';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/super-admin/billing')({
   component: BillingPage,
@@ -14,6 +15,9 @@ function BillingPage() {
   const [billingConfigs, setBillingRecords] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     Promise.all([
@@ -37,7 +41,7 @@ function BillingPage() {
   const handleBuyPlan = async (planId: number, planName: string) => {
     setPurchasingPlanId(planId);
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/buy-plan/', {
+      const res = await authFetch(`${API_BASE}/buy-plan/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: planId, billing_cycle: 'monthly' }),
@@ -55,6 +59,18 @@ function BillingPage() {
       setPurchasingPlanId(null);
     }
   };
+
+  const filteredBilling = billingConfigs.filter((bill) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      String(bill.organization).includes(q) ||
+      (bill.billing_cycle && bill.billing_cycle.toLowerCase().includes(q)) ||
+      (bill.status && bill.status.toLowerCase().includes(q))
+    );
+  });
+
+  const paginatedBilling = filteredBilling.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -131,13 +147,14 @@ function BillingPage() {
             <input 
               type="text" 
               placeholder="Search billing records..." 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-colors font-semibold text-xs">
-            <Filter className="size-4 text-muted-foreground" />
-            Filters
-          </button>
         </div>
         
         <div className="overflow-x-auto">
@@ -156,11 +173,11 @@ function BillingPage() {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">Loading billing config...</td>
                 </tr>
-              ) : billingConfigs.length === 0 ? (
+              ) : filteredBilling.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">No billing records found.</td>
                 </tr>
-              ) : billingConfigs.map((bill) => (
+              ) : paginatedBilling.map((bill) => (
                 <DataTableRow
                   key={bill.id}
                   summary={
@@ -209,7 +226,7 @@ function BillingPage() {
                   onDelete={async () => {
                     if (confirm(`Are you sure you want to delete this billing configuration?`)) {
                       try {
-                        const res = await authFetch(`http://127.0.0.1:8000/api/billing/${bill.id}/`, { method: 'DELETE' });
+                        const res = await authFetch(`${API_BASE}/billing/${bill.id}/`, { method: 'DELETE' });
                         if (res.ok) {
                           setBillingRecords(billingConfigs.filter(b => b.id !== bill.id));
                         } else {
@@ -226,7 +243,20 @@ function BillingPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredBilling.length > 0 && (
+          <div className="px-4 py-2 border-t border-border">
+            <PaginationControls
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredBilling.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

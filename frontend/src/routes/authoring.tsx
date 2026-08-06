@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Plus, ChevronRight, ChevronDown, BookOpen, Layers, Video,
+  Plus, Minus, ChevronRight, ChevronDown, BookOpen, Layers, Video,
   Puzzle, FileText, CheckSquare, GitBranch, Trash2, Save,
   Lock, Unlock, Globe, FileEdit, X, Check, Loader2,
   RefreshCw, GripVertical, Eye, EyeOff, ImagePlus, Upload, Link2, Download,
@@ -14,7 +14,7 @@ import {
   createModule, updateModule, deleteModule,
   createLesson, updateLesson, deleteLesson,
   downloadAssessmentCsvTemplate, uploadAssessmentCsv, uploadLessonVideo,
-  uploadScormPackage, exportScormPackage, fetchCourseVersions,
+  exportScormPackage, fetchCourseVersions,
   rollbackCourseVersion, uploadUniversalImport,
   fetchAssessmentQuestions, type ApiAssessmentQuestion
 } from "@/lib/courses-api";
@@ -24,9 +24,10 @@ import { PolymorphicLessonRenderer } from "@/components/PolymorphicLessonRendere
 import { BlockEditorCanvas } from "@/components/BlockEditorCanvas";
 
 export const Route = createFileRoute("/authoring")({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { courseId?: number; preview?: boolean } => {
     return {
       courseId: search.courseId ? Number(search.courseId) : undefined,
+      preview: search.preview ? Boolean(search.preview) : undefined,
     };
   },
   head: () => ({ meta: [{ title: "Content Authoring — Halyard Learn" }] }),
@@ -78,7 +79,7 @@ const defaultModuleForm: ModuleForm = {
 };
 const defaultLessonForm: LessonForm = {
   title: "", duration: "5 min", type: "video", order: 0,
-  video_url: null, interaction: null,
+  video_id: null, video_url: null, interaction: null,
 };
 
 // ─── Toast helper ──────────────────────────────────────────────────────────
@@ -151,9 +152,8 @@ function Authoring() {
   const [moduleForm, setModuleForm] = useState<ModuleForm>(defaultModuleForm);
   const [lessonForm, setLessonForm] = useState<LessonForm>(defaultLessonForm);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
-  const [isUploadingScorm, setIsUploadingScorm] = useState(false);
-  const [showAuthoringScormPlayer, setShowAuthoringScormPlayer] = useState(false);
   const [importedQuestions, setImportedQuestions] = useState<ApiAssessmentQuestion[]>([]);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Enterprise Authoring Pipeline state
   const [publishErrors, setPublishErrors] = useState<string[] | null>(null);
@@ -261,9 +261,25 @@ function Authoring() {
     }
   }, [show]);
 
+  const search = Route.useSearch();
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (search.courseId && courses.length > 0) {
+      const cid = Number(search.courseId);
+      const match = courses.find((x) => x.id === cid);
+      if (match) {
+        setExpandedCourses((s) => new Set([...s, cid]));
+        setSelection({ kind: "course", courseId: cid });
+        if (search.preview) {
+          setIsPreviewMode(true);
+        }
+      }
+    }
+  }, [search.courseId, search.preview, courses]);
 
   useEffect(() => {
     if (selection?.kind === "course") {
@@ -278,7 +294,7 @@ function Authoring() {
     role.can_create_courses || 
     role.can_edit_courses || 
     role.can_publish_courses ||
-    user?.is_authenticated
+    Boolean(user)
   ));
 
   // ── Populate form when selection changes ──────────────────────────────────
@@ -304,7 +320,7 @@ function Authoring() {
       const c = courses.find((x) => x.id === selection.courseId);
       const m = c?.modules.find((x) => x.id === selection.moduleId);
       const l = m?.lessons.find((x) => x.id === selection.lessonId);
-      if (l) setLessonForm({ title: l.title ?? "", duration: l.duration ?? "5 min", type: l.type ?? "video", order: l.order ?? 0, video_id: l.video_id ?? null, video_url: l.video_url ?? "", interaction: l.interaction ?? "" });
+      if (l) setLessonForm({ title: l.title ?? "", duration: l.duration ?? "5 min", type: l.type ?? "video", order: l.order ?? 0, video_id: (l as any).video_id ?? null, video_url: l.video_url ?? "", interaction: l.interaction ?? "" });
     }
   }, [selection, courses]);
 
@@ -429,6 +445,18 @@ function Authoring() {
             <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           <button
+            onClick={() => setIsPreviewMode((p) => !p)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
+              isPreviewMode
+                ? "bg-brand text-brand-foreground border-brand shadow-sm"
+                : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            title={isPreviewMode ? "Switch to Edit Mode" : "Switch to Preview Mode"}
+          >
+            <Eye className="size-3.5" />
+            <span>{isPreviewMode ? "Editing Mode" : "Preview"}</span>
+          </button>
+          <button
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors"
           >
@@ -451,10 +479,10 @@ function Authoring() {
         </div>
       )}
 
-      {/* ── 3-panel layout ──────────────────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-[280px_1fr_360px] gap-4" style={{ minHeight: "calc(100vh - 160px)" }}>
+      {/* ── 2-panel layout: Course Library (fixed 280px) + Expanded Edit/Preview Workspace (1fr) ── */}
+      <div className="grid lg:grid-cols-[280px_1fr] gap-4" style={{ minHeight: "calc(100vh - 160px)" }}>
 
-        {/* ── LEFT: Course Tree ──────────────────────────────────────────── */}
+        {/* ── LEFT: Course Library ────────────────────────────────────────── */}
         <aside className="rounded-2xl ring-1 ring-border bg-card overflow-y-auto flex flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
@@ -588,615 +616,593 @@ function Authoring() {
           )}
         </aside>
 
-        {/* ── CENTER: Editor ─────────────────────────────────────────────── */}
-        <div className="rounded-2xl ring-1 ring-border bg-card overflow-y-auto flex flex-col">
-          {!selection ? (
-            <div className="flex-1 grid place-items-center text-center p-12">
-              <div className="size-16 rounded-2xl bg-brand/10 grid place-items-center mb-4">
-                <Eye className="size-7 text-brand" />
+        {/* ── RIGHT: Expanded Workspace (Edit Mode OR Preview Mode) ──────────────── */}
+        {isPreviewMode ? (
+          /* ── Full-Width Preview Mode ── */
+          <div className="rounded-2xl ring-1 ring-border bg-card overflow-y-auto flex flex-col">
+            <div className="p-5 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-brand/10 grid place-items-center text-brand">
+                  <Eye className="size-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-foreground">Course Preview Workspace</h2>
+                    {selectedCourse && <StatusBadge status={selectedCourse.status} />}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Full-width preview of course layout, modules, and interactive lesson player</p>
+                </div>
               </div>
-              <h2 className="text-lg font-medium tracking-tight mb-2">Nothing selected</h2>
-              <p className="text-sm text-muted-foreground max-w-[36ch]">
-                Select a course, module or lesson from the library to edit it, or click <strong>New Course</strong> to create one.
-              </p>
+              <button
+                onClick={() => setIsPreviewMode(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors"
+              >
+                <FileEdit className="size-3.5 text-brand" />
+                <span>Back to Edit Mode</span>
+              </button>
             </div>
-          ) : (
-            <div className="flex flex-col h-full">
-              {/* Editor header */}
-              <div className="p-5 border-b border-border flex items-center gap-3">
-                <div className="flex-1">
-                  <p className="text-[10px] uppercase tracking-widest text-brand font-semibold mb-0.5">
-                    {selection.kind === "new-course" ? "New Course" :
-                     selection.kind === "course" ? "Edit Course" :
-                     selection.kind === "new-module" ? "New Module" :
-                     selection.kind === "module" ? "Edit Module" :
-                     selection.kind === "new-lesson" ? "New Lesson" : "Edit Lesson"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selection.kind === "course" || selection.kind === "new-course" ? "Course details, metadata and settings" :
-                     selection.kind === "module" || selection.kind === "new-module" ? "Module title and configuration" :
-                     "Lesson content, type and video assignment"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!isNewMode && (
-                    <button onClick={() => setSelection(null)} className="p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors" title="Close">
-                      <X className="size-4" />
-                    </button>
+
+            {selectedCourse ? (
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+                {/* Course Banner */}
+                <div className="rounded-2xl overflow-hidden ring-1 ring-border bg-background shadow-sm">
+                  {selectedCourse.hero_url ? (
+                    <img src={selectedCourse.hero_url} alt="" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : (
+                    <div className="w-full h-36 bg-gradient-to-r from-brand/20 via-brand/10 to-brand/5 grid place-items-center">
+                      <BookOpen className="size-12 text-brand/40" />
+                    </div>
                   )}
-                  <button
-                    onClick={save}
-                    disabled={!canSave || saving}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                    {isNewMode ? "Create" : "Save Changes"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Editor body */}
-              <div className="flex-1 overflow-y-auto p-6">
-
-                {/* ── COURSE FORM ── */}
-                {(selection.kind === "course" || selection.kind === "new-course") && (
-                  <div className="space-y-5">
-                    <Field label="Course Title *">
-                      <input
-                        className={inputCls}
-                        placeholder="e.g. Introduction to Company Policies"
-                        value={courseForm.title}
-                        onChange={(e) => setCourseForm((f) => ({ ...f, title: e.target.value }))}
-                      />
-                    </Field>
-                    <Field label="Subtitle / Description">
-                      <textarea
-                        className={inputCls + " resize-none"}
-                        rows={3}
-                        placeholder="One-sentence overview of what learners will gain..."
-                        value={courseForm.subtitle}
-                        onChange={(e) => setCourseForm((f) => ({ ...f, subtitle: e.target.value }))}
-                      />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Field label="Category">
-                        <input
-                          className={inputCls}
-                          placeholder="e.g. Technology, Compliance, Safety"
-                          value={courseForm.category}
-                          onChange={(e) => setCourseForm((f) => ({ ...f, category: e.target.value as ApiCourse["category"] }))}
-                        />
-                      </Field>
-                      <Field label="Level">
-                        <select className={selectCls} value={courseForm.level} onChange={(e) => setCourseForm((f) => ({ ...f, level: e.target.value as ApiCourse["level"] }))}>
-                          <option value="Foundational">Foundational</option>
-                          <option value="Intermediate">Intermediate</option>
-                          <option value="Advanced">Advanced</option>
-                        </select>
-                      </Field>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <span className="text-xs font-bold uppercase tracking-widest text-brand">{selectedCourse.category}</span>
+                      <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">{selectedCourse.level}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Field label="Duration (hours)">
-                        <input
-                          type="number"
-                          className={inputCls}
-                          placeholder="e.g. 12"
-                          value={courseForm.duration_hrs ?? ""}
-                          onChange={(e) => setCourseForm((f) => ({ ...f, duration_hrs: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 }))}
-                        />
-                      </Field>
-                      <Field label="Passing Score (%)" hint="Minimum score required for certification">
-                        <input
-                          type="number"
-                          className={inputCls}
-                          placeholder="e.g. 80"
-                          value={courseForm.passing_score ?? ""}
-                          onChange={(e) => setCourseForm((f) => ({ ...f, passing_score: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 }))}
-                        />
-                      </Field>
-                    </div>
-                    <HeroImageField
-                      value={courseForm.hero_url}
-                      onChange={(url) => setCourseForm((f) => ({ ...f, hero_url: url }))}
-                      onUploadError={(msg) => show(msg, false)}
-                      onUploadSuccess={(msg) => show(msg)}
-                    />
-                    {/* Pre-flight Publishing Validation Banner */}
-                    {publishErrors && (
-                      <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs space-y-2">
-                        <div className="flex items-center gap-2 font-bold text-sm">
-                          <AlertTriangle className="size-4 shrink-0" /> Pre-Flight Publishing Validation Errors:
-                        </div>
-                        <ul className="list-disc list-inside space-y-1 text-xs">
-                          {publishErrors.map((err, i) => (
-                            <li key={i}>{err}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-border bg-card/60">
+                    <h1 className="text-xl font-bold text-foreground mb-2">{selectedCourse.title || "Untitled course"}</h1>
+                    {selectedCourse.subtitle && <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed">{selectedCourse.subtitle}</p>}
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-4 border-t border-border/60">
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Publication & Versioning</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <StatusBadge status={courseForm.status} />
-                          {selection.kind === "course" && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenVersions(selection.courseId)}
-                              className="text-xs text-brand font-semibold hover:underline inline-flex items-center gap-1"
-                            >
-                              <RefreshCw className="size-3" /> Version History
-                            </button>
-                          )}
-                        </div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Duration</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">{selectedCourse.duration_hrs} hours</p>
                       </div>
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {selection.kind === "course" && (
-                          <button
-                            type="button"
-                            onClick={() => handlePublishCourse(selection.courseId)}
-                            className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                          >
-                            <Globe className="size-3.5" /> Validate & Publish
-                          </button>
-                        )}
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Passing Score</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">{selectedCourse.passing_score}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Modules</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">{selectedCourse.modules.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total Lessons</p>
+                        <p className="text-sm font-semibold text-foreground mt-0.5">{selectedCourse.modules.reduce((s, m) => s + m.lessons.length, 0)}</p>
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    {publishErrors && publishErrors.length > 0 && (
-                      <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 space-y-2">
-                        <div className="flex items-center gap-2 text-destructive">
-                          <AlertTriangle className="size-4" />
-                          <span className="text-xs font-bold uppercase tracking-wider">Publish Validation Failed</span>
-                        </div>
-                        <ul className="list-disc list-inside text-xs text-foreground space-y-1">
-                          {publishErrors.map((err, idx) => (
-                            <li key={idx} className="font-medium">{err}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* Polymorphic Lesson Preview when a lesson is selected */}
+                {selectedLesson && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <LessonTypeIcon type={selectedLesson.type} />
+                        Active Lesson Preview: <span className="text-foreground">{selectedLesson.title}</span>
+                      </h3>
+                      <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{selectedLesson.duration}</span>
+                    </div>
+                    <div className="rounded-2xl overflow-hidden ring-1 ring-border p-5 bg-background shadow-sm">
+                      <PolymorphicLessonRenderer lesson={selectedLesson} isAuthoringPreview={true} />
+                    </div>
+                  </div>
+                )}
 
-                    {/* SCORM Export Section (Export SCORM 1.2 & 2004) */}
-                    {selection.kind === "course" && (
-                      <div className="p-4 rounded-xl border border-border bg-card/40 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Package className="size-4 text-brand" />
-                            <span className="text-xs font-bold text-foreground">SCORM Export Package</span>
-                          </div>
-                          {courseForm.status !== "published" && (
-                            <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                              Publish course first to enable SCORM export
+                {/* Modules & Curriculum Breakdown */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Curriculum & Module Breakdown</h3>
+                  {selectedCourse.modules.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No modules added to this course yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedCourse.modules.map((m, idx) => (
+                        <div key={m.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-foreground flex items-center gap-2">
+                              <Layers className="size-3.5 text-brand" />
+                              Module {idx + 1}: {m.title}
                             </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 pt-1">
-                          <button
-                            type="button"
-                            disabled={courseForm.status !== "published"}
-                            onClick={() => exportScormPackage(selection.courseId, "1.2")}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-background text-xs font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                            title={courseForm.status !== "published" ? "Only published courses can be exported to SCORM" : "Export SCORM 1.2 ZIP package"}
-                          >
-                            <Download className="size-3.5 text-brand" /> Export SCORM 1.2 ZIP
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={courseForm.status !== "published"}
-                            onClick={() => exportScormPackage(selection.courseId, "2004")}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-background text-xs font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                            title={courseForm.status !== "published" ? "Only published courses can be exported to SCORM" : "Export SCORM 2004 ZIP package"}
-                          >
-                            <Download className="size-3.5 text-indigo-400" /> Export SCORM 2004 ZIP
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Assessment & SCORM Management (Only show when editing an existing course) */}
-                    {selection.kind === "course" && (
-                      <>
-                        <div className="pt-4 border-t border-border">
-                          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <CheckSquare className="size-4 text-brand" /> Assessment Management
-                          </h3>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Upload a CSV file containing multiple choice questions (4 options, 1 correct answer) for the final assessment.
-                          </p>
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => downloadAssessmentCsvTemplate(selection.courseId).catch((e) => show(e.message, false))}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
-                            >
-                              <Download className="size-3" /> Template
-                            </button>
-                            
-                            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand text-brand-foreground text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity ${isUploadingCsv ? "opacity-50 pointer-events-none" : ""}`}>
-                              {isUploadingCsv ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
-                              {isUploadingCsv ? "Uploading..." : "Import CSV"}
-                              <input 
-                                type="file" 
-                                accept=".csv" 
-                                className="hidden" 
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  setIsUploadingCsv(true);
-                                  try {
-                                    const res = await uploadAssessmentCsv(selection.courseId, file);
-                                    if (res.error) {
-                                      show(res.error, false);
-                                    } else {
-                                      show(res.message || "Imported successfully", true);
-                                      const questions = await fetchAssessmentQuestions(selection.courseId);
-                                      setImportedQuestions(questions);
-                                    }
-                                  } catch (err: any) {
-                                    show(err.message || "Failed to upload", false);
-                                  } finally {
-                                    setIsUploadingCsv(false);
-                                    e.target.value = ""; // Reset file input
-                                  }
-                                }}
-                              />
-                            </label>
+                            <span className="text-[10px] text-muted-foreground font-medium">{m.lessons.length} lessons</span>
                           </div>
-                          {importedQuestions.length > 0 && (
-                            <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
-                              {importedQuestions.map((q) => (
-                                <div key={q.id} className="text-xs p-2 rounded border border-border">
-                                  <p className="font-medium">{q.question_text}</p>
-                                  <p className="text-muted-foreground">Correct: {q.correct_option}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* SCORM Package Section (SCORM 1.2 & SCORM 2004) */}
-                        <div className="pt-4 border-t border-border">
-                          <div className="p-5 rounded-2xl bg-card text-foreground space-y-4 shadow-sm border border-border">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-3">
-                                <div className="size-9 rounded-xl bg-indigo-600 text-foreground grid place-items-center font-bold text-xs shadow-md">
-                                  <Sparkles className="size-4" />
-                                </div>
-                                <div>
-                                  <h3 className="text-sm font-bold text-foreground">SCORM Course Package (SCORM 1.2 / 2004)</h3>
-                                  <p className="text-[11px] text-muted-foreground">
-                                    Upload Articulate Storyline, Adobe Captivate, or iSpring SCORM (.zip) packages.
-                                  </p>
-                                </div>
-                              </div>
-
-                              {selectedCourse?.is_scorm && (
-                                <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[11px] font-bold flex items-center gap-1">
-                                  <CheckCircle2 className="size-3 text-emerald-400" /> Active SCORM Package
+                          {m.summary && <p className="text-xs text-muted-foreground">{m.summary}</p>}
+                          <div className="grid sm:grid-cols-2 gap-2 pt-2 border-t border-border/40">
+                            {m.lessons.map((l) => (
+                              <div key={l.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 border border-border/40">
+                                <span className="truncate flex items-center gap-2 text-foreground font-medium">
+                                  <LessonTypeIcon type={l.type} />
+                                  {l.title}
                                 </span>
-                              )}
+                                <span className="text-[10px] text-muted-foreground font-mono ml-2 shrink-0">{l.duration}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Catalog Link Button */}
+                {selectedCourse.status === "published" && (
+                  <div className="pt-2">
+                    <a
+                      href={`/courses/api-${String(selectedCourse.id).replace('api-', '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand text-brand-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+                    >
+                      <Eye className="size-4" /> View Live in Learner Catalog
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 grid place-items-center text-center p-12">
+                <Eye className="size-10 text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground font-medium">Select a course from the Course Library to see its preview.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── Expanded Edit Mode Workspace ── */
+          <div className="rounded-2xl ring-1 ring-border bg-card overflow-y-auto flex flex-col">
+            {!selection ? (
+              <div className="flex-1 grid place-items-center text-center p-12">
+                <div className="size-16 rounded-2xl bg-brand/10 grid place-items-center mb-4">
+                  <Eye className="size-7 text-brand" />
+                </div>
+                <h2 className="text-lg font-medium tracking-tight mb-2">Nothing selected</h2>
+                <p className="text-sm text-muted-foreground max-w-[36ch]">
+                  Select a course, module or lesson from the library to edit it, or click <strong>New Course</strong> to create one.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                {/* Editor header */}
+                <div className="p-5 border-b border-border flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-brand font-semibold mb-0.5">
+                      {selection.kind === "new-course" ? "New Course" :
+                       selection.kind === "course" ? "Edit Course" :
+                       selection.kind === "new-module" ? "New Module" :
+                       selection.kind === "module" ? "Edit Module" :
+                       selection.kind === "new-lesson" ? "New Lesson" : "Edit Lesson"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selection.kind === "course" || selection.kind === "new-course" ? "Course details, metadata and settings" :
+                       selection.kind === "module" || selection.kind === "new-module" ? "Module title and configuration" :
+                       "Lesson content, type and video assignment"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isNewMode && (
+                      <button onClick={() => setSelection(null)} className="p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors" title="Close">
+                        <X className="size-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={save}
+                      disabled={!canSave || saving}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                      {isNewMode ? "Create" : "Save Changes"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Editor body */}
+                <div className="flex-1 overflow-y-auto p-6">
+
+                  {/* ── COURSE FORM ── */}
+                  {(selection.kind === "course" || selection.kind === "new-course") && (
+                    <div className="space-y-5">
+                      <Field label="Course Title *">
+                        <input
+                          className={inputCls}
+                          placeholder="e.g. Introduction to Company Policies"
+                          value={courseForm.title}
+                          onChange={(e) => setCourseForm((f) => ({ ...f, title: e.target.value }))}
+                        />
+                      </Field>
+                      <Field label="Subtitle / Description">
+                        <textarea
+                          className={inputCls + " resize-none"}
+                          rows={3}
+                          placeholder="One-sentence overview of what learners will gain..."
+                          value={courseForm.subtitle}
+                          onChange={(e) => setCourseForm((f) => ({ ...f, subtitle: e.target.value }))}
+                        />
+                      </Field>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Category">
+                          <input
+                            className={inputCls}
+                            placeholder="e.g. Technology, Compliance, Safety"
+                            value={courseForm.category}
+                            onChange={(e) => setCourseForm((f) => ({ ...f, category: e.target.value as ApiCourse["category"] }))}
+                          />
+                        </Field>
+                        <Field label="Level">
+                          <select className={selectCls} value={courseForm.level} onChange={(e) => setCourseForm((f) => ({ ...f, level: e.target.value as ApiCourse["level"] }))}>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                          </select>
+                        </Field>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Duration (hours)">
+                          <div className="relative flex items-center">
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              className={inputCls + " pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"}
+                              placeholder="e.g. 12"
+                              value={courseForm.duration_hrs ?? ""}
+                              onChange={(e) => setCourseForm((f) => ({ ...f, duration_hrs: e.target.value === "" ? 0 : Math.max(0, parseFloat(e.target.value) || 0) }))}
+                            />
+                            <div className="absolute right-1.5 flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/60">
+                              <button
+                                type="button"
+                                onClick={() => setCourseForm((f) => ({ ...f, duration_hrs: Math.max(0, (f.duration_hrs || 0) - 1) }))}
+                                className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
+                                title="Decrease Duration"
+                              >
+                                <Minus className="size-3.5" />
+                              </button>
+                              <div className="h-3 w-[1px] bg-border" />
+                              <button
+                                type="button"
+                                onClick={() => setCourseForm((f) => ({ ...f, duration_hrs: (f.duration_hrs || 0) + 1 }))}
+                                className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
+                                title="Increase Duration"
+                              >
+                                <Plus className="size-3.5" />
+                              </button>
                             </div>
+                          </div>
+                        </Field>
+                        <Field label="Passing Score (%)" hint="Minimum score required for certification">
+                          <div className="relative flex items-center">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={1}
+                              className={inputCls + " pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"}
+                              placeholder="e.g. 80"
+                              value={courseForm.passing_score ?? ""}
+                              onChange={(e) => setCourseForm((f) => ({ ...f, passing_score: e.target.value === "" ? 0 : Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                            />
+                            <div className="absolute right-1.5 flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/60">
+                              <button
+                                type="button"
+                                onClick={() => setCourseForm((f) => ({ ...f, passing_score: Math.max(0, (f.passing_score || 0) - 1) }))}
+                                className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
+                                title="Decrease Passing Score"
+                              >
+                                <Minus className="size-3.5" />
+                              </button>
+                              <div className="h-3 w-[1px] bg-border" />
+                              <button
+                                type="button"
+                                onClick={() => setCourseForm((f) => ({ ...f, passing_score: Math.min(100, (f.passing_score || 0) + 1) }))}
+                                className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
+                                title="Increase Passing Score"
+                              >
+                                <Plus className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </Field>
+                      </div>
+                      <HeroImageField
+                        value={courseForm.hero_url}
+                        onChange={(url) => setCourseForm((f) => ({ ...f, hero_url: url }))}
+                        onUploadError={(msg) => show(msg, false)}
+                        onUploadSuccess={(msg) => show(msg)}
+                      />
+                      {/* Pre-flight Publishing Validation Banner */}
+                      {publishErrors && (
+                        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs space-y-2">
+                          <div className="flex items-center gap-2 font-bold text-sm">
+                            <AlertTriangle className="size-4 shrink-0" /> Pre-Flight Publishing Validation Errors:
+                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-xs">
+                            {publishErrors.map((err, i) => (
+                              <li key={i}>{err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                            {selectedCourse?.scorm_package ? (
-                              <div className="p-4 bg-muted/80 rounded-xl border border-border/80 space-y-3">
-                                <div className="flex items-center justify-between text-xs flex-wrap gap-2">
-                                  <div>
-                                    <span className="text-muted-foreground">Package Title: </span>
-                                    <span className="font-bold text-foreground">{selectedCourse.scorm_package.title}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
-                                      SCORM {selectedCourse.scorm_package.version}
-                                    </span>
-                                    <span className="text-muted-foreground text-[10px]">
-                                      Uploaded {new Date(selectedCourse.scorm_package.uploaded_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="text-[11px] text-muted-foreground font-mono truncate bg-background p-2.5 rounded-lg border border-border">
-                                  Launch Point: {selectedCourse.scorm_package.launch_url}
-                                </div>
-
-                                <div className="flex items-center gap-3 pt-1 flex-wrap">
-                                  <label className={`cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-foreground rounded-xl text-xs font-semibold transition-all shadow-sm ${isUploadingScorm ? "opacity-50 pointer-events-none" : ""}`}>
-                                    {isUploadingScorm ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                                    <span>{isUploadingScorm ? "Extracting & Validating..." : "Replace SCORM Package (.zip)"}</span>
-                                    <input
-                                      type="file"
-                                      accept=".zip"
-                                      className="hidden"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        setIsUploadingScorm(true);
-                                        try {
-                                          await uploadScormPackage(selection.courseId, file);
-                                          show("SCORM Package uploaded & verified ✓");
-                                          await load();
-                                        } catch (err: any) {
-                                          show(err.message || "Failed to upload SCORM package", false);
-                                        } finally {
-                                          setIsUploadingScorm(false);
-                                          e.target.value = "";
-                                        }
-                                      }}
-                                    />
-                                  </label>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowAuthoringScormPlayer(true)}
-                                    className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-foreground rounded-xl text-xs font-semibold transition-all shadow-sm"
-                                  >
-                                    <PlayCircle className="size-3.5" /> Preview SCORM Player 🚀
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="p-5 border-2 border-dashed border-border hover:border-indigo-500 rounded-xl text-center transition-all bg-background/40">
-                                <Upload className="size-7 text-muted-foreground mx-auto mb-2" />
-                                <h4 className="text-xs font-bold text-foreground mb-1">Upload SCORM Package (.zip)</h4>
-                                <p className="text-[11px] text-muted-foreground max-w-sm mx-auto mb-3">
-                                  Upload SCORM 1.2 or SCORM 2004 ZIP packages exported from Articulate Storyline, Adobe Captivate, or iSpring.
-                                </p>
-
-                                <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-foreground rounded-xl text-xs font-bold transition-all shadow-md ${isUploadingScorm ? "opacity-50 pointer-events-none" : ""}`}>
-                                  {isUploadingScorm ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5 text-amber-300" />}
-                                  <span>{isUploadingScorm ? "Validating & Extracting Package..." : "Select SCORM ZIP File"}</span>
-                                  <input
-                                    type="file"
-                                    accept=".zip"
-                                    className="hidden"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (!file) return;
-                                      setIsUploadingScorm(true);
-                                      try {
-                                        await uploadScormPackage(selection.courseId, file);
-                                        show("SCORM Package uploaded & verified ✓");
-                                        await load();
-                                      } catch (err: any) {
-                                        show(err.message || "Failed to upload SCORM package", false);
-                                      } finally {
-                                        setIsUploadingScorm(false);
-                                        e.target.value = "";
-                                      }
-                                    }}
-                                  />
-                                </label>
-                              </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-border bg-card/60">
+                        <div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Publication & Versioning</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <StatusBadge status={courseForm.status} />
+                            {selection.kind === "course" && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenVersions(selection.courseId)}
+                                className="text-xs text-brand font-semibold hover:underline inline-flex items-center gap-1"
+                              >
+                                <RefreshCw className="size-3" /> Version History
+                              </button>
                             )}
                           </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                )}
 
-                {/* ── MODULE FORM ── */}
-                {(selection.kind === "module" || selection.kind === "new-module") && (
-                  <div className="space-y-5">
-                    {selectedCourse && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
-                        <BookOpen className="size-3.5" />
-                        <span>Part of <strong className="text-foreground">{selectedCourse.title}</strong></span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {selection.kind === "course" && (
+                            <button
+                              type="button"
+                              onClick={() => handlePublishCourse(selection.courseId)}
+                              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                            >
+                              <Globe className="size-3.5" /> Validate & Publish
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <Field label="Module Title *">
-                      <input className={inputCls} placeholder="e.g. Module 1 — Introduction & Core Concepts" value={moduleForm.title} onChange={(e) => setModuleForm((f) => ({ ...f, title: e.target.value }))} />
-                    </Field>
-                    <Field label="Summary" hint="Shown in the course curriculum to learners">
-                      <textarea className={inputCls + " resize-none"} rows={3} placeholder="Brief description of what this module covers..." value={moduleForm.summary} onChange={(e) => setModuleForm((f) => ({ ...f, summary: e.target.value }))} />
-                    </Field>
-                    <Field label="Display Order" hint="Lower numbers appear first">
-                      <input type="number" className={inputCls} min={0} value={moduleForm.order} onChange={(e) => setModuleForm((f) => ({ ...f, order: parseInt(e.target.value) || 0 }))} />
-                    </Field>
-                  </div>
-                )}
 
-                {/* ── LESSON FORM ── */}
-                {(selection.kind === "lesson" || selection.kind === "new-lesson") && (
-                  <div className="space-y-5">
-                    {selectedModule && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
-                        <Layers className="size-3.5" />
-                        <span>Part of <strong className="text-foreground">{selectedModule.title}</strong></span>
-                      </div>
-                    )}
-                    <Field label="Lesson Title *">
-                      <input className={inputCls} placeholder="e.g. Safety Guidelines & Best Practices" value={lessonForm.title} onChange={(e) => setLessonForm((f) => ({ ...f, title: e.target.value }))} />
-                    </Field>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Field label="Duration" hint='Display value, e.g. "6 min"'>
-                        <input className={inputCls} placeholder="5 min" value={lessonForm.duration} onChange={(e) => setLessonForm((f) => ({ ...f, duration: e.target.value }))} />
+                      {publishErrors && publishErrors.length > 0 && (
+                        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 space-y-2">
+                          <div className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="size-4" />
+                            <span className="text-xs font-bold uppercase tracking-wider">Publish Validation Failed</span>
+                          </div>
+                          <ul className="list-disc list-inside text-xs text-foreground space-y-1">
+                            {publishErrors.map((err, idx) => (
+                              <li key={idx} className="font-medium">{err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* SCORM Export Section (Export SCORM 1.2 & 2004) */}
+                      {selection.kind === "course" && (
+                        <div className="p-4 rounded-xl border border-border bg-card/40 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Package className="size-4 text-brand" />
+                              <span className="text-xs font-bold text-foreground">SCORM Export Package</span>
+                            </div>
+                            {courseForm.status !== "published" && (
+                              <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                Publish course first to enable SCORM export
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <button
+                              type="button"
+                              disabled={courseForm.status !== "published"}
+                              onClick={() => exportScormPackage(selection.courseId, "1.2")}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-background text-xs font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              title={courseForm.status !== "published" ? "Only published courses can be exported to SCORM" : "Export SCORM 1.2 ZIP package"}
+                            >
+                              <Download className="size-3.5 text-brand" /> Export SCORM 1.2 ZIP
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={courseForm.status !== "published"}
+                              onClick={() => exportScormPackage(selection.courseId, "2004")}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-background text-xs font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              title={courseForm.status !== "published" ? "Only published courses can be exported to SCORM" : "Export SCORM 2004 ZIP package"}
+                            >
+                              <Download className="size-3.5 text-indigo-400" /> Export SCORM 2004 ZIP
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Assessment & SCORM Management (Only show when editing an existing course) */}
+                      {selection.kind === "course" && (
+                        <>
+                          <div className="pt-4 border-t border-border">
+                            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                              <CheckSquare className="size-4 text-brand" /> Assessment Management
+                            </h3>
+                            <p className="text-xs text-muted-foreground mb-4">
+                              Upload a CSV file containing multiple choice questions (4 options, 1 correct answer) for the final assessment.
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => downloadAssessmentCsvTemplate(selection.courseId).catch((e) => show(e.message, false))}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+                              >
+                                <Download className="size-3" /> Template
+                              </button>
+                              
+                              <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand text-brand-foreground text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity ${isUploadingCsv ? "opacity-50 pointer-events-none" : ""}`}>
+                                {isUploadingCsv ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
+                                {isUploadingCsv ? "Uploading..." : "Import CSV"}
+                                <input 
+                                  type="file" 
+                                  accept=".csv" 
+                                  className="hidden" 
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    setIsUploadingCsv(true);
+                                    try {
+                                      const res = await uploadAssessmentCsv(selection.courseId, file);
+                                      if (res.error) {
+                                        show(res.error, false);
+                                      } else {
+                                        show(res.message || "Imported successfully", true);
+                                        const questions = await fetchAssessmentQuestions(selection.courseId);
+                                        setImportedQuestions(questions);
+                                      }
+                                    } catch (err: any) {
+                                      show(err.message || "Failed to upload", false);
+                                    } finally {
+                                      setIsUploadingCsv(false);
+                                      e.target.value = ""; // Reset file input
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                            {importedQuestions.length > 0 && (
+                              <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+                                {importedQuestions.map((q) => (
+                                  <div key={q.id} className="text-xs p-2 rounded border border-border">
+                                    <p className="font-medium">{q.question_text}</p>
+                                    <p className="text-muted-foreground">Correct: {q.correct_option}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── MODULE FORM ── */}
+                  {(selection.kind === "module" || selection.kind === "new-module") && (
+                    <div className="space-y-5">
+                      {selectedCourse && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
+                          <BookOpen className="size-3.5" />
+                          <span>Part of <strong className="text-foreground">{selectedCourse.title}</strong></span>
+                        </div>
+                      )}
+                      <Field label="Module Title *">
+                        <input className={inputCls} placeholder="e.g. Module 1 — Introduction & Core Concepts" value={moduleForm.title} onChange={(e) => setModuleForm((f) => ({ ...f, title: e.target.value }))} />
                       </Field>
-                      <Field label="Display Order">
-                        <input type="number" className={inputCls} min={0} value={lessonForm.order} onChange={(e) => setLessonForm((f) => ({ ...f, order: parseInt(e.target.value) || 0 }))} />
+                      <Field label="Summary" hint="Shown in the course curriculum to learners">
+                        <textarea className={inputCls + " resize-none"} rows={3} placeholder="Brief description of what this module covers..." value={moduleForm.summary} onChange={(e) => setModuleForm((f) => ({ ...f, summary: e.target.value }))} />
+                      </Field>
+                      <Field label="Display Order" hint="Lower numbers appear first">
+                        <input type="number" className={inputCls} min={0} value={moduleForm.order} onChange={(e) => setModuleForm((f) => ({ ...f, order: parseInt(e.target.value) || 0 }))} />
                       </Field>
                     </div>
-                    <Field label="Lesson Type">
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {LESSON_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setLessonForm((f) => ({ ...f, type: value as ApiLesson["type"], interaction: value === "video" || value === "reading" ? null : f.interaction }))}
-                            className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-[10px] font-semibold uppercase tracking-wide transition-all ${lessonForm.type === value ? "bg-brand text-brand-foreground border-brand" : "border-border text-muted-foreground hover:border-brand/40 hover:bg-muted/50"}`}
-                          >
-                            <Icon className="size-4" />
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </Field>
+                  )}
 
-                    {/* Video picker — only for video lessons */}
-                    {lessonForm.type === "video" && (
-                      <Field label="Video File" hint="Upload the video for this lesson">
-                        <VideoUploadField
-                          value={lessonForm.video_url}
-                          onChange={(url) => setLessonForm((f) => ({ ...f, video_url: url }))}
-                          onUploadError={(msg) => show(msg, false)}
-                          onUploadSuccess={(msg) => show(msg)}
-                        />
+                  {/* ── LESSON FORM ── */}
+                  {(selection.kind === "lesson" || selection.kind === "new-lesson") && (
+                    <div className="space-y-5">
+                      {selectedModule && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
+                          <Layers className="size-3.5" />
+                          <span>Part of <strong className="text-foreground">{selectedModule.title}</strong></span>
+                        </div>
+                      )}
+                      <Field label="Lesson Title *">
+                        <input className={inputCls} placeholder="e.g. Safety Guidelines & Best Practices" value={lessonForm.title} onChange={(e) => setLessonForm((f) => ({ ...f, title: e.target.value }))} />
                       </Field>
-                    )}
-
-                    {/* Block Editor Canvas (for non-video lessons) */}
-                    {selectedLesson && selectedLesson.type !== "video" && selectedLesson.block_tree && (
-                      <div className="pt-6 border-t border-border">
-                        <BlockEditorCanvas
-                          tree={selectedLesson.block_tree}
-                          onTreeUpdated={load}
-                          onBlockPayloadUpdated={(blockId, newPayload) => {
-                            setCourses((prevCourses) =>
-                              prevCourses.map((c) => {
-                                if (!c.modules) return c;
-                                return {
-                                  ...c,
-                                  modules: c.modules.map((m) => {
-                                    if (!m.lessons) return m;
-                                    return {
-                                      ...m,
-                                      lessons: m.lessons.map((l) => {
-                                        if (l.id !== selectedLesson.id || !l.block_tree) return l;
-                                        return {
-                                          ...l,
-                                          block_tree: {
-                                            ...l.block_tree,
-                                            blocks: l.block_tree.blocks.map((b) => {
-                                              if (b.id !== blockId) return b;
-                                              return {
-                                                ...b,
-                                                settings: newPayload.settings !== undefined ? newPayload.settings : b.settings,
-                                                reading_payload: (newPayload.html_content !== undefined || newPayload.meta_data !== undefined) ? {
-                                                  ...b.reading_payload,
-                                                  ...newPayload,
-                                                } : b.reading_payload,
-                                                kc_questions: newPayload.kc_questions !== undefined ? newPayload.kc_questions : b.kc_questions,
-                                                interaction_payload: newPayload.interaction_payload !== undefined ? newPayload.interaction_payload : b.interaction_payload,
-                                              };
-                                            }),
-                                          },
-                                        };
-                                      }),
-                                    };
-                                  }),
-                                };
-                              })
-                            );
-                          }}
-                          showToast={(msg, ok) => show(msg, ok)}
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Duration" hint='Display value, e.g. "6 min"'>
+                          <input className={inputCls} placeholder="5 min" value={lessonForm.duration} onChange={(e) => setLessonForm((f) => ({ ...f, duration: e.target.value }))} />
+                        </Field>
+                        <Field label="Display Order">
+                          <input type="number" className={inputCls} min={0} value={lessonForm.order} onChange={(e) => setLessonForm((f) => ({ ...f, order: parseInt(e.target.value) || 0 }))} />
+                        </Field>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+                      <Field label="Lesson Type">
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {LESSON_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setLessonForm((f) => ({ ...f, type: value as ApiLesson["type"], interaction: value === "video" || value === "reading" ? null : f.interaction }))}
+                              className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-[10px] font-semibold uppercase tracking-wide transition-all ${lessonForm.type === value ? "bg-brand text-brand-foreground border-brand" : "border-border text-muted-foreground hover:border-brand/40 hover:bg-muted/50"}`}
+                            >
+                              <Icon className="size-4" />
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </Field>
 
-        {/* ── RIGHT: Preview ─────────────────────────────────────────────── */}
-        <aside className="rounded-2xl ring-1 ring-border bg-card overflow-y-auto flex flex-col">
-          <div className="p-4 border-b border-border">
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">Preview</p>
-          </div>
+                      {/* Video picker — only for video lessons */}
+                      {lessonForm.type === "video" && (
+                        <Field label="Video File" hint="Upload the video for this lesson">
+                          <VideoUploadField
+                            value={lessonForm.video_url}
+                            onChange={(url) => setLessonForm((f) => ({ ...f, video_url: url }))}
+                            onUploadError={(msg) => show(msg, false)}
+                            onUploadSuccess={(msg) => show(msg)}
+                          />
+                        </Field>
+                      )}
 
-          {selectedCourse ? (
-            <div className="p-4 space-y-4 flex-1">
-              {/* Course card preview */}
-              <div className="rounded-xl overflow-hidden ring-1 ring-border bg-background">
-                {selectedCourse.hero_url ? (
-                  <img src={selectedCourse.hero_url} alt="" className="w-full h-28 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                ) : (
-                  <div className="w-full h-28 bg-gradient-to-br from-brand/20 to-brand/5 grid place-items-center">
-                    <BookOpen className="size-8 text-brand/40" />
-                  </div>
-                )}
-                <div className="p-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-brand">{selectedCourse.category}</span>
-                  <h3 className="text-sm font-medium leading-tight mt-1 mb-1">{selectedCourse.title || "Untitled course"}</h3>
-                  {selectedCourse.subtitle && <p className="text-xs text-muted-foreground line-clamp-2">{selectedCourse.subtitle}</p>}
-                  <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                    <span>{selectedCourse.duration_hrs}h</span>
-                    <span>·</span>
-                    <span>{selectedCourse.modules.length} modules</span>
-                    <span>·</span>
-                    <span>{selectedCourse.level}</span>
-                  </div>
+                      {/* Block Editor Canvas (for non-video lessons) */}
+                      {selectedLesson && selectedLesson.type !== "video" && selectedLesson.block_tree && (
+                        <div className="pt-6 border-t border-border">
+                          <BlockEditorCanvas
+                            tree={selectedLesson.block_tree}
+                            onTreeUpdated={load}
+                            onBlockPayloadUpdated={(blockId, newPayload) => {
+                              setCourses((prevCourses) =>
+                                prevCourses.map((c) => {
+                                  if (!c.modules) return c;
+                                  return {
+                                    ...c,
+                                    modules: c.modules.map((m) => {
+                                      if (!m.lessons) return m;
+                                      return {
+                                        ...m,
+                                        lessons: m.lessons.map((l) => {
+                                          if (l.id !== selectedLesson.id || !l.block_tree) return l;
+                                          return {
+                                            ...l,
+                                            block_tree: {
+                                              ...l.block_tree,
+                                              blocks: (l.block_tree as any).blocks.map((b: any) => {
+                                                if (b.id !== blockId) return b;
+                                                return {
+                                                  ...b,
+                                                  settings: newPayload.settings !== undefined ? newPayload.settings : b.settings,
+                                                  reading_payload: (newPayload.html_content !== undefined || newPayload.meta_data !== undefined) ? {
+                                                    ...b.reading_payload,
+                                                    ...newPayload,
+                                                  } : b.reading_payload,
+                                                  kc_questions: newPayload.kc_questions !== undefined ? newPayload.kc_questions : b.kc_questions,
+                                                  interaction_payload: newPayload.interaction_payload !== undefined ? newPayload.interaction_payload : b.interaction_payload,
+                                                };
+                                              }),
+                                            },
+                                          };
+                                        }),
+                                      };
+                                    }),
+                                  };
+                                })
+                              );
+                            }}
+                            showToast={(msg, ok) => show(msg, ok)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Status */}
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Status</span>
-                <StatusBadge status={selectedCourse.status} />
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Modules</p>
-                  <p className="text-xl font-semibold">{selectedCourse.modules.length}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Lessons</p>
-                  <p className="text-xl font-semibold">{selectedCourse.modules.reduce((s, m) => s + m.lessons.length, 0)}</p>
-                </div>
-              </div>
-
-              {/* Polymorphic Lesson Preview */}
-              {selectedLesson && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-2">Lesson Preview ({selectedLesson.type})</p>
-                  <div className="rounded-xl overflow-hidden ring-1 ring-border p-3 bg-background">
-                    <PolymorphicLessonRenderer lesson={selectedLesson} isAuthoringPreview={true} />
-                  </div>
-                </div>
-              )}
-
-              {/* Catalog link */}
-              {selectedCourse.status === "published" && (
-                <a
-                  href={`/courses/api-${String(selectedCourse.id).replace('api-', '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  <Eye className="size-4" /> View in Catalog
-                </a>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 grid place-items-center text-center p-8">
-              <GripVertical className="size-8 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">Select or create a course to see the preview.</p>
-            </div>
-          )}
-        </aside>
-
-        {/* SCORM Player Modal Overlay for Content Authoring Preview */}
-        {showAuthoringScormPlayer && selectedCourse?.scorm_package?.launch_url && (
-          <div className="fixed inset-0 z-50 bg-background/85 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in fade-in">
-            <div className="w-full max-w-6xl">
-              <ScormPlayer
-                courseId={selectedCourse.id}
-                courseTitle={selectedCourse.title}
-                launchUrl={selectedCourse.scorm_package.launch_url}
-                scormVersion={selectedCourse.scorm_package.version}
-                onClose={() => setShowAuthoringScormPlayer(false)}
-              />
-            </div>
+            )}
           </div>
         )}
-        {/* Version History Modal */}
+      </div>
+
+      {/* Version History Modal */}
         {showVersionsModal && (
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-card border border-border rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
@@ -1316,7 +1322,6 @@ function Authoring() {
             </div>
           </div>
         )}
-      </div>
     </AppShell>
   );
 }

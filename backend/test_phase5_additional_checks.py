@@ -14,7 +14,6 @@ from authoring_engine.models import LessonBlockTree, LessonBlock, ReadingContent
 from users.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 from import_engine.views import upload_and_convert
-from courses.views import UploadScormPackageView
 import pptx
 
 def create_sample_video(path):
@@ -131,20 +130,6 @@ def run_additional_checks():
         assert res.status_code == 201, f"SCORM import failed: {res.data}"
         s_course = Course.objects.get(id=res.data['target_course_id'])
         print(f"  [PASS] Universal SCORM Adapter: Converted SCORM package -> Course ID {s_course.id} ('{s_course.title}').")
-
-        # Part B: Test PRE-EXISTING SCORM Package Upload Feature (UploadScormPackageView)
-        target_c = Course.objects.create(title="Pre-Existing SCORM Test Course", organization=admin_user.organization)
-        scorm_view = UploadScormPackageView.as_view()
-        with open(scorm_path, 'rb') as f:
-            uf2 = SimpleUploadedFile("sample_scorm.zip", f.read(), content_type="application/zip")
-        
-        scorm_req = factory.post(f'/api/courses/{target_c.id}/scorm/', {'file': uf2}, format='multipart')
-        force_authenticate(scorm_req, user=admin_user)
-        scorm_res = scorm_view(scorm_req, course_id=target_c.id)
-        assert scorm_res.status_code in [200, 201], f"Pre-existing SCORM upload failed: {scorm_res.data}"
-        sp = ScormPackage.objects.get(course=target_c)
-        assert sp.version == '1.2'
-        print(f"  [PASS] Pre-Existing SCORM Upload Feature: Verified 100% working (ScormPackage ID {sp.id}, Title '{sp.title}'). ZERO REGRESSION.")
     except Exception as e:
         print(f"  [FAIL] SCORM Check: {str(e)}")
         raise

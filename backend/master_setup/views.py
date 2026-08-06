@@ -26,8 +26,13 @@ class SuperAdminPermission(permissions.BasePermission):
 class FeatureViewSet(viewsets.ModelViewSet):
     queryset = Feature.objects.all()
     serializer_class = FeatureSerializer
-    permission_classes = [SuperAdminPermission]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [SuperAdminPermission()]
 
     def list(self, request, *args, **kwargs):
         features_to_seed = [
@@ -49,11 +54,14 @@ class FeatureViewSet(viewsets.ModelViewSet):
             ('billing_management', 'Subscription & Billing', 'Tenant plans, subscriptions, and invoicing', 'billing'),
             ('admin_console', 'Admin Console', 'Organization administration console', 'advanced'),
         ]
-        for key, name, desc, cat in features_to_seed:
-            Feature.objects.update_or_create(
-                key=key,
-                defaults={'name': name, 'description': desc, 'category': cat, 'is_active': True}
-            )
+        try:
+            for key, name, desc, cat in features_to_seed:
+                Feature.objects.update_or_create(
+                    key=key,
+                    defaults={'name': name, 'description': desc, 'category': cat, 'is_active': True}
+                )
+        except Exception:
+            pass
         return super().list(request, *args, **kwargs)
 
 class SiteFeatureAccessViewSet(viewsets.ModelViewSet):
@@ -119,6 +127,9 @@ class OrgFeatureAccessView(APIView):
         obj, _ = OrganizationFeatureAccess.objects.get_or_create(organization_id=org_id, feature=feature)
         obj.enabled = bool(enabled)
         obj.save()
+
+        # Also sync SiteFeatureAccess for sites under this organization
+        SiteFeatureAccess.objects.filter(site__organization_id=org_id, feature=feature).update(enabled=bool(enabled))
 
         return Response({
             'message': f"Feature '{feature.name}' {'enabled' if obj.enabled else 'disabled'}",
@@ -252,64 +263,21 @@ class ProvisionOrganizationView(APIView):
                 billing_date=billing_data.get('billing_date') or None,
             )
                 
-            admin_email = data.get('admin_email') or data.get('contact_email')
-            admin_password = data.get('admin_password') or 'TempPass@2026'
-            
+            admin_email = data.get('initial_admin_email') or data.get('admin_email') or data.get('contact_email')
+            admin_password = data.get('initial_admin_password') or data.get('admin_password')
+
+            # Seed all OrganizationFeatureAccess rows as enabled=True for this new org
+            from organizations.services import seed_org_feature_access
+            seed_org_feature_access(org)
+
             if admin_email:
-                from users.models import User
-                from organizations.models import Role
-                
-                admin_role = Role.objects.filter(organization=org, is_admin_role=True).first()
-                if not admin_role:
-                    admin_role = Role.objects.create(
-                        organization=org, 
-                        name='Organization Admin', 
-                        is_default=True,
-                        is_admin_role=True,
-                        can_manage_users=True,
-                        can_manage_departments=True,
-                        can_manage_roles=True,
-                        can_create_courses=True,
-                        can_edit_courses=True,
-                        can_publish_courses=True,
-                        can_manage_module_access=True,
-                        can_view_reports=True,
-                        can_manage_certificates=True
-                    )
-                
-                from master_setup.models import Workspace
-                admin_role.workspaces.add(*Workspace.objects.all())
-                
-                admin_user, created = User.objects.get_or_create(
-                    email=admin_email,
-                    defaults={
-                        'username': admin_email,
-                        'organization': org,
-                        'role': admin_role,
-                        'is_active': True
-                    }
-                )
-                if created or data.get('admin_password'):
-                    admin_user.set_password(admin_password)
-                    admin_user.organization = org
-                    admin_user.role = admin_role
-                    admin_user.save()
-                
-                # Send fully dynamic welcome email with login portal URL link & credentials
-                from organizations.emails import send_tenant_welcome_email
-                send_tenant_welcome_email(
+                from organizations.services import provision_org_admin_user
+                provision_org_admin_user(
                     org=org,
-                    recipient_email=admin_email,
-                    admin_username=admin_email,
-                    raw_password=admin_password if (created or data.get('admin_password')) else "[Your existing account password]"
-                )
-            elif org.contact_email:
-                from organizations.emails import send_tenant_welcome_email
-                send_tenant_welcome_email(
-                    org=org,
-                    recipient_email=org.contact_email,
-                    admin_username=org.contact_email,
-                    raw_password=admin_password
+                    admin_email=admin_email,
+                    raw_password=admin_password,
+                    contact_name=data.get('contact_name'),
+                    request=request
                 )
 
             ActivityLog.objects.create(

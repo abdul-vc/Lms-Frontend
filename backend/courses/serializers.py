@@ -64,6 +64,7 @@ class AccessRequestSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)
     user_progress = serializers.SerializerMethodField()
+    accent = serializers.CharField(required=False, allow_blank=True, default='var(--brand)')
 
     class Meta:
         model = Course
@@ -114,8 +115,6 @@ class CourseSerializer(serializers.ModelSerializer):
             if launch_url and not (launch_url.startswith('http://') or launch_url.startswith('https://')):
                 if request is not None:
                     launch_url = request.build_absolute_uri(launch_url)
-                else:
-                    launch_url = f"http://127.0.0.1:8000{launch_url}"
             ret['scorm_package'] = {
                 'id': sp.id,
                 'version': sp.version,
@@ -174,7 +173,7 @@ class IssuedCertificateSerializer(serializers.ModelSerializer):
                 return tpl.body_html
         return None
 
-from .models import LearningPath, LearningPathCourse
+from .models import LearningPath, LearningPathCourse, LessonProgress, ScormTracking
 
 class LearningPathCourseSerializer(serializers.ModelSerializer):
     course = CourseSerializer(read_only=True)
@@ -188,11 +187,97 @@ class LearningPathCourseSerializer(serializers.ModelSerializer):
 
 class LearningPathSerializer(serializers.ModelSerializer):
     path_courses = LearningPathCourseSerializer(many=True, read_only=True)
+    course_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=False
+    )
+    total_courses = serializers.SerializerMethodField()
+    total_duration_hrs = serializers.SerializerMethodField()
+    progress_pct = serializers.SerializerMethodField()
+    is_completed = serializers.SerializerMethodField()
 
     class Meta:
         model = LearningPath
-        fields = ['id', 'title', 'description', 'created_at', 'path_courses']
+        fields = [
+            'id', 'title', 'description', 'created_at', 'path_courses', 
+            'course_ids', 'total_courses', 'total_duration_hrs', 'progress_pct', 'is_completed'
+        ]
         read_only_fields = ['organization']
+
+    def get_total_courses(self, obj):
+        return obj.path_courses.count()
+
+    def get_total_duration_hrs(self, obj):
+        total = 0.0
+        for pc in obj.path_courses.select_related('course').all():
+            if pc.course and pc.course.duration_hrs:
+                total += float(pc.course.duration_hrs)
+        return round(total, 1)
+
+    def get_progress_pct(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return 0
+
+        path_courses_list = list(obj.path_courses.select_related('course').all())
+        if not path_courses_list:
+            return 0
+
+        total_progress = 0
+        for pc in path_courses_list:
+            course = pc.course
+            if not course:
+                continue
+
+            total_lessons = Lesson.objects.filter(module__course=course).count()
+            scorm_pct = 0
+            if course.is_scorm:
+                st = ScormTracking.objects.filter(user=request.user, course=course).first()
+                if st:
+                    if st.lesson_status in ['completed', 'passed']:
+                        scorm_pct = 100
+                    elif st.score_raw is not None and st.score_raw > 0:
+                        scorm_pct = min(100, int(st.score_raw))
+                    elif st.lesson_status in ['incomplete', 'browsed']:
+                        scorm_pct = 50
+
+            lesson_pct = 0
+            if total_lessons > 0:
+                completed = LessonProgress.objects.filter(user=request.user, lesson__module__course=course, completed=True).count()
+                lesson_pct = int((completed / total_lessons) * 100)
+
+            total_progress += max(scorm_pct, lesson_pct)
+
+        return int(total_progress / len(path_courses_list))
+
+    def get_is_completed(self, obj):
+        return self.get_progress_pct(obj) == 100
+
+    def create(self, validated_data):
+        course_ids = validated_data.pop('course_ids', None)
+        path = LearningPath.objects.create(**validated_data)
+        if course_ids:
+            self._save_courses(path, course_ids)
+        return path
+
+    def update(self, instance, validated_data):
+        course_ids = validated_data.pop('course_ids', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if course_ids is not None:
+            self._save_courses(instance, course_ids)
+        return instance
+
+    def _save_courses(self, path, course_ids):
+        path.path_courses.all().delete()
+        new_links = []
+        for order, cid in enumerate(course_ids):
+            try:
+                c = Course.objects.get(pk=cid)
+                new_links.append(LearningPathCourse(learning_path=path, course=c, order=order))
+            except Course.DoesNotExist:
+                pass
+        LearningPathCourse.objects.bulk_create(new_links)
 
 from .models import ScormPackage, ScormTracking
 

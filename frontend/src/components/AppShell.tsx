@@ -2,24 +2,17 @@ import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { resolveIcon, Icon } from '@/components/IconRegistry';
 import { useState, useEffect } from 'react';
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router';
-import { useAuth, authFetch } from '@/lib/auth';
-import { LogOut, Search, ChevronDown, Menu, X } from 'lucide-react';
+import { useAuth, authFetch, API_BASE } from '@/lib/auth';
+import { Search, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ThemeToggle } from './ThemeToggle';
+import { UserProfileDropdown } from './UserProfileDropdown';
 
 export function Header({
-  displayName,
-  email,
-  initials,
   activeWorkspaceKey,
-  onLogout
 }: {
-  displayName: string;
-  email: string;
-  initials: string;
   activeWorkspaceKey?: string;
-  onLogout: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -29,17 +22,16 @@ export function Header({
     ? 'Search users, departments, roles, courses…'
     : activeWorkspaceKey === 'learner'
     ? 'Search courses, paths, certificates…'
+    : activeWorkspaceKey === 'super_admin'
+    ? 'Search organizations, sites, plans…'
     : 'Search…';
 
+
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      setIsSearching(false);
-      return;
-    }
+    if (!query) { setResults([]); setIsSearching(false); return; }
     setIsSearching(true);
     const t = setTimeout(() => {
-      authFetch(`http://127.0.0.1:8000/api/search/?q=${encodeURIComponent(query)}&workspace=${activeWorkspaceKey}`)
+      authFetch(`${API_BASE}/search/?q=${encodeURIComponent(query)}&workspace=${activeWorkspaceKey}`)
         .then(res => res.json())
         .then(data => setResults(data.results || []))
         .catch(console.error)
@@ -67,12 +59,50 @@ export function Header({
               <div className="p-4 text-xs text-muted-foreground text-center">Searching…</div>
             ) : results.length > 0 ? (
               <div className="max-h-72 overflow-y-auto custom-scrollbar">
-                {results.map((r, i) => (
-                  <Link key={i} to="/" className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/50 last:border-0">
-                    <span className="badge-brand text-[10px] uppercase tracking-wider">{r.type}</span>
-                    <span className="text-xs text-foreground font-medium truncate">{r.name}</span>
-                  </Link>
-                ))}
+                {results.map((r, i) => {
+                  let toRoute = '/catalog';
+                  let paramsObj: any = undefined;
+
+                  if (r.type === 'page') {
+                    toRoute = String(r.id);
+                  } else if (r.type === 'course') {
+                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/courses' : '/courses/$courseId';
+                    paramsObj = activeWorkspaceKey === 'admin' ? undefined : { courseId: String(r.id) };
+                  } else if (r.type === 'path') {
+                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/paths' : '/paths';
+                  } else if (r.type === 'certificate') {
+                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/certificates' : '/certificates';
+                  } else if (r.type === 'user' || r.type === 'department') {
+                    toRoute = '/org-admin/departments';
+                  } else if (r.type === 'role') {
+                    toRoute = '/org-admin/roles';
+                  } else if (r.type === 'organization') {
+                    toRoute = '/super-admin/organizations';
+                  } else if (r.type === 'site') {
+                    toRoute = '/super-admin/sites';
+                  } else if (r.type === 'plan') {
+                    toRoute = '/super-admin/plans';
+                  }
+
+
+                  return (
+                    <Link
+                      key={i}
+                      to={toRoute as any}
+                      params={paramsObj}
+                      onClick={() => setQuery('')}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/50 last:border-0"
+                    >
+                      <div className="flex items-center gap-2.5 truncate min-w-0">
+                        <span className="badge-brand text-[10px] uppercase tracking-wider shrink-0">{r.type}</span>
+                        <span className="text-xs text-foreground font-semibold truncate">{r.name}</span>
+                      </div>
+                      {r.subtitle && (
+                        <span className="text-[10px] text-muted-foreground shrink-0 font-medium">{r.subtitle}</span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <div className="p-4 text-xs text-muted-foreground text-center">No results found</div>
@@ -81,28 +111,12 @@ export function Header({
         )}
       </div>
 
-      {/* Right controls */}
-      <div className="flex items-center gap-2 ml-4 shrink-0">
-        <ThemeToggle />
+      {/* Right controls — order: Notifications → Theme → Profile */}
+      <div className="flex items-center gap-1.5 ml-4 shrink-0">
         <NotificationDropdown />
+        <ThemeToggle />
         <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
-        <div className="flex items-center gap-2.5">
-          <div className="size-8 rounded-full bg-accent border border-accent-foreground/20 grid place-items-center text-accent-foreground text-xs font-bold shrink-0">
-            {initials}
-          </div>
-          <div className="leading-tight hidden md:block">
-            <div className="text-xs font-semibold text-foreground">{displayName}</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[140px]">{email}</div>
-          </div>
-        </div>
-        <button
-          onClick={onLogout}
-          className="btn-icon ml-1 hidden sm:flex"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className="size-4" />
-        </button>
+        <UserProfileDropdown />
       </div>
     </header>
   );
@@ -260,20 +274,18 @@ export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { chil
           <div className="flex-1 text-sm font-semibold text-foreground truncate">
             {data.organization_name || "Learning Platform"}
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center gap-1.5 shrink-0">
             <NotificationDropdown />
+            <ThemeToggle />
+            <div className="h-5 w-px bg-border mx-0.5" />
+            <UserProfileDropdown />
           </div>
         </header>
 
         {/* Desktop header */}
         <div className="hidden lg:block">
           <Header
-            displayName={data.user_display_name}
-            email={data.user_email}
-            initials={initials}
             activeWorkspaceKey={currentWorkspace?.workspace_key}
-            onLogout={handleLogout}
           />
         </div>
 

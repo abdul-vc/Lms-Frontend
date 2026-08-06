@@ -5,6 +5,7 @@ import { fetchCourses, adaptApiCourse, fetchMyCertificates } from "@/lib/courses
 import { type Course } from "@/lib/mock";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
+import { PaginationControls } from "@/components/ui/PaginationControls";
 
 export const Route = createFileRoute("/certificates")({
   head: () => ({ meta: [{ title: "Certifications" }] }),
@@ -18,6 +19,9 @@ function Certificates() {
   const [apiCertificates, setApiCertificates] = useState<any[]>([]);
   const [apiCourses, setApiCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -157,58 +161,70 @@ function Certificates() {
               <Loader2 className="size-6 animate-spin text-emerald-500" />
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-            {apiCertificates.map((c: any) => {
-              const certId = c.certificate_id || c.certificate_number || String(c.id) || '';
-              const displayId = certId ? certId.split('-')[0] : 'CERT';
-              const courseTitle = c.course_title || c.course?.title || c.title || 'Certificate of Completion';
-              const issueDateStr = c.issued_at || c.created_at;
-              const formattedDate = issueDateStr ? new Date(issueDateStr).toLocaleDateString() : 'N/A';
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+              {apiCertificates.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c: any) => {
+                const certId = c.certificate_id || c.certificate_number || String(c.id) || '';
+                const displayId = certId ? certId.split('-')[0] : 'CERT';
+                const courseTitle = c.course_title || c.course?.title || c.title || 'Certificate of Completion';
+                const issueDateStr = c.issued_at || c.created_at;
+                const formattedDate = issueDateStr ? new Date(issueDateStr).toLocaleDateString() : 'N/A';
 
-              return (
-                <div
-                  key={c.id || certId}
-                  onClick={() => setSelectedCert(c)}
-                  className="rounded-2xl border border-border bg-card/90 p-5 hover:border-emerald-500/50 hover:shadow-2xl transition-all group relative overflow-hidden cursor-pointer"
-                >
-                  <div className="flex items-start gap-4 relative z-10">
-                    <div className="size-12 rounded-xl bg-background grid place-items-center text-emerald-400 shadow-md border border-border shrink-0">
-                      <Award className="size-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-extrabold leading-tight text-foreground group-hover:text-emerald-300 transition-colors truncate">{courseTitle}</h3>
-                      <p className="text-xs text-muted-foreground font-medium mt-1 flex items-center gap-2">
-                        <Calendar className="size-3 text-emerald-400" /> Issued {formattedDate}
-                      </p>
-                      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                          ID: {displayId}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                          <Eye className="size-3 text-muted-foreground" /> View Details
-                        </span>
+                return (
+                  <div
+                    key={c.id || certId}
+                    onClick={() => setSelectedCert(c)}
+                    className="rounded-2xl border border-border bg-card/90 p-5 hover:border-emerald-500/50 hover:shadow-2xl transition-all group relative overflow-hidden cursor-pointer"
+                  >
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className="size-12 rounded-xl bg-background grid place-items-center text-emerald-400 shadow-md border border-border shrink-0">
+                        <Award className="size-6" />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-extrabold leading-tight text-foreground group-hover:text-emerald-300 transition-colors truncate">{courseTitle}</h3>
+                        <p className="text-xs text-muted-foreground font-medium mt-1 flex items-center gap-2">
+                          <Calendar className="size-3 text-emerald-400" /> Issued {formattedDate}
+                        </p>
+                        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                            ID: {displayId}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                            <Eye className="size-3 text-muted-foreground" /> View Details
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDownloadPdf(c); }} 
+                        className="p-2.5 bg-muted text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-xl border border-border transition-all shadow-md shrink-0" 
+                        title="Download / Print PDF Certificate"
+                      >
+                        <Download className="size-4" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleDownloadPdf(c); }} 
-                      className="p-2.5 bg-muted text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-xl border border-border transition-all shadow-md shrink-0" 
-                      title="Download / Print PDF Certificate"
-                    >
-                      <Download className="size-4" />
-                    </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
-            {apiCertificates.length === 0 && (
-              <div className="col-span-2 text-center py-12 px-6 bg-card/60 border border-dashed border-border rounded-2xl">
-                <Award className="size-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-                <h3 className="text-sm font-bold text-foreground">No Certificates Earned Yet</h3>
-                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto font-medium">
-                  Complete courses or pass assessments to earn verifiable certificates issued by {orgName}.
-                </p>
-              </div>
+              {apiCertificates.length === 0 && (
+                <div className="col-span-2 text-center py-12 px-6 bg-card/60 border border-dashed border-border rounded-2xl">
+                  <Award className="size-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                  <h3 className="text-sm font-bold text-foreground">No Certificates Earned Yet</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto font-medium">
+                    Complete courses or pass assessments to earn verifiable certificates issued by {orgName}.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {apiCertificates.length > 0 && (
+              <PaginationControls
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalItems={apiCertificates.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
           )}

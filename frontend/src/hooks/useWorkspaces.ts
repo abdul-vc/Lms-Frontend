@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 
 export interface NavItem { 
   key: string; 
@@ -33,7 +33,7 @@ export function useWorkspaces() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/me/workspaces/')
+    authFetch(`${API_BASE}/me/workspaces/`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch workspaces');
         return res.json();

@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState, useMemo } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { DataTableRow } from '@/components/DataTableRow';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/super-admin/sites')({
   component: SitesPage,
@@ -14,13 +15,15 @@ function SitesPage() {
   const navigate = useNavigate();
   const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [productTypeFilter, setProductTypeFilter] = useState('');
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/sites/')
+    authFetch(`${API_BASE}/sites/`)
       .then(r => r.json())
       .then((sitesData) => {
         setSites(Array.isArray(sitesData) ? sitesData : []);
@@ -49,9 +52,12 @@ function SitesPage() {
     });
   }, [sites, searchTerm, productTypeFilter]);
 
+  const paginatedSites = filteredSites.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const clearFilters = () => {
     setSearchTerm('');
     setProductTypeFilter('');
+    setCurrentPage(1);
   };
 
   return (
@@ -81,13 +87,19 @@ function SitesPage() {
                 type="text" 
                 placeholder="Search site..." 
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 transition-all"
               />
             </div>
             <select
               value={productTypeFilter}
-              onChange={(e) => setProductTypeFilter(e.target.value)}
+              onChange={(e) => {
+                setProductTypeFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-emerald-500/50 transition-all min-w-[200px] appearance-none"
               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
             >
@@ -128,7 +140,7 @@ function SitesPage() {
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground text-sm">No sites found.</td>
                 </tr>
-              ) : filteredSites.map((site) => (
+              ) : paginatedSites.map((site) => (
                 <DataTableRow 
                   key={site.id}
                   summary={
@@ -179,7 +191,7 @@ function SitesPage() {
                   onDelete={async () => {
                     if (confirm(`Are you sure you want to delete the site "${site.name}"? This action cannot be undone.`)) {
                       try {
-                        const res = await authFetch(`http://127.0.0.1:8000/api/sites/${site.id}/`, { method: 'DELETE' });
+                        const res = await authFetch(`${API_BASE}/sites/${site.id}/`, { method: 'DELETE' });
                         if (res.ok) {
                           setSites(sites.filter(s => s.id !== site.id));
                         } else {
@@ -196,7 +208,20 @@ function SitesPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredSites.length > 0 && (
+          <div className="px-4 py-2 border-t border-border">
+            <PaginationControls
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={filteredSites.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

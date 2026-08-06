@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { Users, Plus, Pencil, Trash2, Loader2, AlertCircle, Shield, Grid, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/org-admin/roles')({
   component: RolesPage,
@@ -14,45 +15,92 @@ interface Role {
   is_default: boolean;
   is_admin_role: boolean;
   user_count: number;
-  can_manage_users: boolean;
-  can_manage_departments: boolean;
-  can_manage_roles: boolean;
-  can_create_courses: boolean;
-  can_edit_courses: boolean;
-  can_publish_courses: boolean;
-  can_manage_module_access: boolean;
-  can_view_reports: boolean;
-  can_manage_certificates: boolean;
+
+  can_view_users?: boolean;
+  can_create_users?: boolean;
+  can_edit_users?: boolean;
+  can_delete_users?: boolean;
+
+  can_view_roles?: boolean;
+  can_create_roles?: boolean;
+  can_edit_roles?: boolean;
+  can_delete_roles?: boolean;
+
+  can_view_courses?: boolean;
+  can_create_courses?: boolean;
+  can_edit_courses?: boolean;
+  can_delete_courses?: boolean;
+
+  can_view_certificates?: boolean;
+  can_create_certificates?: boolean;
+  can_edit_certificates?: boolean;
+  can_delete_certificates?: boolean;
+
+  can_view_reports?: boolean;
+  can_create_reports?: boolean;
+  can_edit_reports?: boolean;
+  can_delete_reports?: boolean;
+
+  can_view_module_access?: boolean;
+  can_create_module_access?: boolean;
+  can_edit_module_access?: boolean;
+  can_delete_module_access?: boolean;
+
+  can_view_activity_log?: boolean;
+  can_create_activity_log?: boolean;
+  can_edit_activity_log?: boolean;
+  can_delete_activity_log?: boolean;
+
+  can_manage_users?: boolean;
+  can_manage_departments?: boolean;
+  can_manage_roles?: boolean;
+  can_publish_courses?: boolean;
+  can_manage_module_access?: boolean;
+  can_manage_certificates?: boolean;
 }
 
 const PERMISSION_GROUPS = [
   {
     title: "User Management",
     keys: [
-      { key: "can_manage_users", label: "Manage Users" },
-      { key: "can_manage_departments", label: "Manage Departments" },
-      { key: "can_manage_roles", label: "Manage Roles" },
+      { key: "can_view_users", label: "View Users & Departments" },
+      { key: "can_create_users", label: "Create Users & Departments" },
+      { key: "can_edit_users", label: "Edit Users & Departments" },
+      { key: "can_delete_users", label: "Delete Users & Departments" },
+      { key: "can_view_roles", label: "View Roles & Permissions" },
+      { key: "can_create_roles", label: "Create Roles" },
+      { key: "can_edit_roles", label: "Edit Roles" },
+      { key: "can_delete_roles", label: "Delete Roles" },
     ]
   },
   {
     title: "Course Management",
     keys: [
+      { key: "can_view_courses", label: "View Courses" },
       { key: "can_create_courses", label: "Create Courses" },
       { key: "can_edit_courses", label: "Edit Courses" },
-      { key: "can_publish_courses", label: "Publish Courses" },
+      { key: "can_delete_courses", label: "Delete Courses" },
     ]
   },
   {
-    title: "Platform Configuration",
+    title: "Platform Configuration & Audit",
     keys: [
-      { key: "can_manage_module_access", label: "Manage Module Access" },
-      { key: "can_manage_certificates", label: "Manage Certificates" },
+      { key: "can_view_module_access", label: "View Module Access" },
+      { key: "can_edit_module_access", label: "Edit Module Access" },
+      { key: "can_view_certificates", label: "View Certificate Templates" },
+      { key: "can_create_certificates", label: "Create Certificate Templates" },
+      { key: "can_edit_certificates", label: "Edit Certificate Templates" },
+      { key: "can_delete_certificates", label: "Delete Certificate Templates" },
+      { key: "can_view_activity_log", label: "View Audit & Activity Log" },
     ]
   },
   {
     title: "Reporting",
     keys: [
       { key: "can_view_reports", label: "View Reports" },
+      { key: "can_create_reports", label: "Create Reports" },
+      { key: "can_edit_reports", label: "Edit Reports" },
+      { key: "can_delete_reports", label: "Delete Reports" },
     ]
   }
 ] as const;
@@ -73,18 +121,21 @@ function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoleForMatrix, setSelectedRoleForMatrix] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Matrix state
   const [matrixState, setMatrixState] = useState<Record<string, { view: boolean; create: boolean; edit: boolean; delete: boolean }>>({
-    users: { view: true, create: true, edit: true, delete: false },
-    roles: { view: true, create: true, edit: true, delete: false },
-    courses: { view: true, create: true, edit: true, delete: true },
-    certificates: { view: true, create: true, edit: true, delete: false },
-    reports: { view: true, create: false, edit: false, delete: false },
-    module_access: { view: true, create: true, edit: true, delete: false },
-    activity: { view: true, create: false, edit: false, delete: false },
+    users: { view: false, create: false, edit: false, delete: false },
+    roles: { view: false, create: false, edit: false, delete: false },
+    courses: { view: false, create: false, edit: false, delete: false },
+    certificates: { view: false, create: false, edit: false, delete: false },
+    reports: { view: false, create: false, edit: false, delete: false },
+    module_access: { view: false, create: false, edit: false, delete: false },
+    activity: { view: false, create: false, edit: false, delete: false },
   });
   const [matrixSaved, setMatrixSaved] = useState(false);
+  const [matrixSaving, setMatrixSaving] = useState(false);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,15 +143,34 @@ function RolesPage() {
   
   const [formData, setFormData] = useState<Partial<Role>>({
     name: '',
-    can_manage_users: false,
-    can_manage_departments: false,
-    can_manage_roles: false,
+    can_view_users: false,
+    can_create_users: false,
+    can_edit_users: false,
+    can_delete_users: false,
+    can_view_roles: false,
+    can_create_roles: false,
+    can_edit_roles: false,
+    can_delete_roles: false,
+    can_view_courses: false,
     can_create_courses: false,
     can_edit_courses: false,
-    can_publish_courses: false,
-    can_manage_module_access: false,
+    can_delete_courses: false,
+    can_view_certificates: false,
+    can_create_certificates: false,
+    can_edit_certificates: false,
+    can_delete_certificates: false,
     can_view_reports: false,
-    can_manage_certificates: false,
+    can_create_reports: false,
+    can_edit_reports: false,
+    can_delete_reports: false,
+    can_view_module_access: false,
+    can_create_module_access: false,
+    can_edit_module_access: false,
+    can_delete_module_access: false,
+    can_view_activity_log: false,
+    can_create_activity_log: false,
+    can_edit_activity_log: false,
+    can_delete_activity_log: false,
   });
   
   const [error, setError] = useState<string | null>(null);
@@ -112,12 +182,14 @@ function RolesPage() {
 
   const fetchRoles = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/roles/');
+      const res = await authFetch(`${API_BASE}/roles/`);
       if (res.ok) {
         const allRoles = await res.json();
         const nonAdmin = allRoles.filter((r: Role) => !r.is_admin_role);
         setRoles(nonAdmin);
-        if (nonAdmin.length > 0) setSelectedRoleForMatrix(nonAdmin[0].id);
+        if (nonAdmin.length > 0 && !selectedRoleForMatrix) {
+          setSelectedRoleForMatrix(nonAdmin[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -126,19 +198,91 @@ function RolesPage() {
     }
   };
 
+  // Sync matrix state whenever selected role changes or roles update
+  useEffect(() => {
+    if (selectedRoleForMatrix) {
+      const r = roles.find((role) => role.id === selectedRoleForMatrix);
+      if (r) {
+        setMatrixState({
+          users: {
+            view: Boolean(r.can_view_users),
+            create: Boolean(r.can_create_users),
+            edit: Boolean(r.can_edit_users),
+            delete: Boolean(r.can_delete_users),
+          },
+          roles: {
+            view: Boolean(r.can_view_roles),
+            create: Boolean(r.can_create_roles),
+            edit: Boolean(r.can_edit_roles),
+            delete: Boolean(r.can_delete_roles),
+          },
+          courses: {
+            view: Boolean(r.can_view_courses),
+            create: Boolean(r.can_create_courses),
+            edit: Boolean(r.can_edit_courses),
+            delete: Boolean(r.can_delete_courses),
+          },
+          certificates: {
+            view: Boolean(r.can_view_certificates),
+            create: Boolean(r.can_create_certificates),
+            edit: Boolean(r.can_edit_certificates),
+            delete: Boolean(r.can_delete_certificates),
+          },
+          reports: {
+            view: Boolean(r.can_view_reports),
+            create: Boolean(r.can_create_reports),
+            edit: Boolean(r.can_edit_reports),
+            delete: Boolean(r.can_delete_reports),
+          },
+          module_access: {
+            view: Boolean(r.can_view_module_access),
+            create: Boolean(r.can_create_module_access),
+            edit: Boolean(r.can_edit_module_access),
+            delete: Boolean(r.can_delete_module_access),
+          },
+          activity: {
+            view: Boolean(r.can_view_activity_log),
+            create: Boolean(r.can_create_activity_log),
+            edit: Boolean(r.can_edit_activity_log),
+            delete: Boolean(r.can_delete_activity_log),
+          },
+        });
+      }
+    }
+  }, [selectedRoleForMatrix, roles]);
+
   const openAdd = () => {
     setEditingRole(null);
     setFormData({
       name: '',
-      can_manage_users: false,
-      can_manage_departments: false,
-      can_manage_roles: false,
+      can_view_users: false,
+      can_create_users: false,
+      can_edit_users: false,
+      can_delete_users: false,
+      can_view_roles: false,
+      can_create_roles: false,
+      can_edit_roles: false,
+      can_delete_roles: false,
+      can_view_courses: false,
       can_create_courses: false,
       can_edit_courses: false,
-      can_publish_courses: false,
-      can_manage_module_access: false,
+      can_delete_courses: false,
+      can_view_certificates: false,
+      can_create_certificates: false,
+      can_edit_certificates: false,
+      can_delete_certificates: false,
       can_view_reports: false,
-      can_manage_certificates: false,
+      can_create_reports: false,
+      can_edit_reports: false,
+      can_delete_reports: false,
+      can_view_module_access: false,
+      can_create_module_access: false,
+      can_edit_module_access: false,
+      can_delete_module_access: false,
+      can_view_activity_log: false,
+      can_create_activity_log: false,
+      can_edit_activity_log: false,
+      can_delete_activity_log: false,
     });
     setError(null);
     setIsModalOpen(true);
@@ -158,8 +302,8 @@ function RolesPage() {
 
     try {
       const url = editingRole 
-        ? `http://127.0.0.1:8000/api/roles/${editingRole.id}/` 
-        : 'http://127.0.0.1:8000/api/roles/';
+        ? `${API_BASE}/roles/${editingRole.id}/` 
+        : `${API_BASE}/roles/`;
       
       const payload = { ...formData };
       if (editingRole?.is_default) {
@@ -199,7 +343,7 @@ function RolesPage() {
     if (!window.confirm(`Are you sure you want to delete ${r.name}?`)) return;
     
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/roles/${r.id}/`, {
+      const res = await authFetch(`${API_BASE}/roles/${r.id}/`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -222,9 +366,66 @@ function RolesPage() {
     }));
   };
 
-  const handleSaveMatrix = () => {
-    setMatrixSaved(true);
-    setTimeout(() => setMatrixSaved(false), 2000);
+  const handleSaveMatrix = async () => {
+    if (!selectedRoleForMatrix) return;
+    setMatrixSaving(true);
+    try {
+      const payload = {
+        can_view_users: matrixState.users.view,
+        can_create_users: matrixState.users.create,
+        can_edit_users: matrixState.users.edit,
+        can_delete_users: matrixState.users.delete,
+
+        can_view_roles: matrixState.roles.view,
+        can_create_roles: matrixState.roles.create,
+        can_edit_roles: matrixState.roles.edit,
+        can_delete_roles: matrixState.roles.delete,
+
+        can_view_courses: matrixState.courses.view,
+        can_create_courses: matrixState.courses.create,
+        can_edit_courses: matrixState.courses.edit,
+        can_delete_courses: matrixState.courses.delete,
+
+        can_view_certificates: matrixState.certificates.view,
+        can_create_certificates: matrixState.certificates.create,
+        can_edit_certificates: matrixState.certificates.edit,
+        can_delete_certificates: matrixState.certificates.delete,
+
+        can_view_reports: matrixState.reports.view,
+        can_create_reports: matrixState.reports.create,
+        can_edit_reports: matrixState.reports.edit,
+        can_delete_reports: matrixState.reports.delete,
+
+        can_view_module_access: matrixState.module_access.view,
+        can_create_module_access: matrixState.module_access.create,
+        can_edit_module_access: matrixState.module_access.edit,
+        can_delete_module_access: matrixState.module_access.delete,
+
+        can_view_activity_log: matrixState.activity.view,
+        can_create_activity_log: matrixState.activity.create,
+        can_edit_activity_log: matrixState.activity.edit,
+        can_delete_activity_log: matrixState.activity.delete,
+      };
+
+      const res = await authFetch(`${API_BASE}/roles/${selectedRoleForMatrix}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || 'Failed to update matrix permissions.');
+      }
+
+      await fetchRoles();
+      setMatrixSaved(true);
+      setTimeout(() => setMatrixSaved(false), 2500);
+    } catch (err: any) {
+      alert(`Failed to save matrix permissions: ${err.message}`);
+    } finally {
+      setMatrixSaving(false);
+    }
   };
 
   if (loading) {
@@ -300,7 +501,7 @@ function RolesPage() {
                     </td>
                   </tr>
                 ) : (
-                  roles.map((r) => {
+                  roles.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => {
                     const activePerms = Object.keys(r).filter(k => k.startsWith('can_') && (r as any)[k]).length;
                     return (
                       <tr key={r.id} className="hover:bg-muted/50/50 transition-colors">
@@ -349,6 +550,18 @@ function RolesPage() {
                 )}
               </tbody>
             </table>
+
+            {roles.length > 0 && (
+              <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalItems={roles.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            )}
           </div>
         </>
       )}

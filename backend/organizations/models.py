@@ -186,16 +186,66 @@ class Role(models.Model):
     is_admin_role = models.BooleanField(default=False)  # True for Org Admin roles managed by Super Admins
     workspaces = models.ManyToManyField('master_setup.Workspace', related_name='roles')
 
-    # Permission flags — flat & explicit so frontend permission checks stay simple
-    can_manage_users = models.BooleanField(default=False)
-    can_manage_departments = models.BooleanField(default=False)
-    can_manage_roles = models.BooleanField(default=False)
+    # Granular Module & Action Permissions (100% independent)
+    can_view_users = models.BooleanField(default=False)
+    can_create_users = models.BooleanField(default=False)
+    can_edit_users = models.BooleanField(default=False)
+    can_delete_users = models.BooleanField(default=False)
+
+    can_view_roles = models.BooleanField(default=False)
+    can_create_roles = models.BooleanField(default=False)
+    can_edit_roles = models.BooleanField(default=False)
+    can_delete_roles = models.BooleanField(default=False)
+
+    can_view_courses = models.BooleanField(default=False)
     can_create_courses = models.BooleanField(default=False)
     can_edit_courses = models.BooleanField(default=False)
-    can_publish_courses = models.BooleanField(default=False)
-    can_manage_module_access = models.BooleanField(default=False)
+    can_delete_courses = models.BooleanField(default=False)
+
+    can_view_certificates = models.BooleanField(default=False)
+    can_create_certificates = models.BooleanField(default=False)
+    can_edit_certificates = models.BooleanField(default=False)
+    can_delete_certificates = models.BooleanField(default=False)
+
     can_view_reports = models.BooleanField(default=False)
-    can_manage_certificates = models.BooleanField(default=False)
+    can_create_reports = models.BooleanField(default=False)
+    can_edit_reports = models.BooleanField(default=False)
+    can_delete_reports = models.BooleanField(default=False)
+
+    can_view_module_access = models.BooleanField(default=False)
+    can_create_module_access = models.BooleanField(default=False)
+    can_edit_module_access = models.BooleanField(default=False)
+    can_delete_module_access = models.BooleanField(default=False)
+
+    can_view_activity_log = models.BooleanField(default=False)
+    can_create_activity_log = models.BooleanField(default=False)
+    can_edit_activity_log = models.BooleanField(default=False)
+    can_delete_activity_log = models.BooleanField(default=False)
+
+    # Legacy computed properties for backward compatibility
+    @property
+    def can_manage_users(self):
+        return self.can_view_users or self.can_create_users or self.can_edit_users or self.can_delete_users
+
+    @property
+    def can_manage_departments(self):
+        return self.can_view_users or self.can_create_users or self.can_edit_users or self.can_delete_users
+
+    @property
+    def can_manage_roles(self):
+        return self.can_view_roles or self.can_create_roles or self.can_edit_roles or self.can_delete_roles
+
+    @property
+    def can_publish_courses(self):
+        return self.can_create_courses or self.can_edit_courses
+
+    @property
+    def can_manage_module_access(self):
+        return self.can_view_module_access or self.can_create_module_access or self.can_edit_module_access or self.can_delete_module_access
+
+    @property
+    def can_manage_certificates(self):
+        return self.can_view_certificates or self.can_create_certificates or self.can_edit_certificates or self.can_delete_certificates
 
     created_at = models.DateTimeField(auto_now_add=True)
 

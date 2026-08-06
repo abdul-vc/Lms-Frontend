@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { useState, useEffect } from "react";
 import { fetchAccessRequests, acceptAccessRequest, rejectAccessRequest, type ApiAccessRequest, fetchCourses, type ApiCourse } from "@/lib/courses-api";
 import { CheckCircle2, XCircle, Loader2, ShieldAlert, BookOpen, User, RefreshCw, Sparkles, Lock, MessageSquare, Filter } from "lucide-react";
+import { PaginationControls } from "@/components/ui/PaginationControls";
 
 export const Route = createFileRoute("/pending-registration")({
   head: () => ({ meta: [{ title: "Pending Registrations & Access Requests — Halyard Learn" }] }),
@@ -16,6 +17,8 @@ function PendingRegistration() {
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadData = () => {
     setLoading(true);
@@ -23,7 +26,6 @@ function PendingRegistration() {
       fetchAccessRequests(),
       fetchCourses()
     ]).then(([reqs, rawCourses]) => {
-      // Keep ALL requests (pending, accepted, rejected) for persistent history
       setRequests(reqs);
       const courseMap: Record<number, string> = {};
       rawCourses.forEach((c: ApiCourse) => {
@@ -49,7 +51,6 @@ function PendingRegistration() {
         setFeedback("🔒 Access revoked/rejected. Course locked for learner.");
       }
 
-      // Update local state without removing from history list
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status: action === 'accept' ? 'accepted' : 'rejected' } : r));
       setTimeout(() => setFeedback(null), 3500);
     } catch (err: any) {
@@ -60,62 +61,61 @@ function PendingRegistration() {
     }
   };
 
+  const filteredRequests = requests.filter(r => {
+    if (activeTab === 'all') return true;
+    return r.status === activeTab;
+  });
+
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const acceptedCount = requests.filter(r => r.status === 'accepted').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
 
-  const filteredRequests = requests.filter(r => {
-    if (activeTab === 'pending') return r.status === 'pending';
-    if (activeTab === 'accepted') return r.status === 'accepted';
-    if (activeTab === 'rejected') return r.status === 'rejected';
-    return true;
-  });
+  const paginatedRequests = filteredRequests.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <AppShell maxWidth="max-w-6xl">
-      <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6 max-w-6xl">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground">Pending Registrations & Access Requests</h1>
-            <p className="text-foreground text-sm mt-1 font-medium">
-              Review student course access requests, approve access, or toggle access locks anytime.
-            </p>
+            <h1 className="text-3xl font-black tracking-tight text-foreground mb-1 flex items-center gap-2">
+              <ShieldAlert className="size-7 text-indigo-600" /> Pending Registrations
+            </h1>
+            <p className="text-sm text-foreground font-medium">Review, approve, or reject employee course enrollment access requests.</p>
           </div>
 
           <button
             onClick={loadData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-card border border-border hover:bg-muted text-foreground rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shadow-md self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-xs font-bold text-muted-foreground hover:text-foreground transition-all shadow-sm"
           >
-            <RefreshCw className={`size-3.5 text-emerald-400 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
+            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Requests
           </button>
         </div>
 
         {/* Feedback Alert */}
         {feedback && (
-          <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
-            <Sparkles className="size-4 text-emerald-600 shrink-0" />
-            {feedback}
+          <div className="p-4 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-lg flex items-center gap-3 animate-fade-in border border-slate-700">
+            <Sparkles className="size-4 text-emerald-400 shrink-0" />
+            <span>{feedback}</span>
           </div>
         )}
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <button
-            onClick={() => setActiveTab('all')}
+            onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'all'
                 ? "bg-indigo-600 text-foreground shadow-md shadow-indigo-200"
                 : "bg-muted text-muted-foreground hover:bg-slate-200"
             }`}
           >
-            All Requests ({requests.length})
+            <Filter className="size-3.5" /> All ({requests.length})
           </button>
 
           <button
-            onClick={() => setActiveTab('pending')}
+            onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'pending'
                 ? "bg-amber-500 text-foreground shadow-md shadow-amber-200"
@@ -126,7 +126,7 @@ function PendingRegistration() {
           </button>
 
           <button
-            onClick={() => setActiveTab('accepted')}
+            onClick={() => { setActiveTab('accepted'); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'accepted'
                 ? "bg-emerald-600 text-foreground shadow-md shadow-emerald-200"
@@ -137,7 +137,7 @@ function PendingRegistration() {
           </button>
 
           <button
-            onClick={() => setActiveTab('rejected')}
+            onClick={() => { setActiveTab('rejected'); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'rejected'
                 ? "bg-rose-600 text-foreground shadow-md shadow-rose-200"
@@ -172,7 +172,7 @@ function PendingRegistration() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {filteredRequests.map(req => {
+                {paginatedRequests.map(req => {
                   const isProcessing = processingId === req.id;
                   const courseTitle = (req as any).course_title || courses[req.course] || `Course #${req.course}`;
                   const studentName = (req as any).student_name || req.student_details?.full_name || 'Unknown User';
@@ -181,7 +181,6 @@ function PendingRegistration() {
 
                   return (
                     <tr key={req.id} className="hover:bg-muted/50/60 transition-colors">
-                      {/* Student Info */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="size-9 rounded-full bg-indigo-50 text-indigo-700 font-bold grid place-items-center text-xs border border-indigo-100">
@@ -193,16 +192,12 @@ function PendingRegistration() {
                           </div>
                         </div>
                       </td>
-
-                      {/* Course */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <BookOpen className="size-4 text-indigo-600 shrink-0" />
                           <span className="font-semibold text-slate-800">{courseTitle}</span>
                         </div>
                       </td>
-
-                      {/* Status Badge */}
                       <td className="px-6 py-4">
                         {req.status === 'accepted' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
@@ -218,21 +213,15 @@ function PendingRegistration() {
                           </span>
                         )}
                       </td>
-
-                      {/* Requested Date */}
                       <td className="px-6 py-4 text-muted-foreground text-xs">
                         {new Date(req.requested_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                       </td>
-
-                      {/* Reversible Action Controls */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* Chat with Student Button */}
                           <Link
                             to="/messenger"
                             search={{ userId: studentId }}
                             className="p-2 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs transition-colors"
-                            title={`Chat directly with ${studentName}`}
                           >
                             <MessageSquare className="size-4" />
                           </Link>
@@ -241,7 +230,6 @@ function PendingRegistration() {
                             <Loader2 className="size-5 animate-spin text-muted-foreground" />
                           ) : (
                             <>
-                              {/* If Pending: Show Approve & Reject */}
                               {req.status === 'pending' && (
                                 <>
                                   <button
@@ -249,37 +237,33 @@ function PendingRegistration() {
                                     className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-foreground font-semibold text-xs transition-all shadow-sm"
                                     title="Approve Course Access"
                                   >
-                                    <CheckCircle2 className="size-3.5" /> Approve Access
+                                    <CheckCircle2 className="size-3.5" /> Approve
                                   </button>
                                   <button
                                     onClick={() => handleAction(req.id, 'reject')}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs transition-colors border border-rose-200"
-                                    title="Reject Request"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                    title="Reject Course Access"
                                   >
                                     <XCircle className="size-3.5" /> Reject
                                   </button>
                                 </>
                               )}
-
-                              {/* If Accepted: Show Re-lock / Revoke option */}
                               {req.status === 'accepted' && (
                                 <button
                                   onClick={() => handleAction(req.id, 'reject')}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors border border-rose-200"
-                                  title="Revoke and re-lock course access"
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                  title="Revoke Access (Lock Course)"
                                 >
-                                  <Lock className="size-3.5 text-rose-600" /> Revoke / Lock Access
+                                  <Lock className="size-3.5" /> Revoke Access
                                 </button>
                               )}
-
-                              {/* If Rejected: Show Re-approve option */}
                               {req.status === 'rejected' && (
                                 <button
                                   onClick={() => handleAction(req.id, 'accept')}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-foreground font-semibold text-xs transition-all shadow-sm"
-                                  title="Re-approve course access"
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                  title="Re-approve Course Access"
                                 >
-                                  <CheckCircle2 className="size-3.5" /> Approve Access
+                                  <CheckCircle2 className="size-3.5" /> Re-Approve
                                 </button>
                               )}
                             </>
@@ -291,6 +275,18 @@ function PendingRegistration() {
                 })}
               </tbody>
             </table>
+            
+            {filteredRequests.length > 0 && (
+              <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalItems={filteredRequests.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

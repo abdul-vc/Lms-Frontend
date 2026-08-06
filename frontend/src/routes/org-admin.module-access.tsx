@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, useAuth } from '@/lib/auth';
 import { Layers, Loader2, Save, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +41,10 @@ function ModuleAccessPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [saveSuccessId, setSaveSuccessId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  const isSuperOrAdmin = Boolean(user?.is_platform_super_admin || user?.role?.is_admin_role);
+  const canEdit = isSuperOrAdmin || Boolean(user?.role?.can_edit_module_access || user?.role?.can_manage_module_access);
 
   useEffect(() => {
     fetchSites();
@@ -165,18 +169,20 @@ function ModuleAccessPage() {
                       </span>
                     )}
 
-                    <button
-                      onClick={() => handleSave(site)}
-                      disabled={isSaving}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-card text-foreground rounded-xl hover:bg-muted transition-colors text-xs font-bold disabled:opacity-70 shadow-sm"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Save className="size-4" />
-                      )}
-                      {isSaving ? "Saving..." : "Save Changes"}
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleSave(site)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-card text-foreground rounded-xl hover:bg-muted transition-colors text-xs font-bold disabled:opacity-70 shadow-sm"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                        {isSaving ? "Saving..." : "Save Changes"}
+                      </button>
+                    )}
                   </div>
                 </div>
 

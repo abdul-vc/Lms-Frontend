@@ -41,6 +41,7 @@ class Command(BaseCommand):
             ('roles_permissions', 'Roles & Permissions', 'Lock', '/org-admin/roles', 'roles_permissions', 'can_manage_roles'),
             ('module_access', 'Module Access', 'ToggleLeft', '/org-admin/module-access', 'module_access', 'can_manage_module_access'),
             ('course_catalog_admin', 'Course Catalog', 'BookOpen', '/org-admin/courses', 'course_catalog', 'can_edit_courses'),
+            ('learning_paths_admin', 'Learning Paths', 'Route', '/org-admin/paths', 'learning_paths', 'can_edit_courses'),
             ('certificates_admin', 'Certificates', 'Award', '/org-admin/certificates', 'certifications', 'can_manage_certificates'),
             ('activity_log', 'Activity Log', 'History', '/org-admin/activity', 'activity_log', 'is_admin_role'),
             ('content_authoring', 'Content Authoring', 'PenTool', '/authoring', 'content_authoring', 'can_create_courses'),
@@ -117,12 +118,12 @@ class Command(BaseCommand):
                 'label': label, 'component_key': comp, 'order': i
             })
             
-        # Also update actual Roles so existing users can see the workspaces
+        # Also update actual Roles so existing users can see appropriate workspaces
         from organizations.models import Role
         for role in Role.objects.all():
-            if role.is_admin_role or role.can_manage_users or role.can_manage_roles or role.can_create_courses:
-                role.workspaces.add(admin_ws, learner_ws)
+            if role.is_admin_role:
+                role.workspaces.set([admin_ws])
             else:
-                role.workspaces.add(learner_ws)
+                role.workspaces.set([learner_ws])
 
         self.stdout.write(self.style.SUCCESS('Workspaces and nav items seeded successfully.'))

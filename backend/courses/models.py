@@ -47,7 +47,7 @@ class Course(models.Model):
     passing_score = models.IntegerField(default=80)
     level = models.CharField(max_length=50, choices=LEVEL_CHOICES, default='Foundational')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    accent = models.CharField(max_length=100, default='var(--brand)')
+    accent = models.CharField(max_length=100, default='var(--brand)', blank=True)
     skills = models.JSONField(default=list, blank=True)
     time_limit_minutes = models.IntegerField(default=0)
     badge_icon = models.CharField(max_length=50, blank=True, default="🎓")

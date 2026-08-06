@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { Activity } from 'lucide-react';
 import { format } from 'date-fns';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/super-admin/activity')({
   component: SuperAdminActivityLog,
@@ -11,6 +12,8 @@ export const Route = createFileRoute('/super-admin/activity')({
 function SuperAdminActivityLog() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchLogs();
@@ -18,15 +21,17 @@ function SuperAdminActivityLog() {
 
   const fetchLogs = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/activity-log/');
+      const res = await authFetch(`${API_BASE}/activity-log/`);
       const data = await res.json();
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : (data.results || []));
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+
+  const paginatedLogs = logs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -66,7 +71,7 @@ function SuperAdminActivityLog() {
                   </td>
                 </tr>
               ) : (
-                logs.map(log => (
+                paginatedLogs.map(log => (
                   <tr key={log.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4 text-muted-foreground font-mono">
                       {format(new Date(log.created_at), 'MMM d, yyyy HH:mm:ss')}
@@ -108,7 +113,20 @@ function SuperAdminActivityLog() {
             </tbody>
           </table>
         </div>
+
+        {logs.length > 0 && (
+          <div className="px-4 py-2 border-t border-border">
+            <PaginationControls
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={logs.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

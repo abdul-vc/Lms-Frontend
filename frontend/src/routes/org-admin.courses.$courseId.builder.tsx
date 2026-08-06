@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { authFetch, useAuth, API_BASE } from '@/lib/auth';
-import { uploadScormPackage, exportScormPackage, uploadAssessmentCsv, downloadAssessmentCsvTemplate, fetchAssessmentQuestions, type ApiAssessmentQuestion } from '@/lib/courses-api';
+import { exportScormPackage, uploadAssessmentCsv, downloadAssessmentCsvTemplate, fetchAssessmentQuestions, type ApiAssessmentQuestion } from '@/lib/courses-api';
 import {
   ArrowLeft, Save, Loader2, Send, AlertCircle, Plus, X, Eye,
   Upload, CheckCircle2, Sparkles, Download, Trash2, HelpCircle,
@@ -54,9 +54,6 @@ function CourseBuilderPage() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [scormUploading, setScormUploading] = useState(false);
-  const [scormError, setScormError] = useState<string | null>(null);
-
   const [questions, setQuestions] = useState<ApiAssessmentQuestion[]>([]);
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvStatus, setCsvStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -68,20 +65,6 @@ function CourseBuilderPage() {
     option_a: '', option_b: '', option_c: '', option_d: '',
     correct_option: 'A',
   });
-
-  const handleScormUpload = async (file: File) => {
-    const numericId = parseInt(String(courseId).replace('api-', ''), 10);
-    setScormUploading(true);
-    setScormError(null);
-    try {
-      await uploadScormPackage(numericId, file);
-      fetchCourse();
-    } catch (e: any) {
-      setScormError(e.message || "Failed to upload and validate SCORM package.");
-    } finally {
-      setScormUploading(false);
-    }
-  };
 
   useEffect(() => { fetchCourse(); fetchQuestions(); }, [courseId]);
 
@@ -400,74 +383,6 @@ function CourseBuilderPage() {
               </div>
             </div>
           </form>
-
-          {/* SCORM Package Section */}
-          <div className="card-elevated space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="size-8 rounded-lg bg-indigo-500/15 border border-indigo-500/20 grid place-items-center">
-                  <Sparkles className="size-4 text-indigo-400" />
-                </div>
-                <div>
-                  <h2 className="text-heading-3 text-foreground">SCORM Package</h2>
-                  <p className="text-caption">Articulate Storyline, Captivate, or iSpring exports.</p>
-                </div>
-              </div>
-              {course?.is_scorm && (
-                <span className="badge-success gap-1">
-                  <CheckCircle2 className="size-3" /> Active
-                </span>
-              )}
-            </div>
-
-            {course?.scorm_package ? (
-              <div className="space-y-3">
-                <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-2.5">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Package Title</p>
-                      <p className="text-sm font-semibold text-foreground">{course.scorm_package.title}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge-brand">SCORM {course.scorm_package.version}</span>
-                      <span className="text-caption">Uploaded {new Date(course.scorm_package.uploaded_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <div className="text-xs font-mono text-muted-foreground bg-background px-3 py-2 rounded-lg border border-border truncate">
-                    {course.scorm_package.launch_url}
-                  </div>
-                </div>
-                <label className="btn-secondary gap-2 cursor-pointer w-fit">
-                  {scormUploading ? <div className="spinner-sm" /> : <Upload className="size-4" />}
-                  {scormUploading ? 'Uploading…' : 'Replace Package'}
-                  <input type="file" accept=".zip" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScormUpload(f); }} />
-                </label>
-              </div>
-            ) : (
-              <label className="dropzone cursor-pointer">
-                <div className="size-10 rounded-xl bg-muted grid place-items-center">
-                  <Upload className="size-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {scormUploading ? 'Validating & extracting package…' : 'Upload SCORM Package (.zip)'}
-                  </p>
-                  <p className="text-caption mt-0.5">Supports SCORM 1.2 and SCORM 2004</p>
-                </div>
-                {scormUploading ? <div className="spinner" /> : (
-                  <span className="btn-outline-brand">Select ZIP File</span>
-                )}
-                <input type="file" accept=".zip" disabled={scormUploading} className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScormUpload(f); }} />
-              </label>
-            )}
-
-            {scormError && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
-                <AlertCircle className="size-4 shrink-0" /> {scormError}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* ── RIGHT: Assessment Questions Panel ─────────────────────────────── */}

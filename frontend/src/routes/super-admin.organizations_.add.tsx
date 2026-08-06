@@ -127,6 +127,40 @@ function AddOrganizationPage() {
     billing_date: '',
   });
 
+const CYCLE_MONTH_MAP: Record<string, number> = {
+  monthly: 1,
+  bimonthly: 2,
+  quarterly: 3,
+  semi_annually: 6,
+  yearly: 12,
+  annually: 12,
+};
+
+const DURATION_MONTH_MAP: Record<string, number> = {
+  '6_months': 6,
+  '1_year': 12,
+  '2_years': 24,
+};
+
+function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
+  if (!isoDateStr || monthsToAdd <= 0) return '';
+  const [yyyy, mm, dd] = isoDateStr.split('-').map(Number);
+  if (!yyyy || !mm || !dd) return '';
+
+  const totalMonths = (mm - 1) + monthsToAdd;
+  const newYear = yyyy + Math.floor(totalMonths / 12);
+  const newMonthIndex = ((totalMonths % 12) + 12) % 12;
+
+  const maxDaysInTargetMonth = new Date(newYear, newMonthIndex + 1, 0).getDate();
+  const targetDay = Math.min(dd, maxDaysInTargetMonth);
+
+  const formattedY = String(newYear).padStart(4, '0');
+  const formattedM = String(newMonthIndex + 1).padStart(2, '0');
+  const formattedD = String(targetDay).padStart(2, '0');
+
+  return `${formattedY}-${formattedM}-${formattedD}`;
+}
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -138,27 +172,22 @@ function AddOrganizationPage() {
       };
 
       if ((name === 'duration_type' || name === 'start_date') && next.start_date) {
-        if (next.duration_type === '6_months' || next.duration_type === '1_year') {
-          const [yyyy, mm, dd] = next.start_date.split('-').map(Number);
-          if (yyyy && mm && dd) {
-            const d = new Date(yyyy, mm - 1, dd);
-            if (next.duration_type === '6_months') {
-              d.setMonth(d.getMonth() + 6);
-            } else if (next.duration_type === '1_year') {
-              d.setFullYear(d.getFullYear() + 1);
-            }
-            const endY = d.getFullYear();
-            const endM = String(d.getMonth() + 1).padStart(2, '0');
-            const endD = String(d.getDate()).padStart(2, '0');
-            next.end_date = `${endY}-${endM}-${endD}`;
-          }
+        const months = DURATION_MONTH_MAP[next.duration_type];
+        if (months) {
+          next.end_date = addMonthsToIsoDate(next.start_date, months);
         } else if (next.duration_type === 'custom' && name === 'duration_type') {
           next.end_date = '';
         }
       }
 
-      if (name === 'start_date' && next.start_date && !next.billing_date) {
-        next.billing_date = next.start_date;
+      if ((name === 'billing_cycle' || name === 'start_date') && next.start_date) {
+        const cycleKey = (next.billing_cycle || '').toLowerCase();
+        const cycleMonths = CYCLE_MONTH_MAP[cycleKey];
+        if (cycleMonths) {
+          next.billing_date = addMonthsToIsoDate(next.start_date, cycleMonths);
+        } else if (!next.billing_cycle) {
+          next.billing_date = next.start_date;
+        }
       }
 
       return next;
@@ -224,11 +253,16 @@ function AddOrganizationPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        let errMsg = 'Failed to create organization.';
-        if (data.detail) {
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+        let errMsg = `Failed to create organization (HTTP ${res.status}).`;
+        if (data?.detail) {
           errMsg = data.detail;
-        } else if (typeof data === 'object') {
+        } else if (data && typeof data === 'object') {
           errMsg = Object.entries(data)
             .map(([field, msgs]) => {
               const label = field.replace(/_/g, ' ');
@@ -292,7 +326,6 @@ function AddOrganizationPage() {
                 <option value="">-- Please choose an option --</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
               </select>
             </div>
             <div>

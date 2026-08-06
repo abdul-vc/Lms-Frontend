@@ -201,15 +201,63 @@ class BillingConfigurationViewSet(viewsets.ModelViewSet):
         log_activity(self.request, 'billing_updated', target=billing, organization=billing.organization)
 
 class HasRolePermission(permissions.BasePermission):
-    """Usage: set `required_permission = 'can_manage_departments'` as a class attr on the view."""
+    """
+    Evaluates role permissions dynamically for DRF ViewSets based on action method:
+    - View (list/retrieve/GET): can_view_* or is_admin_role
+    - Create (create/POST): can_create_* or is_admin_role
+    - Edit (update/partial_update/PUT/PATCH): can_edit_* or is_admin_role
+    - Delete (destroy/DELETE): can_delete_* or is_admin_role
+    """
     def has_permission(self, request, view):
-        if request.user.is_platform_super_admin:
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_platform_super_admin:
             return True
+        if not user.role:
+            return False
+        if user.role.is_admin_role:
+            return True
+
         perm = getattr(view, 'required_permission', None)
-        has_perm = bool(perm and request.user.role and getattr(request.user.role, perm, False))
-        if not has_perm:
+        if not perm:
+            return True
+
+        role = user.role
+        action = getattr(view, 'action', None) or request.method.lower()
+
+        if 'user' in perm or 'department' in perm:
+            domain = 'users'
+        elif 'role' in perm:
+            domain = 'roles'
+        elif 'course' in perm:
+            domain = 'courses'
+        elif 'certificate' in perm:
+            domain = 'certificates'
+        elif 'report' in perm:
+            domain = 'reports'
+        elif 'module_access' in perm:
+            domain = 'module_access'
+        elif 'activity' in perm:
+            domain = 'activity_log'
+        else:
+            return bool(getattr(role, perm, False))
+
+        if action in ['list', 'retrieve', 'get']:
+            has_cap = getattr(role, f'can_view_{domain}', False) or getattr(role, perm, False)
+        elif action in ['create', 'post']:
+            has_cap = getattr(role, f'can_create_{domain}', False) or getattr(role, perm, False)
+        elif action in ['update', 'partial_update', 'put', 'patch']:
+            has_cap = getattr(role, f'can_edit_{domain}', False) or getattr(role, perm, False)
+        elif action in ['destroy', 'delete']:
+            has_cap = getattr(role, f'can_delete_{domain}', False) or getattr(role, perm, False)
+        else:
+            has_cap = getattr(role, perm, False)
+
+        if not has_cap:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied(f"HasRolePermission Failed. is_super: {request.user.is_platform_super_admin}, perm: {perm}, has_role: {bool(request.user.role)}")
+            raise PermissionDenied(f"Permission denied for action '{action}' on {domain}.")
+
         return True
 
 
@@ -287,11 +335,32 @@ class CertificateTemplateViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(organization_id=self.request.user.organization_id)
 
+    def _assign_courses(self, template, course_ids):
+        """Assign courses to this template via Course.certificate_template FK."""
+        from courses.models import Course
+        org = template.organization
+        # Remove this template from courses that are no longer selected
+        Course.objects.filter(certificate_template=template).exclude(id__in=course_ids).update(certificate_template=None)
+        # Assign new courses — scoped to org and only draft/published
+        if course_ids:
+            qs = Course.objects.filter(id__in=course_ids, status__in=['draft', 'published'])
+            if org:
+                qs = qs.filter(organization=org)
+            qs.update(certificate_template=template)
+
     def perform_create(self, serializer):
         if not self.request.user.is_platform_super_admin:
-            serializer.save(organization=self.request.user.organization)
+            template = serializer.save(organization=self.request.user.organization)
         else:
-            serializer.save()
+            template = serializer.save()
+        course_ids = self.request.data.get('course_ids', [])
+        if course_ids:
+            self._assign_courses(template, course_ids)
+
+    def perform_update(self, serializer):
+        template = serializer.save()
+        if 'course_ids' in self.request.data:
+            self._assign_courses(template, self.request.data.get('course_ids', []))
 
 from .models import ActivityLog
 from .serializers import ActivityLogSerializer
@@ -300,7 +369,7 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only — logs are never edited or deleted through the API, that would defeat the point of an audit trail."""
     serializer_class = ActivityLogSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]
-    required_permission = 'is_admin_role'
+    required_permission = 'can_view_activity_log'
 
     def get_queryset(self):
         from django.db import models
@@ -355,26 +424,29 @@ class MyWorkspacesView(APIView):
             except Exception:
                 pass
 
-        # Resolve workspaces dynamically so no role/user gets an empty sidebar
-        if user.is_platform_super_admin or not role:
+        # Resolve workspaces dynamically based on account type and role
+        if user.is_platform_super_admin:
             workspaces = Workspace.objects.all().order_by('order')
-        elif role.workspaces.exists():
-            workspaces = role.workspaces.all().order_by('order')
-        elif role.is_admin_role or role.can_manage_users or role.can_manage_roles or role.can_create_courses:
-            workspaces = Workspace.objects.all().order_by('order')
-            # Seed workspaces onto this role for future requests
-            role.workspaces.add(*workspaces)
+        elif role and role.is_admin_role:
+            workspaces = Workspace.objects.filter(key='admin').order_by('order')
+            if not workspaces.exists():
+                workspaces = Workspace.objects.all().order_by('order')
         else:
+            # End Users (Manager, HR, Learner, Instructor, Employee, etc.) get ONLY the learner/user workspace
             workspaces = Workspace.objects.filter(key='learner').order_by('order')
             if not workspaces.exists():
                 workspaces = Workspace.objects.all().order_by('order')
-            role.workspaces.add(*workspaces)
 
         result = []
         for ws in workspaces:
-            nav_items = ws.nav_items.select_related('feature').order_by('order')
+            all_candidate_items = list(ws.nav_items.select_related('feature').order_by('order'))
+
             visible_items = []
-            for item in nav_items:
+            seen_keys = set()
+            for item in all_candidate_items:
+                if item.key in seen_keys:
+                    continue
+
                 # Gate 1: Dynamic Organization & Site Feature Check
                 if user.organization and not user.is_platform_super_admin:
                     # Overview / Dashboard is core platform landing page - always accessible
@@ -400,29 +472,45 @@ class MyWorkspacesView(APIView):
                             feat_key = key_map.get(item.key, item.key)
 
                         if feat_key:
-                            disabled_for_org = OrganizationFeatureAccess.objects.filter(
+                            org_access = OrganizationFeatureAccess.objects.filter(
                                 organization=user.organization,
-                                feature__key=feat_key,
-                                enabled=False
-                            ).exists()
-                            disabled_for_site = SiteFeatureAccess.objects.filter(
-                                site__organization=user.organization,
-                                feature__key=feat_key,
-                                enabled=False
-                            ).exists()
-                            if disabled_for_org or disabled_for_site:
+                                feature__key=feat_key
+                            ).first()
+                            # Only hide if explicitly disabled. No row = default allow.
+                            if org_access is not None and not org_access.enabled:
                                 continue
 
-                # Gate 2: Permission check against the role
-                if item.required_permission and not user.is_platform_super_admin:
-                    if role and role.is_admin_role:
-                        pass  # Org Admin has access to all admin items
-                    elif item.required_permission == 'is_admin_role':
-                        if not role or not role.is_admin_role:
+                # Gate 2: Permission check against the user's role
+                if not user.is_platform_super_admin:
+                    if item.required_permission:
+                        if item.required_permission == 'is_admin_role':
+                            if not role or not role.is_admin_role:
+                                continue
+                        elif not role:
                             continue
-                    elif not role or not getattr(role, item.required_permission, False):
-                        continue
+                        else:
+                            perm_key = item.required_permission
+                            view_perm_map = {
+                                'can_manage_users': 'can_view_users',
+                                'can_manage_departments': 'can_view_users',
+                                'can_manage_roles': 'can_view_roles',
+                                'can_create_courses': 'can_view_courses',
+                                'can_edit_courses': 'can_view_courses',
+                                'can_manage_module_access': 'can_view_module_access',
+                                'can_manage_certificates': 'can_view_certificates',
+                                'can_view_reports': 'can_view_reports',
+                                'can_view_activity_log': 'can_view_activity_log',
+                            }
+                            granular_perm = view_perm_map.get(perm_key, perm_key)
+                            has_perm = (
+                                getattr(role, perm_key, False) or 
+                                getattr(role, granular_perm, False) or 
+                                (role.is_admin_role and ws.key == 'admin')
+                            )
+                            if not has_perm:
+                                continue
 
+                seen_keys.add(item.key)
                 route_path = '/org-admin' if (ws.key == 'admin' and item.key == 'overview') else item.route
 
                 visible_items.append({
@@ -437,10 +525,11 @@ class MyWorkspacesView(APIView):
             visible_widgets = []
             for w in widgets:
                 if w.feature and user.organization:
-                    disabled_explicitly = SiteFeatureAccess.objects.filter(
-                        site__organization=user.organization, feature=w.feature, enabled=False
-                    ).exists()
-                    if disabled_explicitly and not user.is_platform_super_admin:
+                    from master_setup.models import OrganizationFeatureAccess
+                    org_access = OrganizationFeatureAccess.objects.filter(
+                        organization=user.organization, feature=w.feature
+                    ).first()
+                    if org_access and not org_access.enabled and not user.is_platform_super_admin:
                         continue
 
                 visible_widgets.append({
@@ -470,34 +559,199 @@ class GlobalSearchView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        query = request.GET.get('q', '')
-        workspace_key = request.GET.get('workspace', 'admin')
+        query = request.GET.get('q', '').strip()
+        workspace_key = request.GET.get('workspace', 'learner')
         user = request.user
 
         results = []
         if not query:
             return Response({'results': []})
             
+        lower_q = query.lower()
         from django.contrib.auth import get_user_model
-        from courses.models import Course
+        from django.db.models import Q
+        from courses.models import Course, LearningPath, IssuedCertificate
+        from organizations.models import Department, Role, CertificateTemplate, Organization, Site
         User = get_user_model()
         
+        # ── 1. CONSOLE-SCOPED NAV SHORTCUTS & PAGE SEARCH ────────────────────
         if workspace_key == 'admin':
-            if user.organization:
-                results += [{'type': 'user', 'name': u.full_name, 'id': u.id} for u in User.objects.filter(
-                    organization=user.organization, first_name__icontains=query
-                )[:5]]
-                results += [{'type': 'department', 'name': d.name, 'id': d.id} for d in Department.objects.filter(
-                    organization=user.organization, name__icontains=query
-                )[:5]]
-                results += [{'type': 'role', 'name': r.name, 'id': r.id} for r in Role.objects.filter(
-                    organization=user.organization, name__icontains=query
-                )[:5]]
-        elif workspace_key == 'learner':
-            if user.organization:
-                results += [{'type': 'course', 'name': c.title, 'id': c.id} for c in Course.objects.filter(
-                    organization=user.organization, title__icontains=query, status='published'
-                )[:5]]
+            admin_pages = [
+                {'name': 'Overview', 'route': '/org-admin', 'keywords': ['overview', 'dashboard', 'admin', 'home', 'o']},
+                {'name': 'Users & Departments', 'route': '/org-admin/departments', 'keywords': ['users', 'user', 'departments', 'department', 'dept', 'u']},
+                {'name': 'Roles & Permissions', 'route': '/org-admin/roles', 'keywords': ['roles', 'role', 'permissions', 'permission', 'rbac', 'r']},
+                {'name': 'Module Access', 'route': '/org-admin/module-access', 'keywords': ['module access', 'modules', 'access', 'toggles']},
+                {'name': 'Course Catalog Admin', 'route': '/org-admin/courses', 'keywords': ['courses', 'course', 'catalog']},
+                {'name': 'Learning Paths Admin', 'route': '/org-admin/paths', 'keywords': ['learning paths', 'learning path', 'paths', 'path']},
+                {'name': 'Certificates Admin', 'route': '/org-admin/certificates', 'keywords': ['certificates', 'certificate', 'cert', 'certs', 'templates']},
+                {'name': 'Activity Log', 'route': '/org-admin/activity', 'keywords': ['activity log', 'activity', 'audit', 'logs', 'log']},
+                {'name': 'Content Authoring', 'route': '/authoring', 'keywords': ['content authoring', 'authoring', 'builder', 'editor', 'create course']},
+                {'name': 'Pending Registration', 'route': '/pending-registration', 'keywords': ['pending registration', 'pending', 'approvals', 'registrations']},
+                {'name': 'Messenger', 'route': '/messenger', 'keywords': ['messenger', 'messages', 'message', 'chat', 'msg', 'm']},
+            ]
+            for page in admin_pages:
+                if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
+                    results.append({'type': 'page', 'name': page['name'], 'id': page['route'], 'subtitle': 'Nav Shortcut'})
+
+        elif workspace_key == 'super_admin':
+            # ── SUPER ADMIN CONSOLE: Fully isolated — platform-level entities ONLY ─
+            # NEVER searches org-scoped data: Courses, Paths, Certificates, Users,
+            # Departments, Roles. Those belong to org/learner consoles, not super admin.
+
+            super_pages = [
+                {'name': 'Super Admin Dashboard', 'route': '/super-admin', 'keywords': ['super admin', 'dashboard', 'overview', 's']},
+                {'name': 'Organizations (Tenants)', 'route': '/super-admin/organizations', 'keywords': ['organizations', 'organization', 'tenants', 'tenant', 'orgs', 'org']},
+                {'name': 'Site Management', 'route': '/super-admin/sites', 'keywords': ['sites', 'site', 'portals', 'domains']},
+                {'name': 'Subscription Plans', 'route': '/super-admin/plans', 'keywords': ['plans', 'subscriptions', 'billing', 'pricing', 'plan']},
+                {'name': 'Access Control', 'route': '/super-admin/access-control', 'keywords': ['access control', 'access', 'control', 'workspaces', 'features']},
+                {'name': 'Global Settings', 'route': '/super-admin/settings', 'keywords': ['global settings', 'settings', 'configuration', 'config']},
+                {'name': 'Billing & Payments', 'route': '/super-admin/billing', 'keywords': ['billing', 'payments', 'payment', 'invoices', 'invoice']},
+                {'name': 'Activity Log', 'route': '/super-admin/activity', 'keywords': ['activity log', 'activity', 'audit', 'logs', 'log']},
+                {'name': 'Setup Guide', 'route': '/super-admin/setup', 'keywords': ['setup guide', 'setup', 'guide', 'onboarding']},
+                {'name': 'Master Toolkit', 'route': '/super-admin/toolkit', 'keywords': ['master toolkit', 'toolkit', 'tools', 'utility', 'utilities']},
+            ]
+            for page in super_pages:
+                if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
+                    results.append({'type': 'page', 'name': page['name'], 'id': page['route'], 'subtitle': 'Nav Shortcut'})
+
+            # Organizations — primary platform-level entity
+            from django.db.models import Q as Q2
+            orgs = Organization.objects.filter(
+                Q2(name__icontains=query) |
+                Q2(company_name__icontains=query) |
+                Q2(entity_name__icontains=query) |
+                Q2(sub_domain__icontains=query)
+            ).distinct()[:6]
+            results += [
+                {'type': 'organization', 'name': o.name, 'id': o.id, 'subtitle': f'Tenant • {o.sub_domain}'}
+                for o in orgs
+            ]
+
+            # Sites — platform-managed deployment units
+            sites = Site.objects.filter(
+                Q2(name__icontains=query) |
+                Q2(site_code__icontains=query)
+            ).select_related('organization').distinct()[:5]
+            results += [
+                {'type': 'site', 'name': s.name, 'id': s.id,
+                 'subtitle': f'Site • {s.organization.name if s.organization else ""}'}
+                for s in sites
+            ]
+
+            # Plans — subscription plans managed at platform level
+            try:
+                from master_setup.models import Plan
+                plans = Plan.objects.filter(
+                    Q2(name__icontains=query)
+                ).distinct()[:5]
+                results += [
+                    {'type': 'plan', 'name': p.name, 'id': p.id, 'subtitle': 'Subscription Plan'}
+                    for p in plans
+                ]
+            except Exception:
+                pass
+
+            # Return immediately — do NOT fall through to org-scoped model searches
+            return Response({'results': results})
+
+        else:
+            # Default: Learner / End-User Console (Strictly End-User Console Scope)
+            learner_pages = [
+                {'name': 'Dashboard', 'route': '/dashboard', 'keywords': ['dashboard', 'dash', 'home', 'overview', 'd']},
+                {'name': 'Course Catalog', 'route': '/catalog', 'keywords': ['course catalog', 'catalog', 'courses', 'course', 'browse', 'cat', 'c']},
+                {'name': 'Learning Paths', 'route': '/paths', 'keywords': ['learning paths', 'learning path', 'paths', 'path', 'curriculum', 'track', 'p']},
+                {'name': 'Certifications', 'route': '/certificates', 'keywords': ['certifications', 'certification', 'certificates', 'certificate', 'cert', 'certs', 'qualification']},
+                {'name': 'AI Assistant', 'route': '/ai-assistant', 'keywords': ['ai assistant', 'ai', 'assistant', 'tutor', 'bot', 'gpt', 'a']},
+                {'name': 'Messenger', 'route': '/messenger', 'keywords': ['messenger', 'messages', 'message', 'msg', 'chat', 'm']},
+            ]
+            for page in learner_pages:
+                if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
+                    results.append({'type': 'page', 'name': page['name'], 'id': page['route'], 'subtitle': 'Nav Shortcut'})
+
+
+        # ── 2. DYNAMIC MODEL SEARCH (Tenant Isolated) ───────────────────────
+        if user.organization:
+            org_filter = {'organization': user.organization}
+        else:
+            org_filter = {'organization__isnull': True}
+        
+        # Courses (Title, Subtitle, Category, Level)
+        course_base_qs = Course.objects.filter(**org_filter)
+        if workspace_key == 'learner':
+            course_base_qs = course_base_qs.filter(status='published')
+        if 'untitled' not in lower_q:
+            course_base_qs = course_base_qs.exclude(title__icontains='Untitled')
+
+        courses = course_base_qs.filter(
+            Q(title__icontains=query) |
+            Q(subtitle__icontains=query) |
+            Q(category__icontains=query) |
+            Q(level__icontains=query)
+        ).distinct()[:5]
+
+        for c in courses:
+            sub = f"{c.category or 'Course'} • {c.status.capitalize()}" if workspace_key == 'admin' else (c.category or 'Course')
+            results.append({'type': 'course', 'name': c.title, 'id': c.id, 'subtitle': sub})
+
+        # Learning Paths (Title, Description)
+        paths = LearningPath.objects.filter(
+            **org_filter
+        ).filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query)
+        ).distinct()[:5]
+        results += [{'type': 'path', 'name': p.title, 'id': p.id, 'subtitle': 'Learning Path'} for p in paths]
+
+        # Certifications (IssuedCertificates for learner, CertificateTemplates for admin)
+        if workspace_key == 'admin' or (user.role and user.role.is_admin_role):
+            cert_tpls = CertificateTemplate.objects.filter(
+                **org_filter
+            ).filter(
+                Q(title__icontains=query)
+            ).distinct()[:5]
+            results += [{'type': 'certificate', 'name': ct.title, 'id': ct.id, 'subtitle': 'Certificate Template'} for ct in cert_tpls]
+
+        if workspace_key == 'learner':
+            certs = IssuedCertificate.objects.filter(
+                user=user
+            ).filter(
+                Q(course__title__icontains=query) |
+                Q(certificate_id__icontains=query)
+            ).select_related('course')[:5]
+
+            results += [{
+                'type': 'certificate', 
+                'name': f"{c.course.title} Certificate", 
+                'id': c.id, 
+                'subtitle': 'Issued Certificate'
+            } for c in certs]
+
+        # Admin multi-domain search (Users, Departments, Roles)
+        if workspace_key == 'admin' or (user.role and user.role.is_admin_role):
+            users = User.objects.filter(
+                **org_filter
+            ).filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(username__icontains=query) |
+                Q(email__icontains=query) |
+                Q(job_title__icontains=query)
+            ).distinct()[:5]
+            results += [{'type': 'user', 'name': u.full_name or u.username or u.email, 'id': u.id, 'subtitle': 'User'} for u in users]
+
+            departments = Department.objects.filter(
+                **org_filter
+            ).filter(
+                Q(name__icontains=query)
+            ).distinct()[:5]
+            results += [{'type': 'department', 'name': d.name, 'id': d.id, 'subtitle': 'Department'} for d in departments]
+
+            roles = Role.objects.filter(
+                **org_filter
+            ).filter(
+                Q(name__icontains=query)
+            ).distinct()[:5]
+            results += [{'type': 'role', 'name': r.name, 'id': r.id, 'subtitle': 'Role'} for r in roles]
 
         return Response({'results': results})
 

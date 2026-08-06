@@ -568,9 +568,13 @@ def submit_assessment(request, course_pk, attempt_id):
     if attempt.passed and attempt.course:
         from .models import IssuedCertificate
         from organizations.models import CertificateTemplate
-        
+
         org = attempt.course.organization or (request.user.organization if request.user else None)
-        active_tpl = CertificateTemplate.objects.filter(organization=org).first() if org else None
+        # Prefer the template explicitly assigned to this course by the org admin.
+        # Fall back to any org-level template if none is assigned.
+        active_tpl = attempt.course.certificate_template
+        if active_tpl is None and org:
+            active_tpl = CertificateTemplate.objects.filter(organization=org).first()
 
         cert, created = IssuedCertificate.objects.get_or_create(
             user=request.user,
@@ -804,44 +808,8 @@ def request_access(request, course_pk):
 
 
 from rest_framework.views import APIView
-from .scorm_engine import process_scorm_package
 from .models import ScormPackage, ScormTracking
 from .serializers import ScormPackageSerializer, ScormTrackingSerializer
-
-class UploadScormPackageView(APIView):
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request, course_id):
-        course = generics.get_object_or_404(Course, pk=course_id)
-        
-        # Check permission
-        if not (request.user.is_platform_super_admin or course.author_id == request.user.id or (request.user.role and (request.user.role.is_admin_role or request.user.role.can_create_courses or request.user.role.can_edit_courses))):
-            return Response({'error': 'You do not have permission to upload SCORM packages for this course.'}, status=status.HTTP_403_FORBIDDEN)
-
-        uploaded_file = request.FILES.get('file') or request.FILES.get('package') or request.FILES.get('scorm_zip')
-        if not uploaded_file:
-            return Response({'error': 'No file uploaded. Please upload a SCORM .zip file.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            scorm_package = process_scorm_package(course, uploaded_file, request.user)
-            log_activity(request, 'scorm_uploaded', target=course, organization=course.organization)
-            
-            serializer = ScormPackageSerializer(scorm_package, context={'request': request})
-            data = serializer.data
-            if data.get('launch_url') and not (data['launch_url'].startswith('http://') or data['launch_url'].startswith('https://')):
-                data['launch_url'] = request.build_absolute_uri(data['launch_url'])
-
-            return Response({
-                'status': 'success',
-                'message': 'SCORM package uploaded, extracted, and verified successfully!',
-                'scorm_package': data
-            }, status=status.HTTP_201_CREATED)
-
-        except ValueError as ve:
-            return Response({'error': str(ve)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': f'Failed to process SCORM package: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ScormRuntimeTrackingView(APIView):
@@ -1006,7 +974,7 @@ def learner_dashboard_data(request):
             'category': course.category or 'General',
             'level': course.level,
             'duration_hrs': course.duration_hrs,
-            'hero_url': course.hero_url,
+            'hero_url': request.build_absolute_uri(course.hero_url) if course.hero_url and not (course.hero_url.startswith('http://') or course.hero_url.startswith('https://')) else (course.hero_url or "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80"),
             'accent': course.accent,
             'progress_pct': progress_pct,
             'status': status_label,
@@ -1179,15 +1147,19 @@ def dashboard_stats(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_leaderboard(request):
-    res = learner_dashboard_data(request)
-    return Response({'leaderboard': res.data.get('leaderboard', [])})
+    raw_req = getattr(request, '_request', request)
+    res = learner_dashboard_data(raw_req)
+    data_dict = res.data if (hasattr(res, 'data') and isinstance(res.data, dict)) else {}
+    return Response({'leaderboard': data_dict.get('leaderboard', [])})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_badges(request):
-    res = learner_dashboard_data(request)
-    return Response({'badges': res.data.get('achievements', [])})
+    raw_req = getattr(request, '_request', request)
+    res = learner_dashboard_data(raw_req)
+    data_dict = res.data if (hasattr(res, 'data') and isinstance(res.data, dict)) else {}
+    return Response({'badges': data_dict.get('achievements', []) or data_dict.get('badges', [])})
 
 
 

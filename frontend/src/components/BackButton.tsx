@@ -3,26 +3,29 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BackButtonProps {
-  to: string;
-  label: string;
+  to?: string;
+  fallbackPath?: string;
+  label?: string;
   params?: Record<string, any>;
   search?: Record<string, any>;
   className?: string;
 }
 
-export function BackButton({ to, label, params, search, className }: BackButtonProps) {
+export function BackButton({ to, fallbackPath, label, params, search, className }: BackButtonProps) {
+  const target = to || fallbackPath || "/";
+  const displayLabel = label || "Back";
   return (
     <Link
-      to={to as any}
+      to={target as any}
       params={params as any}
       search={search as any}
       className={cn(
-        "inline-flex items-center text-xs font-bold text-slate-400 hover:text-white transition-colors group mb-4",
+        "inline-flex items-center text-xs font-bold text-black dark:text-white transition-colors group mb-4",
         className
       )}
     >
-      <ArrowLeft className="size-3.5 mr-1.5 text-slate-400 group-hover:text-emerald-400 group-hover:-translate-x-0.5 transition-all" />
-      <span>{label}</span>
+      <ArrowLeft className="size-3.5 mr-1.5 text-black dark:text-white group-hover:text-emerald-500 group-hover:-translate-x-0.5 transition-all" />
+      <span>{displayLabel}</span>
     </Link>
   );
 }

@@ -33,14 +33,22 @@ function OrgAdminLayout() {
     return <Navigate to="/login" />;
   }
 
-  // Must have at least one admin/manage permission via their role
-  const isOrgAdmin =
-    user.role &&
-    Object.keys(user.role).some(
-      (k) => k.startsWith('can_') && (user.role as any)[k] === true
-    );
+  // Either Org Admin role OR an end-user role with explicit granted permissions can access sub-routes
+  const isOrgAdminOrPermitted = Boolean(
+    user.role && (
+      user.role.is_admin_role === true ||
+      user.role.can_manage_users ||
+      user.role.can_manage_departments ||
+      user.role.can_manage_roles ||
+      user.role.can_create_courses ||
+      user.role.can_edit_courses ||
+      user.role.can_manage_module_access ||
+      user.role.can_manage_certificates ||
+      user.role.can_view_reports
+    )
+  );
 
-  if (!isOrgAdmin) {
+  if (!isOrgAdminOrPermitted) {
     return <Navigate to="/dashboard" />;
   }
 

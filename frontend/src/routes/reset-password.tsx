@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowRight, KeyRound } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowRight, KeyRound, ArrowLeft } from 'lucide-react';
 import { API_BASE } from '@/lib/auth';
 
 export const Route = createFileRoute('/reset-password')({
@@ -70,6 +70,24 @@ function ResetPasswordPage() {
 
       {/* Glassmorphism Card Container */}
       <div className="w-full max-w-md backdrop-blur-2xl bg-card/60 border border-cyan-500/20 shadow-[0_0_60px_rgba(6,182,212,0.15)] rounded-3xl p-8 sm:p-10 relative z-10">
+        {/* Top-Left Back Button / Breadcrumb */}
+        <div className="absolute top-4 left-4 sm:top-5 sm:left-5">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                navigate({ to: '/' });
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-cyan-400 hover:bg-cyan-500/10 border border-border/40 hover:border-cyan-500/30 transition-all"
+            title="Go Back"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Back</span>
+          </button>
+        </div>
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 p-[2px] shadow-[0_0_25px_rgba(6,182,212,0.4)] mb-4">
             <div className="w-full h-full bg-[#071328] rounded-[14px] flex items-center justify-center text-cyan-400">

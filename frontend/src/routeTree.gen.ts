@@ -30,6 +30,7 @@ import { Route as SuperAdminToolkitRouteImport } from './routes/super-admin.tool
 import { Route as SuperAdminSitesRouteImport } from './routes/super-admin.sites'
 import { Route as SuperAdminSetupGuideRouteImport } from './routes/super-admin.setup-guide'
 import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin.settings'
+import { Route as SuperAdminProfileRouteImport } from './routes/super-admin.profile'
 import { Route as SuperAdminPlansRouteImport } from './routes/super-admin.plans'
 import { Route as SuperAdminOrganizationsRouteImport } from './routes/super-admin.organizations'
 import { Route as SuperAdminFeatureRegistryRouteImport } from './routes/super-admin.feature-registry'
@@ -38,6 +39,7 @@ import { Route as SuperAdminBillingRouteImport } from './routes/super-admin.bill
 import { Route as SuperAdminActivityRouteImport } from './routes/super-admin.activity'
 import { Route as OrgAdminUsersRouteImport } from './routes/org-admin.users'
 import { Route as OrgAdminRolesRouteImport } from './routes/org-admin.roles'
+import { Route as OrgAdminPathsRouteImport } from './routes/org-admin.paths'
 import { Route as OrgAdminModuleAccessRouteImport } from './routes/org-admin.module-access'
 import { Route as OrgAdminDepartmentsRouteImport } from './routes/org-admin.departments'
 import { Route as OrgAdminCoursesRouteImport } from './routes/org-admin.courses'
@@ -162,6 +164,11 @@ const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => SuperAdminRoute,
 } as any)
+const SuperAdminProfileRoute = SuperAdminProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => SuperAdminRoute,
+} as any)
 const SuperAdminPlansRoute = SuperAdminPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
@@ -201,6 +208,11 @@ const OrgAdminUsersRoute = OrgAdminUsersRouteImport.update({
 const OrgAdminRolesRoute = OrgAdminRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => OrgAdminRoute,
+} as any)
+const OrgAdminPathsRoute = OrgAdminPathsRouteImport.update({
+  id: '/paths',
+  path: '/paths',
   getParentRoute: () => OrgAdminRoute,
 } as any)
 const OrgAdminModuleAccessRoute = OrgAdminModuleAccessRouteImport.update({
@@ -327,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
+  '/org-admin/paths': typeof OrgAdminPathsRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -335,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/super-admin/feature-registry': typeof SuperAdminFeatureRegistryRoute
   '/super-admin/organizations': typeof SuperAdminOrganizationsRoute
   '/super-admin/plans': typeof SuperAdminPlansRoute
+  '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
   '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
@@ -375,6 +389,7 @@ export interface FileRoutesByTo {
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
+  '/org-admin/paths': typeof OrgAdminPathsRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -383,6 +398,7 @@ export interface FileRoutesByTo {
   '/super-admin/feature-registry': typeof SuperAdminFeatureRegistryRoute
   '/super-admin/organizations': typeof SuperAdminOrganizationsRoute
   '/super-admin/plans': typeof SuperAdminPlansRoute
+  '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
   '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
@@ -425,6 +441,7 @@ export interface FileRoutesById {
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
+  '/org-admin/paths': typeof OrgAdminPathsRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -433,6 +450,7 @@ export interface FileRoutesById {
   '/super-admin/feature-registry': typeof SuperAdminFeatureRegistryRoute
   '/super-admin/organizations': typeof SuperAdminOrganizationsRoute
   '/super-admin/plans': typeof SuperAdminPlansRoute
+  '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
   '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
@@ -476,6 +494,7 @@ export interface FileRouteTypes {
     | '/org-admin/courses'
     | '/org-admin/departments'
     | '/org-admin/module-access'
+    | '/org-admin/paths'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -484,6 +503,7 @@ export interface FileRouteTypes {
     | '/super-admin/feature-registry'
     | '/super-admin/organizations'
     | '/super-admin/plans'
+    | '/super-admin/profile'
     | '/super-admin/settings'
     | '/super-admin/setup-guide'
     | '/super-admin/sites'
@@ -524,6 +544,7 @@ export interface FileRouteTypes {
     | '/org-admin/courses'
     | '/org-admin/departments'
     | '/org-admin/module-access'
+    | '/org-admin/paths'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -532,6 +553,7 @@ export interface FileRouteTypes {
     | '/super-admin/feature-registry'
     | '/super-admin/organizations'
     | '/super-admin/plans'
+    | '/super-admin/profile'
     | '/super-admin/settings'
     | '/super-admin/setup-guide'
     | '/super-admin/sites'
@@ -573,6 +595,7 @@ export interface FileRouteTypes {
     | '/org-admin/courses'
     | '/org-admin/departments'
     | '/org-admin/module-access'
+    | '/org-admin/paths'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -581,6 +604,7 @@ export interface FileRouteTypes {
     | '/super-admin/feature-registry'
     | '/super-admin/organizations'
     | '/super-admin/plans'
+    | '/super-admin/profile'
     | '/super-admin/settings'
     | '/super-admin/setup-guide'
     | '/super-admin/sites'
@@ -767,6 +791,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminSettingsRouteImport
       parentRoute: typeof SuperAdminRoute
     }
+    '/super-admin/profile': {
+      id: '/super-admin/profile'
+      path: '/profile'
+      fullPath: '/super-admin/profile'
+      preLoaderRoute: typeof SuperAdminProfileRouteImport
+      parentRoute: typeof SuperAdminRoute
+    }
     '/super-admin/plans': {
       id: '/super-admin/plans'
       path: '/plans'
@@ -821,6 +852,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/org-admin/roles'
       preLoaderRoute: typeof OrgAdminRolesRouteImport
+      parentRoute: typeof OrgAdminRoute
+    }
+    '/org-admin/paths': {
+      id: '/org-admin/paths'
+      path: '/paths'
+      fullPath: '/org-admin/paths'
+      preLoaderRoute: typeof OrgAdminPathsRouteImport
       parentRoute: typeof OrgAdminRoute
     }
     '/org-admin/module-access': {
@@ -994,6 +1032,7 @@ interface OrgAdminRouteChildren {
   OrgAdminCoursesRoute: typeof OrgAdminCoursesRouteWithChildren
   OrgAdminDepartmentsRoute: typeof OrgAdminDepartmentsRoute
   OrgAdminModuleAccessRoute: typeof OrgAdminModuleAccessRoute
+  OrgAdminPathsRoute: typeof OrgAdminPathsRoute
   OrgAdminRolesRoute: typeof OrgAdminRolesRoute
   OrgAdminUsersRoute: typeof OrgAdminUsersRoute
   OrgAdminIndexRoute: typeof OrgAdminIndexRoute
@@ -1005,6 +1044,7 @@ const OrgAdminRouteChildren: OrgAdminRouteChildren = {
   OrgAdminCoursesRoute: OrgAdminCoursesRouteWithChildren,
   OrgAdminDepartmentsRoute: OrgAdminDepartmentsRoute,
   OrgAdminModuleAccessRoute: OrgAdminModuleAccessRoute,
+  OrgAdminPathsRoute: OrgAdminPathsRoute,
   OrgAdminRolesRoute: OrgAdminRolesRoute,
   OrgAdminUsersRoute: OrgAdminUsersRoute,
   OrgAdminIndexRoute: OrgAdminIndexRoute,
@@ -1021,6 +1061,7 @@ interface SuperAdminRouteChildren {
   SuperAdminFeatureRegistryRoute: typeof SuperAdminFeatureRegistryRoute
   SuperAdminOrganizationsRoute: typeof SuperAdminOrganizationsRoute
   SuperAdminPlansRoute: typeof SuperAdminPlansRoute
+  SuperAdminProfileRoute: typeof SuperAdminProfileRoute
   SuperAdminSettingsRoute: typeof SuperAdminSettingsRoute
   SuperAdminSetupGuideRoute: typeof SuperAdminSetupGuideRoute
   SuperAdminSitesRoute: typeof SuperAdminSitesRoute
@@ -1040,6 +1081,7 @@ const SuperAdminRouteChildren: SuperAdminRouteChildren = {
   SuperAdminFeatureRegistryRoute: SuperAdminFeatureRegistryRoute,
   SuperAdminOrganizationsRoute: SuperAdminOrganizationsRoute,
   SuperAdminPlansRoute: SuperAdminPlansRoute,
+  SuperAdminProfileRoute: SuperAdminProfileRoute,
   SuperAdminSettingsRoute: SuperAdminSettingsRoute,
   SuperAdminSetupGuideRoute: SuperAdminSetupGuideRoute,
   SuperAdminSitesRoute: SuperAdminSitesRoute,

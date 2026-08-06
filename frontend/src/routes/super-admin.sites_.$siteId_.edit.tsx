@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useParams } from '@tanstack/react-router';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { BackButton } from '@/components/BackButton';
 
 export const Route = createFileRoute('/super-admin/sites_/$siteId_/edit')({
@@ -9,14 +9,15 @@ export const Route = createFileRoute('/super-admin/sites_/$siteId_/edit')({
 });
 
 function EditSitePage() {
+  const { siteId } = useParams({ from: '/super-admin/sites_/$siteId_/edit' });
   const navigate = useNavigate();
-  const { siteId } = useParams({ strict: false }) as any;
   const [organizations, setOrganizations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [features, setFeatures] = useState<any[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<Record<number, boolean>>({});
   const [siteFeatureAccessIds, setSiteFeatureAccessIds] = useState<Record<number, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     organization: '',
@@ -34,7 +35,7 @@ function EditSitePage() {
   });
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/')
+    authFetch(`${API_BASE}/organizations/`)
       .then(res => res.json())
       .then(data => setOrganizations(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
@@ -43,9 +44,9 @@ function EditSitePage() {
   useEffect(() => {
     if (siteId) {
       Promise.all([
-        authFetch(`http://127.0.0.1:8000/api/sites/${siteId}/`).then(r => r.json()),
-        authFetch('http://127.0.0.1:8000/api/features/').then(r => r.json()),
-        authFetch('http://127.0.0.1:8000/api/site-feature-access/').then(r => r.json())
+        authFetch(`${API_BASE}/sites/${siteId}/`).then(r => r.json()),
+        authFetch(`${API_BASE}/features/`).then(r => r.json()),
+        authFetch(`${API_BASE}/site-feature-access/`).then(r => r.json())
       ])
       .then(([siteData, featuresData, accessData]) => {
         setFormData(prev => ({
@@ -68,7 +69,7 @@ function EditSitePage() {
         setFeatures(featArr);
         
         const accArr = Array.isArray(accessData) ? accessData : [];
-        const siteAccess = accArr.filter((a: any) => a.site === parseInt(siteId));
+        const siteAccess = accArr.filter((a: any) => a.site === parseInt(siteId, 10));
         const initialSelected: Record<number, boolean> = {};
         const accessIds: Record<number, number> = {};
         
@@ -106,56 +107,77 @@ function EditSitePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
+
+    const sanitizeUrl = (input: string) => {
+      let val = input.trim();
+      if (!val) return '';
+      val = val.replace(/^https?:?\/*/, '');
+      return val ? `https://${val}` : '';
+    };
+
     try {
-      const siteRes = await authFetch(`http://127.0.0.1:8000/api/sites/${siteId}/`, {
+      const siteRes = await authFetch(`${API_BASE}/sites/${siteId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organization_id: formData.organization,
-          organization: formData.organization,
-          name: formData.name,
-          url: formData.url,
-          site_code: formData.site_code,
-          product_type: formData.product_type,
-          country: formData.country,
-          location_address: formData.location_address,
+          organization: formData.organization ? parseInt(formData.organization, 10) : null,
+          name: formData.name.trim(),
+          url: sanitizeUrl(formData.url) || null,
+          site_code: formData.site_code.trim() || null,
+          product_type: formData.product_type || null,
+          country: formData.country || null,
+          location_address: formData.location_address || null,
           activate_date: formData.activate_date || null,
-          status: formData.status,
-          contact_name: formData.contact_name,
-          contact_phone: formData.contact_phone,
-          contact_email: formData.contact_email,
+          status: formData.status || 'Active',
+          contact_name: formData.contact_name || null,
+          contact_phone: formData.contact_phone || null,
+          contact_email: formData.contact_email || null,
         }),
       });
 
-      if (siteRes.ok) {
-        // Update SiteFeatureAccess records
-        for (const [featureId, enabled] of Object.entries(selectedFeatures)) {
-          const accessId = siteFeatureAccessIds[parseInt(featureId)];
-          if (accessId) {
-            await authFetch(`http://127.0.0.1:8000/api/site-feature-access/${accessId}/`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ enabled })
-            });
-          } else {
-            await authFetch('http://127.0.0.1:8000/api/site-feature-access/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                site: parseInt(siteId),
-                feature: parseInt(featureId),
-                enabled
-              })
-            });
-          }
+      if (!siteRes.ok) {
+        const errData = await siteRes.json();
+        let errMsg = 'Failed to update site.';
+        if (errData.detail) {
+          errMsg = errData.detail;
+        } else if (typeof errData === 'object') {
+          errMsg = Object.entries(errData)
+            .map(([field, msgs]) => {
+              const label = field.replace(/_/g, ' ');
+              const msgList = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+              return `${label}: ${msgList}`;
+            })
+            .join(' | ');
         }
-        navigate({ to: '/super-admin/sites' });
-      } else {
-        alert("Failed to update site.");
+        throw new Error(errMsg);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating site.");
+
+      // Update SiteFeatureAccess records
+      for (const [featureId, enabled] of Object.entries(selectedFeatures)) {
+        const accessId = siteFeatureAccessIds[parseInt(featureId, 10)];
+        if (accessId) {
+          await authFetch(`${API_BASE}/site-feature-access/${accessId}/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+          });
+        } else {
+          await authFetch(`${API_BASE}/site-feature-access/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              site: parseInt(siteId, 10),
+              feature: parseInt(featureId, 10),
+              enabled
+            })
+          });
+        }
+      }
+
+      navigate({ to: '/super-admin/sites' });
+    } catch (err: any) {
+      setError(err.message || 'Error updating site.');
     } finally {
       setSaving(false);
     }

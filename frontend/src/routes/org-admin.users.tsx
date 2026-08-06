@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
-import { Users, Plus, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { authFetch, API_BASE } from '@/lib/auth';
+import { Users, Plus, Pencil, Trash2, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/org-admin/users')({
@@ -16,8 +16,8 @@ interface User {
   username: string;
   full_name: string;
   job_title: string;
-  department: number | null;
-  role: { id: number; name: string } | null;
+  department: number | { id: number; name: string } | null;
+  role: number | { id: number; name: string } | null;
 }
 
 interface Department {
@@ -39,6 +39,7 @@ function UsersPage() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -61,9 +62,9 @@ function UsersPage() {
   const fetchData = async () => {
     try {
       const [uRes, dRes, rRes] = await Promise.all([
-        authFetch('http://127.0.0.1:8000/api/users/'),
-        authFetch('http://127.0.0.1:8000/api/departments/'),
-        authFetch('http://127.0.0.1:8000/api/roles/')
+        authFetch(`${API_BASE}/users/`),
+        authFetch(`${API_BASE}/departments/`),
+        authFetch(`${API_BASE}/roles/`)
       ]);
 
       if (uRes.ok) setUsers(await uRes.json());
@@ -78,6 +79,7 @@ function UsersPage() {
 
   const openAdd = () => {
     setEditingUser(null);
+    setShowPassword(false);
     setFormData({
       username: '',
       email: '',
@@ -94,14 +96,15 @@ function UsersPage() {
 
   const openEdit = (u: User) => {
     setEditingUser(u);
+    setShowPassword(false);
     setFormData({
       username: u.username || '',
       email: u.email || '',
       first_name: u.first_name || '',
       last_name: u.last_name || '',
       job_title: u.job_title || '',
-      department: u.department?.id?.toString() || (typeof u.department === 'number' ? u.department.toString() : ''),
-      role: u.role?.id?.toString() || (typeof u.role === 'number' ? u.role.toString() : ''),
+      department: typeof u.department === 'object' ? (u.department?.id ? String(u.department.id) : '') : (u.department ? String(u.department) : ''),
+      role: typeof u.role === 'object' ? (u.role?.id ? String(u.role.id) : '') : (u.role ? String(u.role) : ''),
       password: '' // empty means don't change
     });
     setError(null);
@@ -115,8 +118,8 @@ function UsersPage() {
 
     try {
       const url = editingUser 
-        ? `http://127.0.0.1:8000/api/users/${editingUser.id}/` 
-        : 'http://127.0.0.1:8000/api/users/';
+        ? `${API_BASE}/users/${editingUser.id}/` 
+        : `${API_BASE}/users/`;
       
       const payload: Record<string, any> = {
         username: formData.username,
@@ -159,7 +162,7 @@ function UsersPage() {
     if (!window.confirm(`Are you sure you want to delete user ${u.full_name || u.username}?`)) return;
     
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/users/${u.id}/`, {
+      const res = await authFetch(`${API_BASE}/users/${u.id}/`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -221,11 +224,11 @@ function UsersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 uppercase tracking-wider">
-                      {u.role?.name || "None"}
+                      {typeof u.role === 'object' ? u.role?.name : roles.find(r => r.id === u.role)?.name || "None"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-muted-foreground">
-                    {u.department ? departments.find(d => d.id === u.department)?.name : "—"}
+                    {typeof u.department === 'object' ? u.department?.name : departments.find(d => d.id === u.department)?.name || "—"}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button onClick={() => openEdit(u)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
@@ -249,7 +252,11 @@ function UsersPage() {
               <h2 className="font-semibold text-lg">{editingUser ? 'Edit User' : 'Add User'}</h2>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6">
+            <form onSubmit={handleSubmit} className="p-6" autoComplete="off">
+              {/* Hidden decoy fields to block aggressive browser autofill */}
+              <input type="text" name="fake_username_autofill" id="fake_username_autofill" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+              <input type="password" name="fake_password_autofill" id="fake_password_autofill" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+
               {error && (
                 <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm flex gap-2 items-start">
                   <AlertCircle className="size-4 mt-0.5 shrink-0" />
@@ -262,6 +269,7 @@ function UsersPage() {
                   <label className="block text-sm font-medium text-muted-foreground mb-1">First Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -271,6 +279,7 @@ function UsersPage() {
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Last Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -281,6 +290,7 @@ function UsersPage() {
                   <input
                     required
                     type="text"
+                    autoComplete="off"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -291,6 +301,7 @@ function UsersPage() {
                   <input
                     required
                     type="email"
+                    autoComplete="off"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -300,6 +311,7 @@ function UsersPage() {
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Job Title</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     value={formData.job_title}
                     onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -309,13 +321,25 @@ function UsersPage() {
                   <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Password {editingUser && "(Leave blank to keep current)"}
                   </label>
-                  <input
-                    type="password"
-                    required={!editingUser}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required={!editingUser}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={editingUser ? '••••••••' : 'Password'}
+                      className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-background text-foreground"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 

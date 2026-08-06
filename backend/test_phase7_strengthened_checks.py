@@ -11,7 +11,7 @@ from organizations.models import Organization
 from users.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 from scorm_export.views import export_scorm12, export_scorm2004
-from courses.views import UploadScormPackageView
+from import_engine.views import upload_and_convert
 
 def run_strengthened_checks():
     print("=== PHASE 7 STRENGTHENED VERIFICATION CHECKS ===")
@@ -42,20 +42,15 @@ def run_strengthened_checks():
     res12 = export_scorm12(req12)
     assert res12.status_code == 200
 
-    # Ingest SCORM 1.2 ZIP into UploadScormPackageView
-    target_c1 = Course.objects.create(title="Ingested SCORM 1.2 Target", organization=test_org)
+    # Ingest SCORM 1.2 ZIP via Universal Import (upload_and_convert)
     uf12 = SimpleUploadedFile("exported_scorm12.zip", res12.content, content_type="application/zip")
-    scorm_view = UploadScormPackageView.as_view()
-    
-    ingest_req12 = factory.post(f'/api/courses/{target_c1.id}/scorm/', {'file': uf12}, format='multipart')
+    ingest_req12 = factory.post('/api/import/upload/', {'source_file': uf12, 'source_format': 'scorm'}, format='multipart')
     force_authenticate(ingest_req12, user=admin_user)
-    ingest_res12 = scorm_view(ingest_req12, course_id=target_c1.id)
+    ingest_res12 = upload_and_convert(ingest_req12)
 
-    assert ingest_res12.status_code in [200, 201], f"SCORM 1.2 upload pipeline failed: {ingest_res12.data}"
-    sp12 = ScormPackage.objects.get(course=target_c1)
-    assert sp12.version == '1.2'
-    assert sp12.title == pub_course.title
-    print(f"  [PASS] SCORM 1.2 Round-Trip: Exported ZIP successfully ingested via UploadScormPackageView (ScormPackage ID {sp12.id}).")
+    assert ingest_res12.status_code == 201, f"SCORM 1.2 upload pipeline failed: {ingest_res12.data}"
+    target_c1 = Course.objects.get(id=ingest_res12.data['target_course_id'])
+    print(f"  [PASS] SCORM 1.2 Round-Trip: Exported ZIP successfully imported via Universal Import -> Course ID {target_c1.id} ('{target_c1.title}').")
 
     # B. Export to SCORM 2004
     req2004 = factory.post('/api/authoring/export/scorm2004/', {'course_id': pub_course.id}, format='json')
@@ -63,17 +58,15 @@ def run_strengthened_checks():
     res2004 = export_scorm2004(req2004)
     assert res2004.status_code == 200
 
-    # Ingest SCORM 2004 ZIP into UploadScormPackageView
-    target_c2 = Course.objects.create(title="Ingested SCORM 2004 Target", organization=test_org)
+    # Ingest SCORM 2004 ZIP via Universal Import (upload_and_convert)
     uf2004 = SimpleUploadedFile("exported_scorm2004.zip", res2004.content, content_type="application/zip")
-    
-    ingest_req2004 = factory.post(f'/api/courses/{target_c2.id}/scorm/', {'file': uf2004}, format='multipart')
+    ingest_req2004 = factory.post('/api/import/upload/', {'source_file': uf2004, 'source_format': 'scorm'}, format='multipart')
     force_authenticate(ingest_req2004, user=admin_user)
-    ingest_res2004 = scorm_view(ingest_req2004, course_id=target_c2.id)
+    ingest_res2004 = upload_and_convert(ingest_req2004)
 
-    assert ingest_res2004.status_code in [200, 201], f"SCORM 2004 upload pipeline failed: {ingest_res2004.data}"
-    sp2004 = ScormPackage.objects.get(course=target_c2)
-    print(f"  [PASS] SCORM 2004 Round-Trip: Exported ZIP successfully ingested via UploadScormPackageView (ScormPackage ID {sp2004.id}).")
+    assert ingest_res2004.status_code == 201, f"SCORM 2004 upload pipeline failed: {ingest_res2004.data}"
+    target_c2 = Course.objects.get(id=ingest_res2004.data['target_course_id'])
+    print(f"  [PASS] SCORM 2004 Round-Trip: Exported ZIP successfully imported via Universal Import -> Course ID {target_c2.id} ('{target_c2.title}').")
 
     # -------------------------------------------------------------------------
     # CHECK 2: DRAFT COURSE EXPORT PROTECTION CHECK

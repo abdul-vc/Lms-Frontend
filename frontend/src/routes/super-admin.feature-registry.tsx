@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { Building2, Sparkles, CheckCircle2, XCircle, ShieldCheck, Edit, Trash2 } from 'lucide-react';
 
 export const Route = createFileRoute('/super-admin/feature-registry')({
@@ -29,8 +29,8 @@ function FeatureRegistry() {
   const fetchFeaturesAndOrgs = async () => {
     try {
       const [featRes, orgRes] = await Promise.all([
-        authFetch('http://127.0.0.1:8000/api/features/').then(r => r.json()),
-        authFetch('http://127.0.0.1:8000/api/organizations/').then(r => r.json()),
+        authFetch(`${API_BASE}/features/`).then(r => r.ok ? r.json() : []),
+        authFetch(`${API_BASE}/organizations/`).then(r => r.ok ? r.json() : []),
       ]);
       const featList = Array.isArray(featRes) ? featRes : (featRes.results || []);
       const orgList = Array.isArray(orgRes) ? orgRes : (orgRes.results || []);
@@ -51,7 +51,8 @@ function FeatureRegistry() {
 
   const fetchOrgFeatureAccess = async (orgId: number) => {
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/org-features/?organization_id=${orgId}`);
+      const res = await authFetch(`${API_BASE}/org-features/?organization_id=${orgId}`);
+      if (!res.ok) return;
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data.results || []);
       const map: Record<string, boolean> = {};
@@ -74,7 +75,7 @@ function FeatureRegistry() {
     const newStatus = !currentStatus;
     setOrgFeatureAccess(prev => ({ ...prev, [featureKey]: newStatus }));
     try {
-      await authFetch('http://127.0.0.1:8000/api/toggle-org-feature/', {
+      await authFetch(`${API_BASE}/toggle-org-feature/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,7 +113,7 @@ function FeatureRegistry() {
       return;
     }
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/features/${featureId}/`, {
+      const res = await authFetch(`${API_BASE}/features/${featureId}/`, {
         method: 'DELETE',
       });
       if (res.ok || res.status === 204) {
@@ -129,8 +130,8 @@ function FeatureRegistry() {
     e.preventDefault();
     try {
       const url = editingFeatureId 
-        ? `http://127.0.0.1:8000/api/features/${editingFeatureId}/` 
-        : 'http://127.0.0.1:8000/api/features/';
+        ? `${API_BASE}/features/${editingFeatureId}/` 
+        : `${API_BASE}/features/`;
       const method = editingFeatureId ? 'PATCH' : 'POST';
 
       await authFetch(url, {

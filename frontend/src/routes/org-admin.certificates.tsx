@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect, useRef } from 'react';
-import { authFetch, useAuth } from '@/lib/auth';
-import { Award, Plus, Loader2, AlertCircle, FileText, Pencil, Trash2, CheckCircle2, Eye, Sparkles, Upload } from 'lucide-react';
+import { authFetch, useAuth, API_BASE } from '@/lib/auth';
+import { Award, Plus, Loader2, AlertCircle, FileText, Pencil, Trash2, CheckCircle2, Eye, Sparkles, Upload, BookOpen, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/org-admin/certificates')({
   component: CertificatesPage,
@@ -13,7 +14,15 @@ interface CertificateTemplate {
   title: string;
   body_html: string;
   created_at: string;
+  assigned_courses: { id: number; title: string; status: string }[];
 }
+
+interface OrgCourse {
+  id: number;
+  title: string;
+  status: 'draft' | 'published' | 'archived';
+}
+
 
 interface SignatureItem {
   id: string;
@@ -43,7 +52,15 @@ function CertificatesPage() {
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { user } = useAuth();
+
+
+  const isSuperOrAdmin = Boolean(user?.is_platform_super_admin || user?.role?.is_admin_role);
+  const canCreate = isSuperOrAdmin || Boolean(user?.role?.can_create_certificates || user?.role?.can_manage_certificates);
+  const canEdit = isSuperOrAdmin || Boolean(user?.role?.can_edit_certificates || user?.role?.can_manage_certificates);
+  const canDelete = isSuperOrAdmin || Boolean(user?.role?.can_delete_certificates || user?.role?.can_manage_certificates);
 
   // Signature state
   const [signatureList, setSignatureList] = useState<SignatureItem[]>(DEFAULT_SIGNATURES);
@@ -59,8 +76,12 @@ function CertificatesPage() {
     body_text: 'This certifies that {{employee_name}} has successfully completed the course {{course_title}}.',
     signatory_title: 'Director of Education',
   });
+  const [selectedCourseIds, setSelectedCourseIds] = useState<number[]>([]);
+  const [orgCourses, setOrgCourses] = useState<OrgCourse[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
 
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,7 +99,7 @@ function CertificatesPage() {
         setSignatureList(newList);
         setSelectedSignatureUrl(dataUrl);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('lams_signatures_library', JSON.stringify(newList));
+          localStorage.setItem('custom_signatures', JSON.stringify(newList));
         }
       }
     };
@@ -95,7 +116,7 @@ function CertificatesPage() {
     setSignatureList(newList);
     setSelectedSignatureUrl(dataUrl);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('lams_signatures_library', JSON.stringify(newList));
+      localStorage.setItem('custom_signatures', JSON.stringify(newList));
     }
     setIsDrawModalOpen(false);
   };
@@ -105,7 +126,7 @@ function CertificatesPage() {
     const updated = signatureList.filter((s) => s.id !== id);
     setSignatureList(updated);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('lams_signatures_library', JSON.stringify(updated));
+      localStorage.setItem('custom_signatures', JSON.stringify(updated));
     }
     if (selectedSignatureUrl && signatureList.find((s) => s.id === id)?.url === selectedSignatureUrl) {
       setSelectedSignatureUrl(updated[0]?.url || '');
@@ -113,26 +134,20 @@ function CertificatesPage() {
   };
 
   useEffect(() => {
-    fetchTemplates();
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lams_signatures_library');
+      const saved = localStorage.getItem('custom_signatures');
       if (saved) {
         try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSignatureList(parsed);
-            setSelectedSignatureUrl(parsed[0].url);
-          }
-        } catch (err) {
-          console.error(err);
-        }
+          setSignatureList(JSON.parse(saved));
+        } catch (e) { console.error(e); }
       }
     }
+    fetchTemplates();
   }, []);
 
   const fetchTemplates = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/certificate-templates/');
+      const res = await authFetch(`${API_BASE}/certificate-templates/`);
       if (res.ok) {
         setTemplates(await res.json());
       } else {
@@ -145,66 +160,54 @@ function CertificatesPage() {
     }
   };
 
+  const fetchOrgCourses = async () => {
+    setCoursesLoading(true);
+    try {
+      const res = await authFetch(`${API_BASE}/courses/`);
+      if (res.ok) {
+        const data: OrgCourse[] = await res.json();
+        setOrgCourses(data.filter(c => c.status === 'draft' || c.status === 'published'));
+      }
+    } catch (e) {
+      console.error('Failed to fetch org courses', e);
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
+
   const openAddModal = () => {
     setEditingTemplate(null);
     setFormData({
-      title: 'Standard Completion Template',
+      title: '',
       cert_title: 'Certificate of Completion',
       body_text: 'This certifies that {{employee_name}} has successfully completed the course {{course_title}}.',
       signatory_title: 'Director of Education',
     });
-    setSelectedSignatureUrl(signatureList[0]?.url || DEFAULT_SIGNATURES[0].url);
+    setSelectedCourseIds([]);
     setModalError(null);
     setIsModalOpen(true);
+    fetchOrgCourses();
   };
 
   const openEditModal = (t: CertificateTemplate) => {
     setEditingTemplate(t);
-    const sigMatch = t.body_html.match(/<img[^>]+src=["'](data:image\/[^"']+|https?:\/\/[^"']+)["']/i);
-    if (sigMatch && sigMatch[1]) {
-      setSelectedSignatureUrl(sigMatch[1]);
-    } else {
-      setSelectedSignatureUrl(signatureList[0]?.url || DEFAULT_SIGNATURES[0].url);
-    }
+    const div = document.createElement('div');
+    div.innerHTML = t.body_html;
+    const h1 = div.querySelector('h1')?.innerText || 'Certificate of Completion';
+    const p = div.querySelector('p')?.innerText || t.body_html;
 
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(t.body_html, 'text/html');
-      const h1 = doc.querySelector('h1')?.textContent || 'Certificate of Completion';
-      const pElements = doc.querySelectorAll('p');
-      
-      let pBody = pElements[0]?.textContent || 'This certifies that {{employee_name}} has successfully completed the course {{course_title}}.';
-      if (pBody.includes('DATE') || pBody.includes('SIGNATURE') || pBody.includes('style=') || pBody.includes('alt=') || pBody.includes('height:')) {
-        pBody = pBody.split(/DATE|SIGNATURE|style=|alt=|height:/)[0].trim();
-      }
-      pBody = pBody.replace(/Certificate of Completion/g, '').trim();
-      if (!pBody || pBody.length < 5) {
-        pBody = 'This certifies that {{employee_name}} has successfully completed the course {{course_title}}.';
-      }
-
-      let signatoryP = pElements[pElements.length - 1]?.textContent || 'Director of Education';
-      if (signatoryP.includes('SIGNATURE') || signatoryP.includes('alt=') || signatoryP.includes('style=')) {
-        signatoryP = 'Director of Education';
-      }
-
-      setFormData({
-        title: t.title,
-        cert_title: h1.length > 50 ? 'Certificate of Completion' : h1,
-        body_text: pBody,
-        signatory_title: signatoryP,
-      });
-    } catch {
-      setFormData({
-        title: t.title,
-        cert_title: 'Certificate of Completion',
-        body_text: 'This certifies that {{employee_name}} has successfully completed the course {{course_title}}.',
-        signatory_title: 'Director of Education',
-      });
-    }
-
+    setFormData({
+      title: t.title,
+      cert_title: h1,
+      body_text: p,
+      signatory_title: 'Director of Education',
+    });
+    setSelectedCourseIds((t.assigned_courses || []).map(c => c.id));
     setModalError(null);
     setIsModalOpen(true);
+    fetchOrgCourses();
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,8 +238,8 @@ function CertificatesPage() {
 
     try {
       const url = editingTemplate
-        ? `http://127.0.0.1:8000/api/certificate-templates/${editingTemplate.id}/`
-        : 'http://127.0.0.1:8000/api/certificate-templates/';
+        ? `${API_BASE}/certificate-templates/${editingTemplate.id}/`
+        : `${API_BASE}/certificate-templates/`;
 
       const res = await authFetch(url, {
         method: editingTemplate ? 'PATCH' : 'POST',
@@ -244,8 +247,10 @@ function CertificatesPage() {
         body: JSON.stringify({
           title: formData.title,
           body_html: formattedBodyHtml,
+          course_ids: selectedCourseIds,
         }),
       });
+
 
       if (!res.ok) {
         const d = await res.json();
@@ -262,10 +267,10 @@ function CertificatesPage() {
   };
 
   const handleDelete = async (t: CertificateTemplate) => {
-    if (!window.confirm(`Are you sure you want to delete "${t.title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete template "${t.title}"?`)) return;
 
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/certificate-templates/${t.id}/`, {
+      const res = await authFetch(`${API_BASE}/certificate-templates/${t.id}/`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error("Delete failed");
@@ -292,7 +297,7 @@ function CertificatesPage() {
           <h1 className="text-3xl font-black tracking-tight text-foreground mb-1">Certificate Templates</h1>
           <p className="text-sm text-foreground font-medium">Design and manage certificates awarded upon course completion.</p>
         </div>
-        {canManage && (
+        {canCreate && (
           <button
             onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm"
@@ -309,60 +314,91 @@ function CertificatesPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.length === 0 ? (
-          <div className="col-span-full p-12 text-center text-muted-foreground bg-card rounded-2xl border border-border shadow-sm">
-            <Award className="size-12 mx-auto text-foreground mb-3" />
-            <h3 className="font-semibold text-slate-800 text-base mb-1">No Certificate Templates Found</h3>
-            <p className="text-xs text-muted-foreground mb-4">Create your first certificate template to start rewarding course graduates.</p>
-            {canManage && (
-              <button
-                onClick={openAddModal}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-xs font-semibold"
-              >
-                <Plus className="size-4" /> Add Template
-              </button>
-            )}
-          </div>
-        ) : (
-          templates.map((template) => (
-            <div key={template.id} className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-              <div className="p-6 flex-1">
-                <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-                  <Award className="size-5" />
-                </div>
-                <h3 className="font-bold text-foreground truncate mb-1 text-base">{template.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  Created {new Date(template.created_at).toLocaleDateString()}
-                </p>
-                <div className="mt-4 p-3 bg-muted/50 rounded-xl border border-border/50 text-[11px] font-mono text-muted-foreground max-h-24 overflow-hidden">
-                  {template.body_html.replace(/<[^>]*>/g, ' ')}
-                </div>
-              </div>
-
-              <div className="px-6 py-4 border-t border-border/50 bg-muted/50/50 flex justify-between items-center">
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                  <FileText className="size-3.5 text-muted-foreground" /> HTML Template
-                </span>
-                {canManage && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEditModal(template)}
-                      className="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 transition-colors p-1.5 hover:bg-emerald-50 rounded-lg"
-                    >
-                      <Pencil className="size-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(template)}
-                      className="text-muted-foreground hover:text-red-600 text-xs font-bold flex items-center gap-1 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
+      <div className="space-y-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {templates.length === 0 ? (
+            <div className="col-span-full p-12 text-center text-muted-foreground bg-card rounded-2xl border border-border shadow-sm">
+              <Award className="size-12 mx-auto text-foreground mb-3" />
+              <h3 className="font-semibold text-slate-800 text-base mb-1">No Certificate Templates Found</h3>
+              <p className="text-xs text-muted-foreground mb-4">Create your first certificate template to start rewarding course graduates.</p>
+              {canCreate && (
+                <button
+                  onClick={openAddModal}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-xs font-semibold"
+                >
+                  <Plus className="size-4" /> Add Template
+                </button>
+              )}
             </div>
-          ))
+          ) : (
+            templates.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((template) => (
+              <div key={template.id} className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                <div className="p-6 flex-1">
+                  <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+                    <Award className="size-5" />
+                  </div>
+                  <h3 className="font-bold text-foreground truncate mb-1 text-base">{template.title}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Created {new Date(template.created_at).toLocaleDateString()}
+                  </p>
+                  {/* Assigned Courses */}
+                  {(template.assigned_courses || []).length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Assigned Courses</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(template.assigned_courses || []).map(c => (
+                          <span key={c.id} className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                            <BookOpen className="size-2.5" />{c.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-4 p-3 bg-muted/50 rounded-xl border border-border/50 text-[11px] font-mono text-muted-foreground max-h-24 overflow-hidden">
+                    {template.body_html.replace(/<[^>]*>/g, ' ')}
+                  </div>
+                </div>
+
+                <div className="px-6 py-4 border-t border-border/50 bg-muted/50/50 flex justify-between items-center">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <FileText className="size-3.5 text-muted-foreground" /> HTML Template
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <button
+                        onClick={() => openEditModal(template)}
+                        className="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 transition-colors p-1.5 hover:bg-emerald-50 rounded-lg"
+                        title="Edit Template"
+                      >
+                        <Pencil className="size-3.5" /> Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(template)}
+                        className="text-muted-foreground hover:text-red-600 text-xs font-bold flex items-center gap-1 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
+                        title="Delete Template"
+                      >
+                        <Trash2 className="size-3.5" /> Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {templates.length > 0 && (
+          <div className="bg-card rounded-2xl border border-border px-4 py-2">
+            <PaginationControls
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={templates.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         )}
       </div>
 
@@ -437,6 +473,63 @@ function CertificatesPage() {
                     placeholder="Director of Education"
                     className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
+                </div>
+
+                {/* Course Selection */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                    Select Courses
+                    <span className="ml-1 text-muted-foreground/60 font-normal">(Draft & Published)</span>
+                  </label>
+                  {coursesLoading ? (
+                    <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" /> Loading courses…
+                    </div>
+                  ) : orgCourses.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">No draft or published courses found in this organization.</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                      {orgCourses.map(course => {
+                        const checked = selectedCourseIds.includes(course.id);
+                        return (
+                          <label
+                            key={course.id}
+                            className={cn(
+                              'flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors text-xs',
+                              checked && 'bg-emerald-50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-emerald-600 size-3.5 shrink-0"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedCourseIds(prev =>
+                                  checked ? prev.filter(id => id !== course.id) : [...prev, course.id]
+                                );
+                              }}
+                            />
+                            <span className={cn('font-medium truncate flex-1', checked ? 'text-emerald-700' : 'text-foreground')}>
+                              {course.title}
+                            </span>
+                            <span className={cn(
+                              'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0',
+                              course.status === 'published'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
+                            )}>
+                              {course.status}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedCourseIds.length > 0 && (
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                      {selectedCourseIds.length} course{selectedCourseIds.length > 1 ? 's' : ''} selected
+                    </p>
+                  )}
                 </div>
 
                 <div>

@@ -49,20 +49,55 @@ export interface AuthRole {
   name: string;
   is_default: boolean;
   is_admin_role: boolean;
-  can_manage_users: boolean;
-  can_manage_departments: boolean;
-  can_manage_roles: boolean;
-  can_create_courses: boolean;
-  can_edit_courses: boolean;
-  can_publish_courses: boolean;
-  can_manage_module_access: boolean;
-  can_view_reports: boolean;
-  can_manage_certificates: boolean;
+
+  can_view_users?: boolean;
+  can_create_users?: boolean;
+  can_edit_users?: boolean;
+  can_delete_users?: boolean;
+
+  can_view_roles?: boolean;
+  can_create_roles?: boolean;
+  can_edit_roles?: boolean;
+  can_delete_roles?: boolean;
+
+  can_view_courses?: boolean;
+  can_create_courses?: boolean;
+  can_edit_courses?: boolean;
+  can_delete_courses?: boolean;
+
+  can_view_certificates?: boolean;
+  can_create_certificates?: boolean;
+  can_edit_certificates?: boolean;
+  can_delete_certificates?: boolean;
+
+  can_view_reports?: boolean;
+  can_create_reports?: boolean;
+  can_edit_reports?: boolean;
+  can_delete_reports?: boolean;
+
+  can_view_module_access?: boolean;
+  can_create_module_access?: boolean;
+  can_edit_module_access?: boolean;
+  can_delete_module_access?: boolean;
+
+  can_view_activity_log?: boolean;
+  can_create_activity_log?: boolean;
+  can_edit_activity_log?: boolean;
+  can_delete_activity_log?: boolean;
+
+  can_manage_users?: boolean;
+  can_manage_departments?: boolean;
+  can_manage_roles?: boolean;
+  can_publish_courses?: boolean;
+  can_manage_module_access?: boolean;
+  can_manage_certificates?: boolean;
 }
 
 export interface AuthOrganization {
   id: number;
   name: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
 }
 
 export interface AuthDepartment {

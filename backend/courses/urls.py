@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CourseViewSet, ModuleViewSet, LessonViewSet, upload_hero_image, upload_lesson_video, download_assessment_template, import_assessment_csv, get_assessment_questions, start_assessment, submit_assessment, AccessRequestViewSet, request_access, MyCertificatesView, OrgIssuedCertificatesView, IssuedCertificateDetailView, dashboard_stats, dashboard_leaderboard, dashboard_badges, learner_dashboard_data, LearningPathViewSet, UploadScormPackageView, ScormRuntimeTrackingView, AssessmentQuestionViewSet
+from .views import CourseViewSet, ModuleViewSet, LessonViewSet, upload_hero_image, upload_lesson_video, download_assessment_template, import_assessment_csv, get_assessment_questions, start_assessment, submit_assessment, AccessRequestViewSet, request_access, MyCertificatesView, OrgIssuedCertificatesView, IssuedCertificateDetailView, dashboard_stats, dashboard_leaderboard, dashboard_badges, learner_dashboard_data, LearningPathViewSet, ScormRuntimeTrackingView, AssessmentQuestionViewSet
 from .ai_views import ai_chat
 
 # Manual URL patterns — no extra packages needed.
@@ -169,11 +169,6 @@ urlpatterns = [
         'paths/<int:pk>/',
         LearningPathViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}),
         name='learning-path-detail',
-    ),
-    path(
-        'courses/<int:course_id>/upload-scorm/',
-        UploadScormPackageView.as_view(),
-        name='upload-scorm',
     ),
     path(
         'courses/<int:course_id>/scorm-runtime/',

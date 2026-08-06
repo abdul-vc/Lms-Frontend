@@ -23,6 +23,8 @@ export interface ApiLesson {
   order: number;
   video_url: string | null;
   interaction: string | null;
+  block_tree?: any;
+  reading_content?: any;
 }
 
 export interface ApiModule {
@@ -67,7 +69,21 @@ export interface ApiCourse {
 
 // ─── Adapter: ApiCourse → frontend Course type ────────────────────────────────
 
-const FALLBACK_HERO = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3";
+export const FALLBACK_HERO = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80";
+
+export function getCourseHeroUrl(heroUrl?: string | null): string {
+  if (!heroUrl || !heroUrl.trim()) {
+    return FALLBACK_HERO;
+  }
+  const trimmed = heroUrl.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/")) {
+    return `${BACKEND_BASE}${trimmed}`;
+  }
+  return `${BACKEND_BASE}/${trimmed}`;
+}
 
 function resolveVideoUrl(l: ApiLesson): string | undefined {
   // 1. Prefer video_url (uploaded file)
@@ -88,7 +104,7 @@ export function adaptApiCourse(c: ApiCourse): Course {
     title: c.title,
     subtitle: c.subtitle || "",
     category: c.category,
-    hero: c.hero_url || FALLBACK_HERO,
+    hero: getCourseHeroUrl(c.hero_url),
     durationHrs: c.duration_hrs,
     modules: c.modules
       .slice()
@@ -337,13 +353,15 @@ export async function rejectAccessRequest(requestId: number): Promise<void> {
 export async function fetchLeaderboard() {
   const res = await authFetch(`${BASE}/dashboard/leaderboard/`);
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.results || []);
 }
 
 export async function fetchBadges() {
   const res = await authFetch(`${BASE}/dashboard/badges/`);
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.results || []);
 }
 
 export async function fetchLearningPaths() {
@@ -359,23 +377,6 @@ export async function chatAi(message: string) {
     body: JSON.stringify({ message })
   });
   if (!res.ok) throw new Error("Failed to chat with AI");
-  return res.json();
-}
-
-export async function uploadScormPackage(courseId: number, file: File): Promise<{ status: string; message: string; scorm_package: ApiScormPackage }> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const res = await authFetch(`${BASE}/courses/${courseId}/upload-scorm/`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Failed to upload SCORM package" }));
-    throw new Error(err.error || "Failed to upload SCORM package");
-  }
-
   return res.json();
 }
 
