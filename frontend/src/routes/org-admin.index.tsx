@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useAuth, authFetch } from "@/lib/auth";
+import { useAuth, authFetch, API_BASE } from "@/lib/auth";
 import { fetchAccessRequests, fetchCourses, acceptAccessRequest, rejectAccessRequest, type ApiAccessRequest } from "@/lib/courses-api";
 import {
   Users, UserCheck, BookOpen, Layers, ShieldAlert, CheckCircle2,
@@ -48,8 +48,8 @@ function OrgAdminOverview() {
     Promise.all([
       fetchAccessRequests().catch(() => []),
       fetchCourses().catch(() => []),
-      authFetch("http://127.0.0.1:8000/api/users/").then(r => r.ok ? r.json() : []).catch(() => []),
-      authFetch("http://127.0.0.1:8000/api/departments/").then(r => r.ok ? r.json() : []).catch(() => [])
+      authFetch(`${API_BASE}/users/`).then(r => r.ok ? r.json() : []).catch(() => []),
+      authFetch(`${API_BASE}/departments/`).then(r => r.ok ? r.json() : []).catch(() => [])
     ]).then(([reqs, rawCourses, uData, dData]) => {
       setRequests(reqs);
       setCoursesCount(rawCourses.length);

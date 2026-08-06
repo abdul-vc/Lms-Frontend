@@ -209,7 +209,7 @@ export function RestrictedVideoPlayer({ src, lessonId, onComplete }: RestrictedV
   const handlePlaying = useCallback(() => setIsLoading(false), []);
 
   const handleError = useCallback(() => {
-    setError('Video failed to load. Please ensure the Django backend is running at http://127.0.0.1:8000');
+    setError('Video failed to load. Please ensure the backend server is reachable.');
     setIsLoading(false);
   }, []);
 

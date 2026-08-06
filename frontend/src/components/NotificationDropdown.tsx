@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2 } from 'lucide-react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 export function NotificationDropdown() {
@@ -24,7 +24,7 @@ export function NotificationDropdown() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/notifications/');
+      const res = await authFetch(`${API_BASE}/notifications/`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -37,7 +37,7 @@ export function NotificationDropdown() {
 
   const markAsRead = async (id: number) => {
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/notifications/${id}/`, {
+      const res = await authFetch(`${API_BASE}/notifications/${id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_read: true }),
@@ -52,7 +52,7 @@ export function NotificationDropdown() {
 
   const deleteNotification = async (id: number) => {
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/notifications/${id}/`, {
+      const res = await authFetch(`${API_BASE}/notifications/${id}/`, {
         method: 'DELETE',
       });
       if (res.ok) {

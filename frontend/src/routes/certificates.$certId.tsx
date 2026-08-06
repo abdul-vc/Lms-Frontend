@@ -2,11 +2,9 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CERTIFICATES } from "@/lib/mock";
 import { Award, Download, Printer, ChevronLeft } from "lucide-react";
 import { z } from "zod";
-import { useAuth } from "@/lib/auth";
+import { authFetch, useAuth, API_BASE } from "@/lib/auth";
 import { fetchCourse, adaptApiCourse } from "@/lib/courses-api";
 import { BackButton } from "@/components/BackButton";
-
-import { authFetch } from "@/lib/auth";
 
 const search = z.object({
   score: z.number().optional(),
@@ -26,7 +24,7 @@ export const Route = createFileRoute("/certificates/$certId")({
     let apiCert = null;
     
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/courses/certificates/${params.certId}/`);
+      const res = await authFetch(`${API_BASE}/courses/certificates/${params.certId}/`);
       if (res.ok) {
         apiCert = await res.json();
       }

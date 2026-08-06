@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
-import { authFetch, useAuth } from '@/lib/auth';
+import { authFetch, useAuth, API_BASE } from '@/lib/auth';
 import { Layers, Loader2, Save, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,7 +52,7 @@ function ModuleAccessPage() {
 
   const fetchSites = async () => {
     try {
-      const res = await authFetch('http://127.0.0.1:8000/api/sites/');
+      const res = await authFetch(`${API_BASE}/sites/`);
       if (res.ok) {
         const rawSites = await res.json();
         const formattedSites: Site[] = rawSites.map((s: any) => ({
@@ -91,7 +91,7 @@ function ModuleAccessPage() {
     setSavingId(site.id);
     setError(null);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/sites/${site.id}/`, {
+      const res = await authFetch(`${API_BASE}/sites/${site.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

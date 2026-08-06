@@ -1,7 +1,7 @@
 /**
  * courses-api.ts
  * Typed fetch helpers for the Django Courses REST API.
- * Base: http://127.0.0.1:8000/api/
+ * Base: Configured via VITE_API_URL / API_BASE
  *
  * Also exports adaptApiCourse() to convert an ApiCourse into the
  * frontend Course type used by mock.ts / the learner routes.

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { ArrowLeft, Building2, Globe, MapPin, CheckCircle2, Send, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { BackButton } from '@/components/BackButton';
@@ -21,14 +21,14 @@ function SiteDetailsPage() {
   useEffect(() => {
     if (siteId) {
       Promise.all([
-        authFetch(`http://127.0.0.1:8000/api/sites/${siteId}/`).then(res => res.json()),
-        authFetch('http://127.0.0.1:8000/api/features/').then(res => res.json()),
-        authFetch(`http://127.0.0.1:8000/api/site-feature-access/?site=${siteId}`).then(res => res.json())
+        authFetch(`${API_BASE}/sites/${siteId}/`).then(res => res.json()),
+        authFetch(`${API_BASE}/features/`).then(res => res.json()),
+        authFetch(`${API_BASE}/site-feature-access/?site=${siteId}`).then(res => res.json())
       ])
       .then(async ([siteData, featuresData, accessData]) => {
         if (siteData.organization) {
           try {
-            const orgRes = await authFetch(`http://127.0.0.1:8000/api/organizations/${siteData.organization}/`);
+            const orgRes = await authFetch(`${API_BASE}/organizations/${siteData.organization}/`);
             if (orgRes.ok) {
               siteData.organization_details = await orgRes.json();
             }
@@ -62,7 +62,7 @@ function SiteDetailsPage() {
     setSendingEmail(true);
     setEmailStatus(null);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/sites/${site.id}/send-welcome-email/`, {
+      const res = await authFetch(`${API_BASE}/sites/${site.id}/send-welcome-email/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient_email: site.contact_email })

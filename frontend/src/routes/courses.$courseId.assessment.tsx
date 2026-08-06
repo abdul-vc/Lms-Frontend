@@ -4,7 +4,7 @@ import { type Question } from "@/lib/mock";
 import { adaptApiCourse, fetchAssessmentQuestions, fetchCourse } from "@/lib/courses-api";
 import { Check, X, Award, RotateCcw, ChevronRight, Lock, Loader2, Clock, AlertTriangle, AlertCircle } from "lucide-react";
 import { isLessonComplete } from "@/lib/progress";
-import { useAuth, authFetch } from "@/lib/auth";
+import { useAuth, authFetch, API_BASE } from "@/lib/auth";
 import { BackButton } from "@/components/BackButton";
 
 export const Route = createFileRoute("/courses/$courseId/assessment")({
@@ -94,7 +94,7 @@ function Assessment() {
         if (!isNaN(courseIdNum)) {
           Promise.all([
             fetchAssessmentQuestions(courseIdNum).catch(() => []),
-            authFetch(`http://127.0.0.1:8000/api/courses/${courseIdNum}/assessment/start/`, { method: 'POST' }).then(res => res.ok ? res.json() : null).catch(() => null)
+            authFetch(`${API_BASE}/courses/${courseIdNum}/assessment/start/`, { method: 'POST' }).then(res => res.ok ? res.json() : null).catch(() => null)
           ]).then(([apiQs, attemptData]) => {
             if (apiQs && apiQs.length > 0) {
                const mappedQs = apiQs.map((q: any) => {
@@ -163,7 +163,7 @@ function Assessment() {
       }
       
       try {
-        const res = await authFetch(`http://127.0.0.1:8000/api/courses/${courseIdNum}/assessment/${attemptId}/submit/`, {
+        const res = await authFetch(`${API_BASE}/courses/${courseIdNum}/assessment/${attemptId}/submit/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ answers: backendAnswers, auto_submitted: auto })

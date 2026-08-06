@@ -3,7 +3,7 @@ import { createFileRoute, Link, notFound, Outlet, useRouterState, useRouter } fr
 import { AppShell } from "@/components/AppShell";
 import { BackButton } from "@/components/BackButton";
 import { adaptApiCourse, fetchCourse, requestAccess } from "@/lib/courses-api";
-import { authFetch } from "@/lib/auth";
+import { authFetch, API_BASE } from "@/lib/auth";
 import { Lock, PlayCircle, CheckCircle2, Award, Clock, BookOpen, MessageSquare, Sparkles } from "lucide-react";
 import { useCourseProgress } from "@/lib/progress";
 import { ScormPlayer } from "@/components/ScormPlayer";
@@ -84,7 +84,7 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
       setAccessLoading(false);
       return;
     }
-    authFetch(`http://127.0.0.1:8000/api/courses/${numericId}/request-access/`)
+    authFetch(`${API_BASE}/courses/${numericId}/request-access/`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.status) setAccessStatus(data.status);

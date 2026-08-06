@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { fetchScormTracking, saveScormTracking } from "@/lib/courses-api";
+import { BACKEND_BASE } from "@/lib/auth";
 import { 
   CheckCircle2, Clock, Play, Award, Maximize2, Minimize2, RefreshCw, 
   Sparkles, AlertCircle, Volume2, ShieldCheck, ChevronRight, Loader2
@@ -214,24 +215,13 @@ export function ScormPlayer({
     }
   };
 
-  // Dynamically normalize launchUrl to match the current window hostname (localhost vs 127.0.0.1)
   const getEffectiveLaunchUrl = (url: string) => {
     if (!url) return "";
-    if (typeof window !== "undefined") {
-      const currentHost = window.location.hostname || "localhost";
-      if (url.startsWith("http://") || url.startsWith("https://")) {
-        try {
-          const parsed = new URL(url);
-          parsed.hostname = currentHost;
-          return parsed.toString();
-        } catch (e) {
-          return url;
-        }
-      }
-      const cleanPath = url.startsWith("/") ? url : `/${url}`;
-      return `http://${currentHost}:8000${cleanPath}`;
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
     }
-    return url;
+    const cleanPath = url.startsWith("/") ? url : `/${url}`;
+    return `${BACKEND_BASE}${cleanPath}`;
   };
 
   const effectiveLaunchUrl = getEffectiveLaunchUrl(launchUrl);

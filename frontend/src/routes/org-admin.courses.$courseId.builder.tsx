@@ -96,8 +96,8 @@ function CourseBuilderPage() {
     setSavingQuestion(true);
     try {
       const url = editingQuestion
-        ? `http://127.0.0.1:8000/api/questions/${editingQuestion.id}/`
-        : `http://127.0.0.1:8000/api/courses/${numericId}/questions/`;
+        ? `${API_BASE}/questions/${editingQuestion.id}/`
+        : `${API_BASE}/courses/${numericId}/questions/`;
       const method = editingQuestion ? 'PUT' : 'POST';
       const res = await authFetch(url, {
         method,
@@ -120,14 +120,14 @@ function CourseBuilderPage() {
   const handleDeleteQuestion = async (qId: number) => {
     if (!confirm("Delete this question?")) return;
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/questions/${qId}/`, { method: 'DELETE' });
+      const res = await authFetch(`${API_BASE}/questions/${qId}/`, { method: 'DELETE' });
       if (res.ok) { fetchQuestions(); }
     } catch (err) { console.error(err); }
   };
 
   const fetchCourse = async () => {
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/courses/${courseId}/`);
+      const res = await authFetch(`${API_BASE}/courses/${courseId}/`);
       if (res.ok) {
         const data = await res.json();
         setCourse(data);
@@ -140,7 +140,7 @@ function CourseBuilderPage() {
     e.preventDefault();
     setSaving(true); setError(null);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/courses/${courseId}/`, {
+      const res = await authFetch(`${API_BASE}/courses/${courseId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -153,7 +153,7 @@ function CourseBuilderPage() {
   const handlePublish = async () => {
     setPublishing(true); setError(null);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/courses/${courseId}/publish/`, { method: 'POST' });
+      const res = await authFetch(`${API_BASE}/courses/${courseId}/publish/`, { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Publish failed"); }
       await fetchCourse();
     } catch (err: any) { setError(err.message); } finally { setPublishing(false); }

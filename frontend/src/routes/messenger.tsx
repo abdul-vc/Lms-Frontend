@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { authFetch, useAuth } from "@/lib/auth";
+import { authFetch, useAuth, API_BASE } from "@/lib/auth";
 import { 
   Send, Search, MessageSquare, User, ShieldCheck, Clock, CheckCheck, 
   Sparkles, BookOpen, AlertCircle, RefreshCw 
@@ -67,7 +67,7 @@ function MessengerPage() {
   // 1. Load Conversations / Contacts List
   const loadContacts = async () => {
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/users/chat/conversations/");
+      const res = await authFetch(`${API_BASE}/users/chat/conversations/`);
       if (res.ok) {
         const data: ChatContact[] = await res.json();
         setContacts(data);
@@ -96,7 +96,7 @@ function MessengerPage() {
   // 2. Load Messages for Selected Contact
   const loadMessages = async (contactId: number) => {
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/users/chat/messages/?with_user=${contactId}`);
+      const res = await authFetch(`${API_BASE}/users/chat/messages/?with_user=${contactId}`);
       if (res.ok) {
         const data: ChatMessageItem[] = await res.json();
         setMessages(data);
@@ -140,7 +140,7 @@ function MessengerPage() {
 
     setSending(true);
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/users/chat/messages/", {
+      const res = await authFetch(`${API_BASE}/users/chat/messages/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

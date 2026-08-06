@@ -39,6 +39,9 @@ export function normalizeUrl(url: string): string {
   if (url.startsWith('http://127.0.0.1:8000') || url.startsWith('http://localhost:8000')) {
     return url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, BACKEND_BASE);
   }
+  if (url.startsWith('/api/')) {
+    return `${BACKEND_BASE}${url}`;
+  }
   return url;
 }
 

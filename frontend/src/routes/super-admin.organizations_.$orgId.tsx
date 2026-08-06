@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { ArrowLeft, Building2, MapPin, CheckCircle2, DollarSign, Mail, ExternalLink, Send, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { BackButton } from '@/components/BackButton';
@@ -21,8 +21,8 @@ function OrganizationDetailsPage() {
   useEffect(() => {
     if (orgId) {
       Promise.all([
-        authFetch(`http://127.0.0.1:8000/api/organizations/${orgId}/`).then(res => res.json()),
-        authFetch(`http://127.0.0.1:8000/api/billing/?organization=${orgId}`)
+        authFetch(`${API_BASE}/organizations/${orgId}/`).then(res => res.json()),
+        authFetch(`${API_BASE}/billing/?organization=${orgId}`)
           .then(res => res.json())
           .then(data => (Array.isArray(data) && data.length > 0 ? data[0] : null))
           .catch(() => null)
@@ -42,7 +42,7 @@ function OrganizationDetailsPage() {
     setSendingEmail(true);
     setEmailStatus(null);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/organizations/${org.id}/send-welcome-email/`, {
+      const res = await authFetch(`${API_BASE}/organizations/${org.id}/send-welcome-email/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient_email: org.contact_email })

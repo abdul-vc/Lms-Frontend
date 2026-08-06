@@ -72,7 +72,7 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
   const handleAddBlock = async (type: string) => {
     setAddingType(type);
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/authoring/blocks/", {
+      const res = await authFetch(`${API_BASE}/authoring/blocks/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -102,7 +102,7 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
   const handleDeleteBlock = async (blockId: string) => {
     if (!confirm("Delete this block?")) return;
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/authoring/blocks/${blockId}/`, {
+      const res = await authFetch(`${API_BASE}/authoring/blocks/${blockId}/`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -127,7 +127,7 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
 
     setReordering(true);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/authoring/trees/${tree.id}/reorder/`, {
+      const res = await authFetch(`${API_BASE}/authoring/trees/${tree.id}/reorder/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

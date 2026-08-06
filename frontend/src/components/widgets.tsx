@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { authFetch } from '@/lib/auth';
+import { authFetch, API_BASE } from '@/lib/auth';
 import { Users, UserPlus, Activity, BookOpen, Flame, Award, ArrowRight, ShieldCheck, CheckCircle2, Clock, BarChart3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export function ActiveUsersCountWidget() {
   const [stats, setStats] = useState<OrgStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/my/stats/')
+    authFetch(`${API_BASE}/organizations/my/stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -63,7 +63,7 @@ export function PendingRegistrationsWidget() {
   const [stats, setStats] = useState<OrgStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/my/stats/')
+    authFetch(`${API_BASE}/organizations/my/stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -107,7 +107,7 @@ export function ModuleStatusSummaryWidget() {
   const [stats, setStats] = useState<OrgStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/my/stats/')
+    authFetch(`${API_BASE}/organizations/my/stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -143,7 +143,7 @@ export function OrgActivitySummaryWidget() {
   const [stats, setStats] = useState<OrgStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/organizations/my/stats/')
+    authFetch(`${API_BASE}/organizations/my/stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -239,7 +239,7 @@ export function DailyStreakWidget() {
   const [stats, setStats] = useState<LearnerStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/users/me/learner-stats/')
+    authFetch(`${API_BASE}/users/me/learner-stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -267,7 +267,7 @@ export function ContinueLearningWidget() {
   const [stats, setStats] = useState<LearnerStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/users/me/learner-stats/')
+    authFetch(`${API_BASE}/users/me/learner-stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -335,7 +335,7 @@ export function BrowseCatalogWidget() {
   const [stats, setStats] = useState<LearnerStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/users/me/learner-stats/')
+    authFetch(`${API_BASE}/users/me/learner-stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -366,7 +366,7 @@ export function LeaderboardWidget() {
   const [stats, setStats] = useState<LearnerStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/users/me/learner-stats/')
+    authFetch(`${API_BASE}/users/me/learner-stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
@@ -421,7 +421,7 @@ export function BadgesEarnedWidget() {
   const [stats, setStats] = useState<LearnerStats | null>(null);
 
   useEffect(() => {
-    authFetch('http://127.0.0.1:8000/api/users/me/learner-stats/')
+    authFetch(`${API_BASE}/users/me/learner-stats/`)
       .then(res => res.ok ? res.json() : null)
       .then(setStats)
       .catch(console.error);
