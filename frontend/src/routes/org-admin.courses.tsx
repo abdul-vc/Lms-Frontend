@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { fetchCourses, createCourse } from '@/lib/courses-api';
 import {
   BookOpen, Plus, Pencil, Loader2, Settings, ShieldCheck,
-  CheckCircle2, AlertCircle, Sparkles, Eye,
+  CheckCircle2, AlertCircle, Sparkles, Eye, Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -25,6 +25,7 @@ interface Course {
 function OrgAdminCoursesPage() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,6 +94,10 @@ function OrgAdminCoursesPage() {
   const canCreate = user?.is_platform_super_admin || user?.role?.can_create_courses;
   const canEdit = user?.is_platform_super_admin || user?.role?.can_edit_courses;
 
+  const filteredCourses = courses.filter((c) =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  );
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -126,6 +131,33 @@ function OrgAdminCoursesPage() {
         </div>
       </div>
 
+      {/* Course Catalog Module Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search course title..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="form-field pl-9 pr-8"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setCurrentPage(1);
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground font-medium"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       {/* Table */}
       {courses.length === 0 ? (
         <div className="data-table-wrapper">
@@ -144,6 +176,27 @@ function OrgAdminCoursesPage() {
             )}
           </div>
         </div>
+      ) : filteredCourses.length === 0 ? (
+        <div className="data-table-wrapper">
+          <div className="empty-state py-8">
+            <div className="empty-state-icon">
+              <Search className="size-6" />
+            </div>
+            <h3 className="empty-state-title">No Matching Courses Found</h3>
+            <p className="empty-state-description">
+              No courses match your search query "{searchQuery}".
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              className="btn-secondary mt-4"
+            >
+              Clear Search
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="data-table-wrapper">
           <div className="overflow-x-auto">
@@ -158,7 +211,7 @@ function OrgAdminCoursesPage() {
                 </tr>
               </thead>
               <tbody className="data-table-tbody">
-                {courses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
+                {filteredCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
                   <tr key={c.id} className="data-table-row">
                     <td className="data-table-td">
                       <div className="flex items-center gap-3">
@@ -204,12 +257,12 @@ function OrgAdminCoursesPage() {
               </tbody>
             </table>
 
-            {courses.length > 0 && (
+            {filteredCourses.length > 0 && (
               <div className="px-4 py-2 border-t border-border">
                 <PaginationControls
                   currentPage={currentPage}
                   pageSize={pageSize}
-                  totalItems={courses.length}
+                  totalItems={filteredCourses.length}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={setPageSize}
                 />

@@ -11,21 +11,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export const getApiBase = (): string => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : undefined;
+  if (!envUrl) {
+    throw new Error('VITE_API_URL environment variable is missing. Please configure VITE_API_URL in your environment.');
   }
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname || 'localhost';
-    return `http://${host}:8000/api`;
-  }
-  return 'http://localhost:8000/api';
+  return envUrl.replace(/\/$/, '');
 };
 
 export const API_BASE = getApiBase();
 
 export const getBackendBase = (): string => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BACKEND_URL) {
-    return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_BACKEND_URL : undefined;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
   }
   return API_BASE.replace(/\/api\/?$/, '');
 };
@@ -33,17 +31,12 @@ export const getBackendBase = (): string => {
 export const BACKEND_BASE = getBackendBase();
 
 export function normalizeUrl(url: string): string {
-  if (url.startsWith('http://127.0.0.1:8000/api') || url.startsWith('http://localhost:8000/api')) {
-    return url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000\/api/, API_BASE);
-  }
-  if (url.startsWith('http://127.0.0.1:8000') || url.startsWith('http://localhost:8000')) {
-    return url.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, BACKEND_BASE);
-  }
   if (url.startsWith('/api/')) {
     return `${BACKEND_BASE}${url}`;
   }
   return url;
 }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -74,8 +74,8 @@ function OrganizationDetailsPage() {
   }
 
   const loginPortalUrl = org.sub_domain 
-    ? `${window.location.origin}/login/${org.sub_domain}` 
-    : `${window.location.origin}/login`;
+    ? `/login/${org.sub_domain}` 
+    : `/login`;
 
   return (
     <div className="space-y-6">

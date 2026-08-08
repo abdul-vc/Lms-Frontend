@@ -231,19 +231,19 @@ function MessengerPage() {
                       onClick={() => setSelectedContact(contact)}
                       className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center gap-3 ${
                         isSelected
-                          ? "bg-indigo-600 text-foreground shadow-md shadow-indigo-200"
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
                           : "hover:bg-muted/80 text-muted-foreground"
                       }`}
                     >
                       <div className="relative shrink-0">
                         <div className={`size-11 rounded-2xl grid place-items-center font-bold text-xs ${
-                          isSelected ? "bg-card/20 text-foreground" : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                          isSelected ? "bg-white/20 text-white" : "bg-indigo-50 text-indigo-700 border border-indigo-100"
                         }`}>
                           {contact.avatar_initials}
                         </div>
                         {contact.is_admin && (
                           <div className={`absolute -bottom-1 -right-1 size-4 rounded-full grid place-items-center text-[9px] ${
-                            isSelected ? "bg-amber-400 text-slate-950" : "bg-indigo-600 text-foreground"
+                            isSelected ? "bg-amber-400 text-slate-950" : "bg-indigo-600 text-white"
                           }`} title="Organization Admin">
                             <ShieldCheck className="size-3" />
                           </div>
@@ -252,7 +252,7 @@ function MessengerPage() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className={`text-xs font-bold truncate ${isSelected ? "text-foreground" : "text-foreground"}`}>
+                          <span className={`text-xs font-bold truncate ${isSelected ? "text-white" : "text-foreground"}`}>
                             {contact.full_name}
                           </span>
                           {contact.last_message_at && (
@@ -268,7 +268,7 @@ function MessengerPage() {
                           </p>
                           {contact.unread_count > 0 && (
                             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              isSelected ? "bg-card text-indigo-700" : "bg-rose-500 text-foreground"
+                              isSelected ? "bg-white text-indigo-700" : "bg-rose-500 text-white"
                             }`}>
                               {contact.unread_count}
                             </span>
@@ -358,8 +358,8 @@ function MessengerPage() {
                             <div
                               className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
                                 isMe
-                                  ? "bg-indigo-600 text-foreground rounded-br-none shadow-sm"
-                                  : "bg-card border border-border/80 text-slate-800 rounded-bl-none shadow-2xs"
+                                  ? "bg-indigo-600 text-white rounded-br-none shadow-sm"
+                                  : "bg-card border border-border/80 text-foreground rounded-bl-none shadow-2xs"
                               }`}
                             >
                               {msg.message}

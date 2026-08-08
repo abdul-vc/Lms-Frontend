@@ -49,6 +49,27 @@ function OrganizationsPage() {
 
   const paginatedOrgs = filteredOrganizations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const handleExport = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/organizations/export/`);
+      if (!res.ok) {
+        throw new Error(`Export failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `organizations_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export organizations data.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -57,7 +78,11 @@ function OrganizationsPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage all tenant organizations across the platform.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-all font-semibold text-xs shadow-md">
+          <button 
+            type="button"
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-all font-semibold text-xs shadow-md"
+          >
             <Download className="size-4 text-emerald-400" />
             Export
           </button>
@@ -95,7 +120,7 @@ function OrganizationsPage() {
                 <th className="px-5 py-3.5">Organization Name</th>
                 <th className="px-5 py-3.5">Company Name</th>
                 <th className="px-5 py-3.5">Entity Name</th>
-                <th className="px-5 py-3.5 text-right">Total Sites</th>
+                <th className="px-5 py-3.5 text-center">Total Sites</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Created</th>
                 <th className="px-5 py-3.5 text-right">Actions</th>
@@ -125,7 +150,7 @@ function OrganizationsPage() {
                       </td>
                       <td className="px-5 py-4 text-muted-foreground">{org.company_name || '-'}</td>
                       <td className="px-5 py-4 text-muted-foreground">{org.entity_name || '-'}</td>
-                      <td className="px-5 py-4 text-muted-foreground text-right">{org.sites?.length ?? 0}</td>
+                      <td className="px-5 py-4 text-muted-foreground text-center">{org.sites?.length ?? 0}</td>
                       <td className="px-5 py-4">
                         <StatusBadge status={org.status} />
                       </td>

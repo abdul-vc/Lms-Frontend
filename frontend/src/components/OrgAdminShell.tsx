@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Shield, Layers, BookOpen, Award,
-  Search, Activity, ArrowLeft, Menu, X,
+  Search, Activity, ArrowLeft, Menu, X, User,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
@@ -29,6 +29,11 @@ const NAV: NavItem[] = [
   { to: "/org-admin/activity", label: "Activity Log", icon: Activity, show: (role) => role.is_admin_role },
 ];
 
+// Core modules: Always visible and accessible unconditionally (bypasses Module Access & role permissions)
+const CORE_NAV: NavItem[] = [
+  { to: "/org-admin/profile", label: "My Profile", icon: User, show: () => true },
+];
+
 export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: ReactNode; maxWidth?: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
@@ -38,7 +43,8 @@ export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: 
     ? new Proxy({}, { get: () => true })
     : (user?.role || {});
 
-  const visibleNav = NAV.filter((n) => n.show(roleDict));
+  const dynamicVisible = NAV.filter((n) => n.show(roleDict));
+  const visibleNav = [...dynamicVisible, ...CORE_NAV];
 
   // Close sidebar on route change
   useEffect(() => { setMobileSidebarOpen(false); }, [pathname]);

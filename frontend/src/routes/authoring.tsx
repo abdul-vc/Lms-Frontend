@@ -784,21 +784,6 @@ function Authoring() {
                        "Lesson content, type and video assignment"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {!isNewMode && (
-                      <button onClick={() => setSelection(null)} className="p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors" title="Close">
-                        <X className="size-4" />
-                      </button>
-                    )}
-                    <button
-                      onClick={save}
-                      disabled={!canSave || saving}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                    >
-                      {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                      {isNewMode ? "Create" : "Save Changes"}
-                    </button>
-                  </div>
                 </div>
 
                 {/* Editor body */}
@@ -1195,6 +1180,22 @@ function Authoring() {
                       )}
                     </div>
                   )}
+                  {/* Global Save Button moved here */}
+                  <div className="flex items-center justify-end gap-2 pt-6 mt-6 border-t border-border">
+                    {!isNewMode && (
+                      <button onClick={() => setSelection(null)} className="p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors" title="Close">
+                        <X className="size-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={save}
+                      disabled={!canSave || saving}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                      {isNewMode ? "Create" : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

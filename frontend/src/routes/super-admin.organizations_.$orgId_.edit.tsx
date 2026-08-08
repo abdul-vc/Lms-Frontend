@@ -628,7 +628,7 @@ function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
           <h2 className="text-lg font-bold text-foreground mb-1">Branding</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Controls what this organization's employees see on their branded login page
-            ({window.location.origin}/login/{formData.sub_domain || '...'}).
+            (/login/{formData.sub_domain || '...'}).
           </p>
           <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl space-y-6">
             <LogoUploadField

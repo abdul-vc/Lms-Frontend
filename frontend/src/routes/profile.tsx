@@ -1,113 +1,332 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Flame, Trophy } from "lucide-react";
-import { useAuth } from "@/lib/auth";
-import { fetchLeaderboard, fetchBadges } from "@/lib/courses-api";
+import { Loader2, Save, AlertCircle, CheckCircle2, Upload, Trash2, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { authFetch, useAuth, normalizeUrl, API_BASE } from "@/lib/auth";
 
 export const Route = createFileRoute("/profile")({
-  loader: async () => {
-    if (typeof window === "undefined") {
-      return { leaderboard: [], badges: [] };
-    }
-    let leaderboard: any[] = [];
-    let badges: any[] = [];
-    try {
-      const [lbData, badgesData] = await Promise.all([
-        fetchLeaderboard(),
-        fetchBadges()
-      ]);
-      leaderboard = lbData;
-      badges = badgesData;
-    } catch {
-      // ignore
-    }
-    return { leaderboard, badges };
-  },
-  head: () => ({ meta: [{ title: "Profile" }] }),
+  head: () => ({ meta: [{ title: "My Profile — Halyard Learn" }] }),
   component: Profile,
 });
 
+const API_URL = API_BASE;
+
 function Profile() {
-  const loaderData = Route.useLoaderData() as any;
-  const badges: any[] = Array.isArray(loaderData?.badges) ? loaderData.badges : (loaderData?.badges?.results || []);
-  const leaderboard: any[] = Array.isArray(loaderData?.leaderboard) ? loaderData.leaderboard : (loaderData?.leaderboard?.results || []);
-  const { user } = useAuth();
-  
-  const displayName = user?.full_name || user?.username || "User";
-  const initials = user?.avatar_initials || "U";
-  const jobTitle = user?.job_title || user?.role?.name || "";
-  const region = user?.region || "";
-  const email = user?.email || "";
-  const points = user?.points ?? 0;
-  const level = user?.level ?? 1;
-  const streakDays = user?.streak_days ?? 0;
+  const { refreshUser } = useAuth();
+
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [pwd, setPwd] = useState({ current: '', new: '', confirm: '' });
+  const [savingPwd, setSavingPwd] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    authFetch(`${API_URL}/users/auth/me/`)
+      .then(res => res.json())
+      .then(d => {
+        setData(d);
+        if (d.profile_picture) {
+          setPreviewUrl(normalizeUrl(d.profile_picture));
+        }
+        setLoading(false);
+      })
+      .catch(e => { setProfileError(e.message || 'Failed to load profile'); setLoading(false); });
+  }, []);
+
+  const handleProfileChange = (e: any) => {
+    setData({ ...data, [e.target.name]: e.target.value });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setRemovePhoto(false);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setRemovePhoto(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    setProfileError('');
+    setProfileSuccess('');
+    try {
+      const formData = new FormData();
+      formData.append('first_name', data.first_name || '');
+      formData.append('last_name', data.last_name || '');
+      formData.append('email', data.email || '');
+
+      if (selectedFile) {
+        formData.append('profile_picture', selectedFile);
+      } else if (removePhoto) {
+        formData.append('remove_profile_picture', 'true');
+      }
+
+      const res = await authFetch(`${API_URL}/users/auth/me/`, {
+        method: 'PATCH',
+        body: formData,
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.detail || (typeof resData === 'object' ? JSON.stringify(resData) : 'Failed to update profile'));
+
+      setData(resData);
+      if (resData.profile_picture) {
+        setPreviewUrl(normalizeUrl(resData.profile_picture));
+      } else {
+        setPreviewUrl(null);
+      }
+      setSelectedFile(null);
+      setRemovePhoto(false);
+
+      await refreshUser();
+      setProfileSuccess('Profile updated successfully!');
+      setTimeout(() => setProfileSuccess(''), 3000);
+    } catch (err: any) {
+      setProfileError(err.message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    setPwdError('');
+    setPwdSuccess('');
+    if (pwd.new !== pwd.confirm) {
+      setPwdError('New passwords do not match.');
+      return;
+    }
+    if (pwd.new.length < 8) {
+      setPwdError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setSavingPwd(true);
+    try {
+      const res = await authFetch(`${API_URL}/users/auth/change-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: pwd.current, new_password: pwd.new }),
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.detail || JSON.stringify(resData));
+      setPwd({ current: '', new: '', confirm: '' });
+      setPwdSuccess('Password changed successfully!');
+      setTimeout(() => setPwdSuccess(''), 3000);
+    } catch (err: any) {
+      setPwdError(err.message);
+    } finally {
+      setSavingPwd(false);
+    }
+  };
 
   return (
     <AppShell>
-      <div className="flex items-center gap-6 mb-10">
-        <div className="size-20 rounded-full bg-brand/15 grid place-items-center text-2xl font-semibold text-brand ring-1 ring-brand/30">
-          {initials}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin text-emerald-400 size-8" />
         </div>
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground mb-1">{displayName}</h1>
-          <p className="text-sm text-foreground font-medium">{jobTitle}{jobTitle && region ? " · " : ""}{region}</p>
-          <p className="text-xs text-muted-foreground mt-1">{email}</p>
+      ) : (
+        <div className="space-y-10">
+          {/* Personal Information Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Personal Information</h2>
+              <p className="text-sm text-muted-foreground">Update your account identity, profile photo, and email address.</p>
+            </div>
+
+            {profileError && <div className="p-3 bg-red-950/60 border border-red-800/80 text-red-400 rounded-xl text-xs flex items-center gap-2"><AlertCircle className="size-4" /> {profileError}</div>}
+            {profileSuccess && <div className="p-3 bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 rounded-xl text-xs flex items-center gap-2"><CheckCircle2 className="size-4" /> {profileSuccess}</div>}
+
+            {/* Profile Photo Upload Block */}
+            <div className="p-5 bg-card/80 border border-border/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 shadow-2xs">
+              <div className="relative shrink-0">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Profile Preview"
+                    className="size-20 rounded-2xl object-cover ring-2 ring-emerald-500/40 shadow-sm"
+                  />
+                ) : (
+                  <div className="size-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 grid place-items-center text-emerald-400 text-xl font-bold">
+                    {(((data?.first_name?.[0] || '') + (data?.last_name?.[0] || '')) || 'U').toUpperCase()}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              <div className="space-y-2 flex-1">
+                <h3 className="text-xs font-bold text-foreground">Profile Photo</h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Upload a PNG, JPG, WebP, or SVG image. Live preview will be saved upon clicking Save Profile.
+                </p>
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/25 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all"
+                  >
+                    <Upload className="size-3.5" />
+                    {previewUrl ? 'Change Photo' : 'Upload Photo'}
+                  </button>
+
+                  {previewUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-bold transition-all"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">First Name</label>
+                <input type="text" name="first_name" value={data?.first_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Last Name</label>
+                <input type="text" name="last_name" value={data?.last_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
+                <input type="email" name="email" value={data?.email || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-foreground rounded-xl font-bold text-xs hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {savingProfile ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Save Profile
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-border" />
+
+          {/* Password Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Change Password</h2>
+              <p className="text-sm text-muted-foreground">Ensure your account uses a long, random password to stay secure.</p>
+            </div>
+
+            {pwdError && <div className="p-3 bg-red-950/60 border border-red-800/80 text-red-400 rounded-xl text-xs flex items-center gap-2"><AlertCircle className="size-4" /> {pwdError}</div>}
+            {pwdSuccess && <div className="p-3 bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 rounded-xl text-xs flex items-center gap-2"><CheckCircle2 className="size-4" /> {pwdSuccess}</div>}
+
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showCurrent ? "text" : "password"}
+                    value={pwd.current}
+                    onChange={e => setPwd({...pwd, current: e.target.value})}
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    title={showCurrent ? "Hide password" : "Show password"}
+                  >
+                    {showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={pwd.new}
+                    onChange={e => setPwd({...pwd, new: e.target.value})}
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    title={showNew ? "Hide password" : "Show password"}
+                  >
+                    {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    value={pwd.confirm}
+                    onChange={e => setPwd({...pwd, confirm: e.target.value})}
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    title={showConfirm ? "Hide password" : "Show password"}
+                  >
+                    {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleSavePassword}
+                disabled={savingPwd || !pwd.current || !pwd.new || !pwd.confirm}
+                className="flex items-center gap-2 px-6 py-2.5 bg-muted text-foreground rounded-xl font-bold text-xs hover:bg-muted transition-all border border-border disabled:opacity-50"
+              >
+                {savingPwd ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Update Password
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-10">
-        <Stat label="Total points" value={points.toLocaleString()} />
-        <Stat label="Current level" value={`Lvl ${level}`} />
-        <Stat label="Streak" value={`${streakDays} days`} icon={<Flame className="size-4 text-brand" />} />
-      </div>
-
-      <h2 className="text-lg font-medium mb-4">Badges</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
-        {badges.map((b: any) => (
-          <div key={b.id || b.name} className={`rounded-2xl ring-1 ring-border p-4 flex items-center gap-3`}>
-            <div className="size-12 rounded-xl bg-brand-light grid place-items-center text-2xl" title={b.name}>{b.icon || "🏆"}</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{b.name}</p>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {b.date ? `Earned on ${new Date(b.date).toLocaleDateString()}` : b.description || 'Badge earned'}
-              </p>
-            </div>
-            {b.earned && <span className="text-[10px] uppercase tracking-widest font-semibold text-success">Earned</span>}
-          </div>
-        ))}
-        {(!badges || badges.length === 0) && (
-          <p className="text-xs text-muted-foreground">No badges earned yet.</p>
-        )}
-      </div>
-
-      <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><Trophy className="size-4 text-brand" /> Organization Leaderboard</h2>
-      <div className="rounded-2xl ring-1 ring-border bg-card overflow-hidden">
-        {leaderboard.map((e: any, i: number) => (
-          <div key={e.rank || e.id || i} className={`flex items-center gap-4 px-5 py-3 ${i > 0 ? "border-t border-border" : ""} ${e.isYou ? "bg-brand/5" : ""}`}>
-            <span className="text-sm font-medium text-muted-foreground w-8">#{e.rank || i + 1}</span>
-            <div className={`size-9 rounded-full grid place-items-center text-xs font-semibold ${e.isYou ? "bg-brand/15 text-brand" : "bg-muted text-muted-foreground"}`}>{e.initials || e.name?.[0] || "U"}</div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">{e.name}{e.isYou && " (you)"}</p>
-              <p className="text-[10px] text-muted-foreground">{e.region || 'Global'}</p>
-            </div>
-            <span className="text-sm font-medium font-mono">{e.points?.toLocaleString() || 0} pts</span>
-          </div>
-        ))}
-        {(!leaderboard || leaderboard.length === 0) && (
-          <div className="px-5 py-4 text-sm text-muted-foreground">No data available yet.</div>
-        )}
-      </div>
+      )}
     </AppShell>
-  );
-}
-
-function Stat({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl ring-1 ring-border bg-card p-5">
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2 flex items-center gap-1">
-        {icon} {label}
-      </p>
-      <p className="text-2xl font-medium">{value}</p>
-    </div>
   );
 }

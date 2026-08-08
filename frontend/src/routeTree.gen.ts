@@ -39,6 +39,7 @@ import { Route as SuperAdminBillingRouteImport } from './routes/super-admin.bill
 import { Route as SuperAdminActivityRouteImport } from './routes/super-admin.activity'
 import { Route as OrgAdminUsersRouteImport } from './routes/org-admin.users'
 import { Route as OrgAdminRolesRouteImport } from './routes/org-admin.roles'
+import { Route as OrgAdminProfileRouteImport } from './routes/org-admin.profile'
 import { Route as OrgAdminPathsRouteImport } from './routes/org-admin.paths'
 import { Route as OrgAdminModuleAccessRouteImport } from './routes/org-admin.module-access'
 import { Route as OrgAdminDepartmentsRouteImport } from './routes/org-admin.departments'
@@ -210,6 +211,11 @@ const OrgAdminRolesRoute = OrgAdminRolesRouteImport.update({
   path: '/roles',
   getParentRoute: () => OrgAdminRoute,
 } as any)
+const OrgAdminProfileRoute = OrgAdminProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => OrgAdminRoute,
+} as any)
 const OrgAdminPathsRoute = OrgAdminPathsRouteImport.update({
   id: '/paths',
   path: '/paths',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
   '/org-admin/paths': typeof OrgAdminPathsRoute
+  '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -390,6 +397,7 @@ export interface FileRoutesByTo {
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
   '/org-admin/paths': typeof OrgAdminPathsRoute
+  '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
   '/org-admin/module-access': typeof OrgAdminModuleAccessRoute
   '/org-admin/paths': typeof OrgAdminPathsRoute
+  '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
@@ -495,6 +504,7 @@ export interface FileRouteTypes {
     | '/org-admin/departments'
     | '/org-admin/module-access'
     | '/org-admin/paths'
+    | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -545,6 +555,7 @@ export interface FileRouteTypes {
     | '/org-admin/departments'
     | '/org-admin/module-access'
     | '/org-admin/paths'
+    | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -596,6 +607,7 @@ export interface FileRouteTypes {
     | '/org-admin/departments'
     | '/org-admin/module-access'
     | '/org-admin/paths'
+    | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
     | '/super-admin/activity'
@@ -854,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgAdminRolesRouteImport
       parentRoute: typeof OrgAdminRoute
     }
+    '/org-admin/profile': {
+      id: '/org-admin/profile'
+      path: '/profile'
+      fullPath: '/org-admin/profile'
+      preLoaderRoute: typeof OrgAdminProfileRouteImport
+      parentRoute: typeof OrgAdminRoute
+    }
     '/org-admin/paths': {
       id: '/org-admin/paths'
       path: '/paths'
@@ -1033,6 +1052,7 @@ interface OrgAdminRouteChildren {
   OrgAdminDepartmentsRoute: typeof OrgAdminDepartmentsRoute
   OrgAdminModuleAccessRoute: typeof OrgAdminModuleAccessRoute
   OrgAdminPathsRoute: typeof OrgAdminPathsRoute
+  OrgAdminProfileRoute: typeof OrgAdminProfileRoute
   OrgAdminRolesRoute: typeof OrgAdminRolesRoute
   OrgAdminUsersRoute: typeof OrgAdminUsersRoute
   OrgAdminIndexRoute: typeof OrgAdminIndexRoute
@@ -1045,6 +1065,7 @@ const OrgAdminRouteChildren: OrgAdminRouteChildren = {
   OrgAdminDepartmentsRoute: OrgAdminDepartmentsRoute,
   OrgAdminModuleAccessRoute: OrgAdminModuleAccessRoute,
   OrgAdminPathsRoute: OrgAdminPathsRoute,
+  OrgAdminProfileRoute: OrgAdminProfileRoute,
   OrgAdminRolesRoute: OrgAdminRolesRoute,
   OrgAdminUsersRoute: OrgAdminUsersRoute,
   OrgAdminIndexRoute: OrgAdminIndexRoute,
