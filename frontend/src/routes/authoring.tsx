@@ -1366,7 +1366,7 @@ function HeroImageField({ value, onChange, onUploadError, onUploadSuccess }: Her
 
       // Save relative path instead of absolute URL
       if (data.path) {
-        onChange(`/media/${data.path}`);
+        onChange(`/api/media/${data.path}`);
       } else {
          onChange(data.url);
       }
