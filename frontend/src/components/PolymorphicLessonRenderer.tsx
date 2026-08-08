@@ -1,6 +1,6 @@
 import React from "react";
 import { RestrictedVideoPlayer } from "@/components/RestrictedVideoPlayer";
-import { API_BASE } from "@/lib/auth";
+import { API_BASE, normalizeUrl } from "@/lib/auth";
 import {
   Video, FileText, Puzzle, CheckSquare, GitBranch, Sparkles,
   Heading, AlignLeft, Image as ImageIcon, Music, Table, Quote, Code, AlertTriangle, HelpCircle
@@ -30,7 +30,8 @@ export function PolymorphicLessonRenderer({
   onVideoComplete,
   isAuthoringPreview = false,
 }: PolymorphicLessonProps) {
-  const videoSource = lesson.video_url || lesson.videoSrc;
+  const rawSource = lesson.video_url || lesson.videoSrc;
+  const videoSource = rawSource ? normalizeUrl(rawSource) : undefined;
   const blocks = lesson.block_tree?.blocks || [];
 
   switch (lesson.type) {
