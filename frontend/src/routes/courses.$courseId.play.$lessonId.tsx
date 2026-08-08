@@ -35,6 +35,53 @@ function Player() {
   const module = loaderData?.module;
   const lesson = loaderData?.lesson;
 
+  const params = Route.useParams();
+  const navigate = useNavigate();
+  const [videoComplete, setVideoComplete] = useState(false);
+  const { isLessonComplete, refresh: refreshProgress } = useCourseProgress(course?.id || "");
+  const [, force] = useState(0);
+
+  useEffect(() => {
+    if (course?.id && lesson?.id) {
+      setLastActive(course.id, lesson.id);
+    }
+  }, [course?.id, lesson?.id]);
+
+  const complete = useCallback(async () => {
+    if (!course?.id || !lesson?.id) return;
+    await markLessonComplete(course.id, lesson.id);
+    refreshProgress();
+    force((x) => x + 1);
+  }, [course?.id, lesson?.id, refreshProgress]);
+
+  const handleVideoComplete = useCallback(() => {
+    setVideoComplete(true);
+    complete();
+  }, [complete]);
+
+  const allLessons = course?.modules?.flatMap((m: Module) =>
+    m.locked ? [] : m.lessons.map((l: Lesson) => ({ ...l, moduleId: m.id }))
+  ) || [];
+  const currIdx = allLessons.findIndex((l: Lesson) => l.id === lesson?.id);
+  const prev = currIdx > 0 ? allLessons[currIdx - 1] : null;
+  const next = currIdx < allLessons.length - 1 ? allLessons[currIdx + 1] : null;
+  const done = lesson?.id ? isLessonComplete(lesson.id) : false;
+
+  const isVideoLesson = lesson?.type === "video";
+  const canProceed = isVideoLesson ? (videoComplete || done) : true;
+
+  const goNext = useCallback(() => {
+    complete();
+    if (next && course?.id) {
+      navigate({
+        to: "/courses/$courseId/play/$lessonId",
+        params: { courseId: course.id, lessonId: next.id },
+      });
+    } else if (course?.id) {
+      navigate({ to: "/courses/$courseId/assessment", params: { courseId: course.id } });
+    }
+  }, [complete, next, navigate, course?.id]);
+
   if (!course || !lesson) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
@@ -42,51 +89,6 @@ function Player() {
       </div>
     );
   }
-
-  const params = Route.useParams();
-  const navigate = useNavigate();
-  const [videoComplete, setVideoComplete] = useState(false);
-  const { isLessonComplete, refresh: refreshProgress } = useCourseProgress(course.id);
-  const [, force] = useState(0);
-
-  useEffect(() => {
-    setLastActive(course.id, lesson.id);
-  }, [course.id, lesson.id]);
-
-  const allLessons = course.modules.flatMap((m: Module) =>
-    m.locked ? [] : m.lessons.map((l: Lesson) => ({ ...l, moduleId: m.id }))
-  );
-  const currIdx = allLessons.findIndex((l: Lesson) => l.id === lesson.id);
-  const prev = currIdx > 0 ? allLessons[currIdx - 1] : null;
-  const next = currIdx < allLessons.length - 1 ? allLessons[currIdx + 1] : null;
-  const done = isLessonComplete(lesson.id);
-
-  // For video lessons: "next" is only enabled after video completes
-  const isVideoLesson = lesson.type === "video";
-  const canProceed = isVideoLesson ? (videoComplete || done) : true;
-
-  const complete = useCallback(async () => {
-    await markLessonComplete(course.id, lesson.id);
-    refreshProgress();
-    force((x) => x + 1);
-  }, [course.id, lesson.id, refreshProgress]);
-
-  const handleVideoComplete = useCallback(() => {
-    setVideoComplete(true);
-    complete();
-  }, [complete]);
-
-  const goNext = useCallback(() => {
-    complete();
-    if (next) {
-      navigate({
-        to: "/courses/$courseId/play/$lessonId",
-        params: { courseId: course.id, lessonId: next.id },
-      });
-    } else {
-      navigate({ to: "/courses/$courseId/assessment", params: { courseId: course.id } });
-    }
-  }, [complete, next, navigate, course.id]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
