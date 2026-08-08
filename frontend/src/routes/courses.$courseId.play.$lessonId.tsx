@@ -59,7 +59,7 @@ function Player() {
   const currIdx = allLessons.findIndex((l: Lesson) => l.id === lesson.id);
   const prev = currIdx > 0 ? allLessons[currIdx - 1] : null;
   const next = currIdx < allLessons.length - 1 ? allLessons[currIdx + 1] : null;
-  const done = isLessonComplete(course.id, lesson.id);
+  const done = isLessonComplete(lesson.id);
 
   // For video lessons: "next" is only enabled after video completes
   const isVideoLesson = lesson.type === "video";
@@ -118,7 +118,7 @@ function Player() {
                   ) : (
                     m.lessons.map((l: Lesson) => {
                       const active = l.id === lesson.id;
-                      const isDone = isLessonComplete(course.id, l.id);
+                      const isDone = isLessonComplete(l.id);
                       return (
                         <li key={l.id}>
                           <Link

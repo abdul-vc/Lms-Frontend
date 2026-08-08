@@ -1,5 +1,6 @@
 import React from "react";
 import { createFileRoute, Link, notFound, Outlet, useRouterState, useRouter } from "@tanstack/react-router";
+import { type Module, type Lesson } from "@/lib/mock";
 import { AppShell } from "@/components/AppShell";
 import { BackButton } from "@/components/BackButton";
 import { adaptApiCourse, fetchCourse, requestAccess } from "@/lib/courses-api";
@@ -330,6 +331,7 @@ function RequestAccessControl({
         </span>
         <Link
           to="/messenger"
+          search={{ userId: undefined }}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 text-foreground hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm"
         >
           <MessageSquare className="size-4" /> Message Admin 💬
