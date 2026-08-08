@@ -209,7 +209,7 @@ export function RestrictedVideoPlayer({ src, lessonId, onComplete }: RestrictedV
   const handlePlaying = useCallback(() => setIsLoading(false), []);
 
   const handleError = useCallback(() => {
-    setError('Video failed to load. Please ensure the backend server is reachable.');
+    setError('Video file missing on server (404). Please re-upload the video file for this lesson in Content Authoring on the live server.');
     setIsLoading(false);
   }, []);
 
