@@ -11,30 +11,82 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export const getApiBase = (): string => {
-  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : undefined;
-  if (!envUrl) {
-    throw new Error('VITE_API_URL environment variable is missing. Please configure VITE_API_URL in your environment.');
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+
+    if (!isLocalDev) {
+      if (import.meta.env.VITE_PROD_API_URL) {
+        return import.meta.env.VITE_PROD_API_URL.replace(/\/$/, '');
+      }
+      if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('127.0.0.1') && !import.meta.env.VITE_API_URL.includes('localhost')) {
+        return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+      }
+      return `${window.location.origin}/api`;
+    }
   }
-  return envUrl.replace(/\/$/, '');
+
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (import.meta.env.VITE_DEV_API_URL) {
+      return import.meta.env.VITE_DEV_API_URL.replace(/\/$/, '');
+    }
+    if (import.meta.env.VITE_API_URL) {
+      return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+    }
+  }
+
+  return 'http://127.0.0.1:8000/api';
 };
 
 export const API_BASE = getApiBase();
 
 export const getBackendBase = (): string => {
-  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_BACKEND_URL : undefined;
-  if (envUrl) {
-    return envUrl.replace(/\/$/, '');
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+
+    if (!isLocalDev) {
+      if (import.meta.env.VITE_PROD_BACKEND_URL) {
+        return import.meta.env.VITE_PROD_BACKEND_URL.replace(/\/$/, '');
+      }
+      if (import.meta.env.VITE_BACKEND_URL && !import.meta.env.VITE_BACKEND_URL.includes('127.0.0.1') && !import.meta.env.VITE_BACKEND_URL.includes('localhost')) {
+        return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+      }
+      return window.location.origin;
+    }
   }
+
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (import.meta.env.VITE_DEV_BACKEND_URL) {
+      return import.meta.env.VITE_DEV_BACKEND_URL.replace(/\/$/, '');
+    }
+    if (import.meta.env.VITE_BACKEND_URL) {
+      return import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
+    }
+  }
+
   return API_BASE.replace(/\/api\/?$/, '');
 };
 
 export const BACKEND_BASE = getBackendBase();
 
-export function normalizeUrl(url: string): string {
-  if (url.startsWith('/api/')) {
-    return `${BACKEND_BASE}${url}`;
+export function normalizeUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://127.0.0.1:8000/api') || trimmed.startsWith('http://localhost:8000/api')) {
+    return trimmed.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000\/api/, API_BASE);
   }
-  return url;
+  if (trimmed.startsWith('http://127.0.0.1:8000') || trimmed.startsWith('http://localhost:8000')) {
+    return trimmed.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, BACKEND_BASE);
+  }
+  if (trimmed.startsWith('/api/')) {
+    return `${BACKEND_BASE}${trimmed}`;
+  }
+  if (trimmed.startsWith('/media/') || trimmed.startsWith('media/')) {
+    const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    return `${BACKEND_BASE}${path}`;
+  }
+  return trimmed;
 }
 
 

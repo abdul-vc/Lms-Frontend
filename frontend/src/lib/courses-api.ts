@@ -8,7 +8,7 @@
  */
 
 import type { Course, Module, Lesson, InteractionKind } from "@/lib/mock";
-import { authFetch, API_BASE, BACKEND_BASE } from "@/lib/auth";
+import { authFetch, API_BASE, BACKEND_BASE, normalizeUrl } from "@/lib/auth";
 
 const BASE = API_BASE;
 
@@ -75,25 +75,12 @@ export function getCourseHeroUrl(heroUrl?: string | null): string {
   if (!heroUrl || !heroUrl.trim()) {
     return FALLBACK_HERO;
   }
-  const trimmed = heroUrl.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-  if (trimmed.startsWith("/")) {
-    return `${BACKEND_BASE}${trimmed}`;
-  }
-  return `${BACKEND_BASE}/${trimmed}`;
+  return normalizeUrl(heroUrl);
 }
 
 function resolveVideoUrl(l: ApiLesson): string | undefined {
-  // 1. Prefer video_url (uploaded file)
   if (l.video_url) {
-    // Already absolute
-    if (l.video_url.startsWith("http://") || l.video_url.startsWith("https://")) {
-      return l.video_url;
-    }
-    // Relative path from Django — make absolute
-    return `${BACKEND_BASE}${l.video_url}`;
+    return normalizeUrl(l.video_url);
   }
   return undefined;
 }
