@@ -30,7 +30,19 @@ export const Route = createFileRoute("/courses/$courseId/play/$lessonId")({
 });
 
 function Player() {
-  const { course, module, lesson } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
+  const course = loaderData?.course;
+  const module = loaderData?.module;
+  const lesson = loaderData?.lesson;
+
+  if (!course || !lesson) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <div className="size-10 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin" />
+      </div>
+    );
+  }
+
   const params = Route.useParams();
   const navigate = useNavigate();
   const [videoComplete, setVideoComplete] = useState(false);
