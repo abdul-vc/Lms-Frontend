@@ -19,8 +19,17 @@ export const Route = createFileRoute("/courses/$courseId/play/$lessonId")({
       if (data) {
         const course = adaptApiCourse(data);
         for (const mod of course.modules) {
-          const lesson = mod.lessons.find((l: { id: string }) => l.id === params.lessonId);
+          const lesson = mod.lessons.find(
+            (l: { id: string }) =>
+              l.id === params.lessonId ||
+              String(l.id) === String(params.lessonId) ||
+              l.id === `l${params.lessonId}` ||
+              String(l.id).replace(/^l/, '') === String(params.lessonId).replace(/^l/, '')
+          );
           if (lesson) return { course, module: mod, lesson };
+        }
+        if (course.modules.length > 0 && course.modules[0].lessons.length > 0) {
+          return { course, module: course.modules[0], lesson: course.modules[0].lessons[0] };
         }
       }
     }
