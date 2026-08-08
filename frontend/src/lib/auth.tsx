@@ -83,8 +83,8 @@ export function normalizeUrl(url: string | null | undefined): string {
     return `${BACKEND_BASE}${trimmed}`;
   }
   if (trimmed.startsWith('/media/') || trimmed.startsWith('media/')) {
-    const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-    return `${BACKEND_BASE}${path}`;
+    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    return `${API_BASE}${cleanPath}`;
   }
   return trimmed;
 }
