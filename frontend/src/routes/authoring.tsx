@@ -1193,7 +1193,7 @@ function Authoring() {
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                      {isNewMode ? "Create" : "Save Changes"}
+                      {isNewMode ? "Create" : selectedCourse?.status === "published" ? "Save Changes" : "Save"}
                     </button>
                   </div>
                 </div>

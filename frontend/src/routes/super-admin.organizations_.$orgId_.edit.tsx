@@ -492,8 +492,8 @@ function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
               <input type="text" name="city" value={formData.city} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Zone</label>
-              <input type="text" name="zone" value={formData.zone} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              <label className="block text-xs font-semibold text-foreground mb-1">Zip Code</label>
+              <input type="text" name="zone" value={formData.zone} onChange={handleChange} placeholder="Zip Code" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
             </div>
           </div>
         </section>

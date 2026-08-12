@@ -189,7 +189,7 @@ function OrganizationDetailsPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-1">Zone</div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1">Zip Code</div>
                 <div className="font-medium text-foreground text-sm">{org.zone || 'N/A'}</div>
               </div>
               <div className="col-span-full">
