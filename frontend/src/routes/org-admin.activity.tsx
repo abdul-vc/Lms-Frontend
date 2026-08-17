@@ -52,7 +52,7 @@ function OrgAdminActivityLog() {
               <tr>
                 <th className="px-6 py-4 font-medium">Timestamp</th>
                 <th className="px-6 py-4 font-medium">Actor</th>
-                <th className="px-6 py-4 font-medium">Action</th>
+                <th className="pl-[2.25rem] pr-6 py-4 font-medium">Action</th>
                 <th className="px-6 py-4 font-medium">Target ID</th>
               </tr>
             </thead>

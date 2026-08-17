@@ -188,7 +188,7 @@ function EditSitePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-4">
+    <div className="space-y-6 w-full py-4">
       <BackButton to="/super-admin/sites" label="Back to Sites List" />
       <div className="flex items-center gap-4 border-b border-border pb-4">
         <div>
@@ -198,135 +198,138 @@ function EditSitePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        
-        {/* Site Details */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Site Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Organization *</label>
-              <select 
-                required name="organization" value={formData.organization} onChange={handleChange}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
-              >
-                <option value="">Select Organization</option>
-                {organizations.map(org => (
-                  <option key={org.id} value={org.id}>{org.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Site Name *</label>
-              <input 
-                required type="text" name="name" value={formData.name} onChange={handleChange}
-                placeholder="e.g., Corporate HQ" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">URL</label>
-              <input 
-                type="url" name="url" value={formData.url} onChange={handleChange}
-                placeholder="e.g., https://site.example.com" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Site Code</label>
-              <input 
-                type="text" name="site_code" value={formData.site_code} onChange={handleChange}
-                placeholder="e.g., CHQ-001" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Select Product Type</label>
-              <select name="product_type" value={formData.product_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">Select a product type</option>
-                <option value="LMS">LMS</option>
-                <option value="ERP">ERP</option>
-                <option value="HRIS">HRIS</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Country</label>
-              <input 
-                type="text" name="country" value={formData.country} onChange={handleChange}
-                placeholder="Select or type country" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-foreground mb-1">Location Address</label>
-              <textarea 
-                name="location_address" value={formData.location_address} onChange={handleChange}
-                placeholder="Enter full address..." 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 min-h-[80px]" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Activate Date</label>
-              <input 
-                type="date" name="activate_date" value={formData.activate_date} onChange={handleChange}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        {/* Contact Person */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Contact Person</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
-              <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="John Doe" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Phone Number</label>
-              <input type="text" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 (555) 123-4567" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
-              <input type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="john.doe@example.com" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-          </div>
-        </section>
-
-        {/* Module Access */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-foreground">Module Access</h2>
-            <p className="text-sm text-muted-foreground">Manage which modules are active for this site.</p>
-          </div>
+        {/* Single Main Card Container for All Sections */}
+        <div className="bg-card/90 p-6 sm:p-8 rounded-2xl border border-border shadow-xl space-y-8">
           
-          <div className="bg-card/90 rounded-2xl border border-border shadow-xl overflow-hidden">
-            <div className="p-6">
-              <h3 className="font-bold text-foreground mb-4">Platform Features</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {features.map((feature: any) => (
-                  <ModuleToggle 
-                    key={feature.id}
-                    name={`feature_${feature.id}`} 
-                    label={feature.name} 
-                    checked={!!selectedFeatures[feature.id]} 
-                    onChange={(e: any) => setSelectedFeatures({
-                      ...selectedFeatures,
-                      [feature.id]: e.target.checked
-                    })} 
-                  />
-                ))}
+          {/* Site Details */}
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-4">Site Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Organization *</label>
+                <select 
+                  required name="organization" value={formData.organization} onChange={handleChange}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                >
+                  <option value="">Select Organization</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Site Name *</label>
+                <input 
+                  required type="text" name="name" value={formData.name} onChange={handleChange}
+                  placeholder="e.g., Corporate HQ" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">URL</label>
+                <input 
+                  type="url" name="url" value={formData.url} onChange={handleChange}
+                  placeholder="e.g., https://site.example.com" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Site Code</label>
+                <input 
+                  type="text" name="site_code" value={formData.site_code} onChange={handleChange}
+                  placeholder="e.g., CHQ-001" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Select Product Type</label>
+                <select name="product_type" value={formData.product_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">Select a product type</option>
+                  <option value="LMS">LMS</option>
+                  <option value="ERP">ERP</option>
+                  <option value="HRIS">HRIS</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Country</label>
+                <input 
+                  type="text" name="country" value={formData.country} onChange={handleChange}
+                  placeholder="Select or type country" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-foreground mb-1">Location Address</label>
+                <textarea 
+                  name="location_address" value={formData.location_address} onChange={handleChange}
+                  placeholder="Enter full address..." 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 min-h-[80px]" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Activate Date</label>
+                <input 
+                  type="date" name="activate_date" value={formData.activate_date} onChange={handleChange}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Status</label>
+                <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+
+          {/* Contact Person */}
+          <section className="pt-6 border-t border-border/60">
+            <h2 className="text-lg font-bold text-foreground mb-4">Contact Person</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
+                <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="John Doe" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Phone Number</label>
+                <input type="text" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 (555) 123-4567" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
+                <input type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="john.doe@example.com" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+            </div>
+          </section>
+
+          {/* Module Access */}
+          <section className="pt-6 border-t border-border/60">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-foreground">Module Access</h2>
+              <p className="text-sm text-muted-foreground">Manage which modules are active for this site.</p>
+            </div>
+            
+            <div className="rounded-2xl border border-border overflow-hidden">
+              <div className="p-6">
+                <h3 className="font-bold text-foreground mb-4">Platform Features</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {features.map((feature: any) => (
+                    <ModuleToggle 
+                      key={feature.id}
+                      name={`feature_${feature.id}`} 
+                      label={feature.name} 
+                      checked={!!selectedFeatures[feature.id]} 
+                      onChange={(e: any) => setSelectedFeatures({
+                        ...selectedFeatures,
+                        [feature.id]: e.target.checked
+                      })} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
 
         <div className="pt-4 flex justify-end gap-3 sticky bottom-0 bg-background/90 backdrop-blur-md py-4 border-t border-border z-10">
           <Link 

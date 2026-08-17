@@ -34,10 +34,30 @@ const CORE_NAV: NavItem[] = [
   { to: "/org-admin/profile", label: "My Profile", icon: User, show: () => true },
 ];
 
-export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: ReactNode; maxWidth?: string }) {
+export function OrgAdminShell({ children, maxWidth = "w-full" }: { children: ReactNode; maxWidth?: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar_collapsed") === "true";
+    }
+    return false;
+  });
+
+  const toggleSidebar = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setMobileSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => {
+        const next = !prev;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("sidebar_collapsed", String(next));
+        }
+        return next;
+      });
+    }
+  };
 
   const roleDict = user?.is_platform_super_admin
     ? new Proxy({}, { get: () => true })
@@ -48,6 +68,15 @@ export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: 
 
   // Close sidebar on route change
   useEffect(() => { setMobileSidebarOpen(false); }, [pathname]);
+
+  const handleNavClick = () => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarCollapsed(true);
+      localStorage.setItem("sidebar_collapsed", "true");
+    } else {
+      setMobileSidebarOpen(false);
+    }
+  };
 
   const SidebarContent = () => (
     <>
@@ -91,6 +120,7 @@ export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: 
               <Link
                 key={item.to}
                 to={item.to}
+                onClick={handleNavClick}
                 className={cn(isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item')}
               >
                 <item.icon className={cn("size-4 shrink-0", isActive ? "text-accent-foreground" : "text-muted-foreground")} />
@@ -106,9 +136,11 @@ export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: 
   return (
     <div className="min-h-screen bg-background text-foreground flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="w-60 lg:w-64 shrink-0 bg-sidebar border-r border-sidebar-border hidden lg:flex flex-col z-10">
-        <SidebarContent />
-      </aside>
+      {!sidebarCollapsed && (
+        <aside className="w-60 lg:w-64 shrink-0 bg-sidebar border-r border-sidebar-border hidden lg:flex flex-col z-10">
+          <SidebarContent />
+        </aside>
+      )}
 
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
@@ -127,11 +159,11 @@ export function OrgAdminShell({ children, maxWidth = "max-w-7xl" }: { children: 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0 bg-background">
         {/* Top Header */}
-        <Header activeWorkspaceKey="admin" />
+        <Header activeWorkspaceKey="admin" onToggleSidebar={toggleSidebar} />
 
         {/* Content */}
         <div className={cn("flex-1 overflow-y-auto min-w-0")}>
-          <div className={cn("mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 lg:py-8", maxWidth)}>
+          <div className={cn("w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 lg:py-8", maxWidth)}>
             {children}
           </div>
         </div>

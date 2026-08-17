@@ -168,10 +168,10 @@ function OrgAdminOverview() {
                   <table className="data-table">
                     <thead className="data-table-thead">
                       <tr>
-                        <th className="data-table-th">User</th>
-                        <th className="data-table-th hidden sm:table-cell">Role</th>
+                        <th className="data-table-th pl-[3.5rem]">User</th>
+                        <th className="data-table-th hidden sm:table-cell pl-[1.75rem]">Role</th>
                         <th className="data-table-th hidden md:table-cell">Department</th>
-                        <th className="data-table-th text-right">Action</th>
+                        <th className="data-table-th text-right pr-6">Action</th>
                       </tr>
                     </thead>
                     <tbody className="data-table-tbody">

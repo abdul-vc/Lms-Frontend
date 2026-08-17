@@ -487,10 +487,10 @@ function RolesPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50/50 text-muted-foreground font-semibold border-b border-border text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4">Role Name</th>
-                  <th className="px-6 py-4">Users</th>
-                  <th className="px-6 py-4">Permissions Overview</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="py-4 pl-14 pr-6">Role Name</th>
+                  <th className="py-4 pl-20 pr-6">Users</th>
+                  <th className="py-4 pl-24 pr-6">Permissions Overview</th>
+                  <th className="px-6 py-4 text-right pr-9">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -505,9 +505,9 @@ function RolesPage() {
                     const activePerms = Object.keys(r).filter(k => k.startsWith('can_') && (r as any)[k]).length;
                     return (
                       <tr key={r.id} className="hover:bg-muted/50/50 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-foreground">
-                          <div className="flex items-center gap-2">
-                            {r.name}
+                        <td className="py-4 pl-14 pr-6 font-bold text-foreground">
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base font-bold text-foreground">{r.name}</span>
                             {r.is_default && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 uppercase tracking-wider border border-blue-100">
                                 Default
@@ -515,15 +515,15 @@ function RolesPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-semibold">
-                            <Users className="size-3" /> {r.user_count}
+                        <td className="py-4 pl-20 pr-6">
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-semibold">
+                            <Users className="size-3.5" /> {r.user_count}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-muted-foreground">
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <Shield className="size-4 text-emerald-600" />
-                            {activePerms} active permissions
+                        <td className="py-4 pl-24 pr-6 text-muted-foreground">
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+                            <Shield className="size-4 text-emerald-600 shrink-0" />
+                            <span>{activePerms} active permissions</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">

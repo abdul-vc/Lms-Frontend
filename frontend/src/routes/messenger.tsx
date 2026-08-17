@@ -169,7 +169,7 @@ function MessengerPage() {
   );
 
   return (
-    <AppShell maxWidth="max-w-7xl">
+    <AppShell maxWidth="w-full">
       <div className="flex flex-col h-[calc(100vh-8.5rem)] bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
         
         {/* Header Bar */}

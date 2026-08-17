@@ -412,12 +412,12 @@ function UsersAndDepartmentsPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                 <tr>
-                  <th className="px-6 py-4">User</th>
+                  <th className="pl-[4.5rem] pr-6 py-4">User</th>
                   <th className="px-6 py-4">Email / Username</th>
                   <th className="px-6 py-4">Department</th>
-                  <th className="px-6 py-4">Role</th>
+                  <th className="pl-[2.25rem] pr-6 py-4">Role</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4 text-right pr-9">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -527,8 +527,8 @@ function UsersAndDepartmentsPage() {
                 <tr>
                   <th className="px-6 py-4">Department Name</th>
                   <th className="px-6 py-4">Parent</th>
-                  <th className="px-6 py-4">Members</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="pl-[2.25rem] pr-6 py-4">Members</th>
+                  <th className="px-6 py-4 text-right pr-9">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -545,7 +545,7 @@ function UsersAndDepartmentsPage() {
                       <td className="px-6 py-4 text-muted-foreground font-medium">
                         {d.parent ? departments.find(x => x.id === d.parent)?.name || `ID: ${d.parent}` : '—'}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="pl-[3rem] pr-6 py-4">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
                           <Users className="size-3" /> {d.user_count}
                         </span>

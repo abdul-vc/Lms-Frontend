@@ -203,17 +203,17 @@ function OrgAdminCoursesPage() {
             <table className="data-table">
               <thead className="data-table-thead">
                 <tr>
-                  <th className="data-table-th">Course</th>
-                  <th className="data-table-th">Status</th>
-                  <th className="data-table-th hidden sm:table-cell">Level</th>
-                  <th className="data-table-th hidden md:table-cell">Duration</th>
-                  <th className="data-table-th text-right">Actions</th>
+                  <th className="data-table-th pl-16 pr-4">Course</th>
+                  <th className="data-table-th pl-18 pr-4">Status</th>
+                  <th className="data-table-th hidden pl-18 pr-4 sm:table-cell">Level</th>
+                  <th className="data-table-th hidden md:table-cell pl-20 pr-4">Duration</th>
+                  <th className="data-table-th text-right pr-12">Actions</th>
                 </tr>
               </thead>
               <tbody className="data-table-tbody">
                 {filteredCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
                   <tr key={c.id} className="data-table-row">
-                    <td className="data-table-td">
+                    <td className="data-table-td pl-14 pr-4">
                       <div className="flex items-center gap-3">
                         <div className="size-8 rounded-lg bg-accent grid place-items-center shrink-0">
                           <BookOpen className="size-4 text-accent-foreground" />
@@ -221,16 +221,16 @@ function OrgAdminCoursesPage() {
                         <span className="font-medium text-foreground">{c.title}</span>
                       </div>
                     </td>
-                    <td className="data-table-td">
+                    <td className="data-table-td pl-16 pr-4">
                       <StatusBadge status={c.status} />
                     </td>
-                    <td className="data-table-td hidden sm:table-cell">
+                    <td className="data-table-td hidden sm:table-cell pl-16 pr-4">
                       <span className="text-muted-foreground text-xs">{c.level}</span>
                     </td>
-                    <td className="data-table-td hidden md:table-cell">
+                    <td className="data-table-td hidden md:table-cell pl-[6.625rem] pr-4">
                       <span className="text-muted-foreground text-xs">{c.duration_hrs}h</span>
                     </td>
-                    <td className="data-table-td text-right">
+                    <td className="data-table-td text-right pr-[2.25rem]">
                       <div className="flex items-center justify-end gap-1">
                         {canEdit && (
                           <Link

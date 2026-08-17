@@ -4,7 +4,7 @@ import {
   Quote, Code, AlertTriangle, FileText, Puzzle, CheckSquare, GitBranch,
   Trash2, MoveUp, MoveDown, Settings, Plus, Loader2, Sparkles
 } from "lucide-react";
-import { authFetch } from "@/lib/auth";
+import { authFetch, API_BASE } from "@/lib/auth";
 import {
   ReadingPayloadEditor,
   InteractionPayloadEditor,

@@ -203,9 +203,9 @@ function UsersPage() {
           <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
             <tr>
               <th className="px-6 py-4">Name / Email</th>
-              <th className="px-6 py-4">Role</th>
+              <th className="pl-[2.125rem] pr-6 py-4">Role</th>
               <th className="px-6 py-4">Department</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-4 text-right pr-9">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">

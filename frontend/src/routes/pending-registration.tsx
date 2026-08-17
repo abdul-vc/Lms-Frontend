@@ -74,7 +74,7 @@ function PendingRegistration() {
 
   return (
     <AppShell>
-      <div className="space-y-6 max-w-6xl">
+      <div className="space-y-6 w-full">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -164,11 +164,11 @@ function PendingRegistration() {
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50/80 text-muted-foreground text-[11px] uppercase tracking-widest font-bold border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-4 font-bold">Student</th>
-                  <th className="px-6 py-4 font-bold">Requested Course</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
+                  <th className="pl-[4.5rem] pr-6 py-4 font-bold">Student</th>
+                  <th className="pl-[3rem] pr-6 py-4 font-bold">Requested Course</th>
+                  <th className="pl-[2.25rem] pr-6 py-4 font-bold">Status</th>
                   <th className="px-6 py-4 font-bold">Requested Date</th>
-                  <th className="px-6 py-4 font-bold text-right">Actions</th>
+                  <th className="px-6 py-4 font-bold text-right pr-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -251,7 +251,7 @@ function PendingRegistration() {
                               {req.status === 'accepted' && (
                                 <button
                                   onClick={() => handleAction(req.id, 'reject')}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                  className="flex items-center justify-center gap-1 w-[122px] py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
                                   title="Revoke Access (Lock Course)"
                                 >
                                   <Lock className="size-3.5" /> Revoke Access
@@ -260,7 +260,7 @@ function PendingRegistration() {
                               {req.status === 'rejected' && (
                                 <button
                                   onClick={() => handleAction(req.id, 'accept')}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                  className="flex items-center justify-center gap-1 w-[122px] py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
                                   title="Re-approve Course Access"
                                 >
                                   <CheckCircle2 className="size-3.5" /> Re-Approve

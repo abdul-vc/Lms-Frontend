@@ -412,7 +412,7 @@ function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-4">
+    <div className="space-y-6 w-full py-4">
       <BackButton to="/super-admin/organizations" label="Back to Organizations" />
       <div className="flex items-center gap-4 border-b border-border pb-4">
         <div>

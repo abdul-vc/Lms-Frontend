@@ -283,13 +283,13 @@ function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-4">
-      <div className="flex items-center gap-4 border-b border-border pb-4">
+    <div className="space-y-6 w-full py-4">
+      <div>
         <BackButton fallbackPath="/super-admin/organizations" />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Organization</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Onboard a new tenant to the platform.</p>
-        </div>
+      </div>
+      <div className="border-b border-border pb-4">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Organization</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Onboard a new tenant to the platform.</p>
       </div>
 
       {error && (
@@ -299,320 +299,323 @@ function addMonthsToIsoDate(isoDateStr: string, monthsToAdd: number): string {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8" autoComplete="off">
-        {/* 1. General Information */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">General Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Organization Name *</label>
-              <input 
-                type="text" 
-                name="name" 
-                required 
-                value={formData.name} 
-                onChange={handleChange} 
-                placeholder="e.g. Acme Corp" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Status</label>
-              <select 
-                name="status" 
-                value={formData.status} 
-                onChange={handleChange} 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
-              >
-                <option value="">-- Please choose an option --</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Company Name</label>
-              <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} placeholder="Legal company name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Entity Name</label>
-              <input type="text" name="entity_name" value={formData.entity_name} onChange={handleChange} placeholder="Legal entity name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-foreground mb-1">Company Address</label>
-              <input type="text" name="company_address" value={formData.company_address} onChange={handleChange} placeholder="Street address, building, suite" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Country</label>
-              <input type="text" name="country" value={formData.country} onChange={handleChange} placeholder="Country" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Region</label>
-              <input type="text" name="region" value={formData.region} onChange={handleChange} placeholder="Region" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">State / Province</label>
-              <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State or province" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">City</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Zip Code</label>
-              <input type="text" name="zone" value={formData.zone} onChange={handleChange} placeholder="Zip Code" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-          </div>
-        </section>
-
-        {/* 2. Contact Person */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-4">Contact Person</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
-              <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="Primary contact full name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
-              <input type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="contact@example.com" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Phone Number</label>
-              <input type="text" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-          </div>
-        </section>
-
-        {/* 3. Login Credentials */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-1">Login Credentials</h2>
-          <p className="text-sm text-muted-foreground mb-4">Administrator login credentials for this organization.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Initial Admin Email / Username</label>
-              <input 
-                type="email"
-                name="initial_admin_email"
-                value={formData.initial_admin_email}
-                onChange={handleChange}
-                autoComplete="off"
-                placeholder="admin@example.com" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Password</label>
-              <div className="relative">
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  name="initial_admin_password" 
-                  value={formData.initial_admin_password} 
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  placeholder="Secure password" 
-                  className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
-                  title={showPassword ? "Hide password" : "Show password"}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. White Labeling Configuration */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-foreground">White Labeling Configuration</h2>
-            <p className="text-sm text-muted-foreground">Configure custom domain mapping for this organization.</p>
-          </div>
-          
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  name="enable_white_label"
-                  checked={formData.enable_white_label}
-                  onChange={handleChange}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-              </label>
-              <span className="text-xs font-semibold text-foreground">Enable Sub-domain Routing</span>
-            </div>
-
-            {formData.enable_white_label && (
-              <div className="space-y-4 pt-2">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">Subdomain Slug</label>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="text" 
-                      name="sub_domain" 
-                      value={formData.sub_domain} 
-                      onChange={handleChange} 
-                      placeholder="acme" 
-                      className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" 
-                    />
-                    <span className="text-xs text-muted-foreground font-mono">.lamsportal.com</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 5. Branding */}
-        <section>
-          <h2 className="text-lg font-bold text-foreground mb-1">Branding</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Controls what this organization's employees see on their branded login page.
-          </p>
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl space-y-6">
-            <LogoUploadField 
-              value={formData.logo_url} 
-              onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))} 
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Single Main Card Container for All Sections */}
+        <div className="bg-card/90 p-6 sm:p-8 rounded-2xl border border-border shadow-xl space-y-8">
+          {/* 1. General Information */}
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-4">General Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Primary Color</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="color" 
-                    name="primary_color" 
-                    value={formData.primary_color} 
-                    onChange={handleChange} 
-                    className="size-10 rounded-xl border border-border cursor-pointer bg-background" 
-                  />
-                  <input 
-                    type="text" 
-                    name="primary_color" 
-                    value={formData.primary_color} 
-                    onChange={handleChange} 
-                    className="w-32 bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground font-mono uppercase focus:outline-none focus:border-emerald-500/50" 
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Tagline</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Organization Name *</label>
                 <input 
-                  type="text" name="tagline" value={formData.tagline} onChange={handleChange}
-                  placeholder="e.g. Excellence in patient care." 
+                  type="text" 
+                  name="name" 
+                  required 
+                  value={formData.name} 
+                  onChange={handleChange} 
+                  placeholder="e.g. Acme Corp" 
                   className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
                 />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Status</label>
+                <select 
+                  name="status" 
+                  value={formData.status} 
+                  onChange={handleChange} 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                >
+                  <option value="">-- Please choose an option --</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Company Name</label>
+                <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} placeholder="Legal company name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Entity Name</label>
+                <input type="text" name="entity_name" value={formData.entity_name} onChange={handleChange} placeholder="Legal entity name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-foreground mb-1">Company Address</label>
+                <input type="text" name="company_address" value={formData.company_address} onChange={handleChange} placeholder="Street address, building, suite" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Country</label>
+                <input type="text" name="country" value={formData.country} onChange={handleChange} placeholder="Country" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Region</label>
+                <input type="text" name="region" value={formData.region} onChange={handleChange} placeholder="Region" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">State / Province</label>
+                <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State or province" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">City</label>
+                <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Zip Code</label>
+                <input type="text" name="zone" value={formData.zone} onChange={handleChange} placeholder="Zip Code" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
             </div>
+          </section>
 
+          {/* 2. Contact Person */}
+          <section className="pt-6 border-t border-border/60">
+            <h2 className="text-lg font-bold text-foreground mb-4">Contact Person</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
+                <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="Primary contact full name" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
+                <input type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="contact@example.com" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Phone Number</label>
+                <input type="text" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Login Credentials */}
+          <section className="pt-6 border-t border-border/60">
+            <h2 className="text-lg font-bold text-foreground mb-1">Login Credentials</h2>
+            <p className="text-sm text-muted-foreground mb-4">Administrator login credentials for this organization.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Initial Admin Email / Username</label>
+                <input 
+                  type="email"
+                  name="initial_admin_email"
+                  value={formData.initial_admin_email}
+                  onChange={handleChange}
+                  autoComplete="off"
+                  placeholder="admin@example.com" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Password</label>
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    name="initial_admin_password" 
+                    value={formData.initial_admin_password} 
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                    placeholder="Secure password" 
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 4. White Labeling Configuration */}
+          <section className="pt-6 border-t border-border/60">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-foreground">White Labeling Configuration</h2>
+              <p className="text-sm text-muted-foreground">Configure custom domain mapping for this organization.</p>
+            </div>
+            
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Login Hero Description</label>
-              <textarea 
-                name="login_hero_description" value={formData.login_hero_description} onChange={handleChange} rows={3}
-                placeholder="Optional — shown under the tagline. Leave blank to omit." 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+              <div className="flex items-center gap-3 mb-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="enable_white_label"
+                    checked={formData.enable_white_label}
+                    onChange={handleChange}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+                <span className="text-xs font-semibold text-foreground">Enable Sub-domain Routing</span>
+              </div>
+
+              {formData.enable_white_label && (
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Subdomain Slug</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        name="sub_domain" 
+                        value={formData.sub_domain} 
+                        onChange={handleChange} 
+                        placeholder="acme" 
+                        className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" 
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">.lamsportal.com</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* 5. Branding */}
+          <section className="pt-6 border-t border-border/60">
+            <h2 className="text-lg font-bold text-foreground mb-1">Branding</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Controls what this organization's employees see on their branded login page.
+            </p>
+            <div className="space-y-6">
+              <LogoUploadField 
+                value={formData.logo_url} 
+                onChange={(url) => setFormData(prev => ({ ...prev, logo_url: url }))} 
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Primary Color</label>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="color" 
+                      name="primary_color" 
+                      value={formData.primary_color} 
+                      onChange={handleChange} 
+                      className="size-10 rounded-xl border border-border cursor-pointer bg-background" 
+                    />
+                    <input 
+                      type="text" 
+                      name="primary_color" 
+                      value={formData.primary_color} 
+                      onChange={handleChange} 
+                      className="w-32 bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground font-mono uppercase focus:outline-none focus:border-emerald-500/50" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">Tagline</label>
+                  <input 
+                    type="text" name="tagline" value={formData.tagline} onChange={handleChange}
+                    placeholder="e.g. Excellence in patient care." 
+                    className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Login Hero Description</label>
+                <textarea 
+                  name="login_hero_description" value={formData.login_hero_description} onChange={handleChange} rows={3}
+                  placeholder="Optional — shown under the tagline. Leave blank to omit." 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Login Welcome Message</label>
+                <input 
+                  type="text" name="login_welcome_message" value={formData.login_welcome_message} onChange={handleChange}
+                  placeholder="Leave blank to use the platform default" 
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Compliance Badges</label>
+                <ComplianceBadgeListEditor
+                  value={formData.compliance_badges}
+                  onChange={(badges) => setFormData(prev => ({ ...prev, compliance_badges: badges }))}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* 6. Billing Information */}
+          <section className="pt-6 border-t border-border/60">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-foreground">Billing Information</h2>
+              <p className="text-sm text-muted-foreground">Configure subscription and billing details.</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Login Welcome Message</label>
-              <input 
-                type="text" name="login_welcome_message" value={formData.login_welcome_message} onChange={handleChange}
-                placeholder="Leave blank to use the platform default" 
-                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50" 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Solution Type</label>
+                <select name="solution_type" value={formData.solution_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">-- Please choose an option --</option>
+                  <option value="SaaS">SaaS Cloud</option>
+                  <option value="On-Premise">On-Premise</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Enterprise">Enterprise</option>
+                  <option value="Professional">Professional</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Solution For</label>
+                <select name="solution_for" value={formData.solution_for} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">-- Please choose an option --</option>
+                  <option value="B2B">B2B</option>
+                  <option value="B2C">B2C</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Billing Term</label>
+                <select name="billing_term" value={formData.billing_term} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">-- Please choose an option --</option>
+                  <option value="Net 30">Net 30</option>
+                  <option value="Net 60">Net 60</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Rate (₹)</label>
+                <input type="number" name="rate" value={formData.rate} onChange={handleChange} placeholder="0.00" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Billing Cycle</label>
+                <select name="billing_cycle" value={formData.billing_cycle} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">-- Please choose an option --</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Annually</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Start Date</label>
+                <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Project Duration</label>
+                <select name="duration_type" value={formData.duration_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
+                  <option value="">-- Please choose an option --</option>
+                  <option value="6_months">6 Months</option>
+                  <option value="1_year">1 Year</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">End Date</label>
+                <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} disabled={formData.duration_type === '6_months' || formData.duration_type === '1_year'} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground disabled:opacity-50 focus:outline-none focus:border-emerald-500/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">Billing Date</label>
+                <input type="date" name="billing_date" value={formData.billing_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Compliance Badges</label>
-              <ComplianceBadgeListEditor
-                value={formData.compliance_badges}
-                onChange={(badges) => setFormData(prev => ({ ...prev, compliance_badges: badges }))}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* 6. Billing Information */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-foreground">Billing Information</h2>
-            <p className="text-sm text-muted-foreground">Configure subscription and billing details.</p>
-          </div>
-
-          <div className="bg-card/90 p-6 rounded-2xl border border-border shadow-xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Solution Type</label>
-              <select name="solution_type" value={formData.solution_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">-- Please choose an option --</option>
-                <option value="SaaS">SaaS Cloud</option>
-                <option value="On-Premise">On-Premise</option>
-                <option value="Hybrid">Hybrid</option>
-                <option value="Enterprise">Enterprise</option>
-                <option value="Professional">Professional</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Solution For</label>
-              <select name="solution_for" value={formData.solution_for} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">-- Please choose an option --</option>
-                <option value="B2B">B2B</option>
-                <option value="B2C">B2C</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Billing Term</label>
-              <select name="billing_term" value={formData.billing_term} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">-- Please choose an option --</option>
-                <option value="Net 30">Net 30</option>
-                <option value="Net 60">Net 60</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Rate (₹)</label>
-              <input type="number" name="rate" value={formData.rate} onChange={handleChange} placeholder="0.00" className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Billing Cycle</label>
-              <select name="billing_cycle" value={formData.billing_cycle} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">-- Please choose an option --</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Annually</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Start Date</label>
-              <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Project Duration</label>
-              <select name="duration_type" value={formData.duration_type} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50">
-                <option value="">-- Please choose an option --</option>
-                <option value="6_months">6 Months</option>
-                <option value="1_year">1 Year</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">End Date</label>
-              <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} disabled={formData.duration_type === '6_months' || formData.duration_type === '1_year'} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground disabled:opacity-50 focus:outline-none focus:border-emerald-500/50" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Billing Date</label>
-              <input type="date" name="billing_date" value={formData.billing_date} onChange={handleChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         <div className="pt-4 flex justify-end gap-3 sticky bottom-0 bg-background/90 backdrop-blur-md py-4 border-t border-border z-10">
           <Link 

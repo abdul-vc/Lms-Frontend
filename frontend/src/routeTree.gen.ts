@@ -28,7 +28,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgAdminIndexRouteImport } from './routes/org-admin.index'
 import { Route as SuperAdminToolkitRouteImport } from './routes/super-admin.toolkit'
 import { Route as SuperAdminSitesRouteImport } from './routes/super-admin.sites'
-import { Route as SuperAdminSetupGuideRouteImport } from './routes/super-admin.setup-guide'
 import { Route as SuperAdminSettingsRouteImport } from './routes/super-admin.settings'
 import { Route as SuperAdminProfileRouteImport } from './routes/super-admin.profile'
 import { Route as SuperAdminPlansRouteImport } from './routes/super-admin.plans'
@@ -153,11 +152,6 @@ const SuperAdminToolkitRoute = SuperAdminToolkitRouteImport.update({
 const SuperAdminSitesRoute = SuperAdminSitesRouteImport.update({
   id: '/sites',
   path: '/sites',
-  getParentRoute: () => SuperAdminRoute,
-} as any)
-const SuperAdminSetupGuideRoute = SuperAdminSetupGuideRouteImport.update({
-  id: '/setup-guide',
-  path: '/setup-guide',
   getParentRoute: () => SuperAdminRoute,
 } as any)
 const SuperAdminSettingsRoute = SuperAdminSettingsRouteImport.update({
@@ -357,7 +351,6 @@ export interface FileRoutesByFullPath {
   '/super-admin/plans': typeof SuperAdminPlansRoute
   '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
-  '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin/': typeof OrgAdminIndexRoute
@@ -408,7 +401,6 @@ export interface FileRoutesByTo {
   '/super-admin/plans': typeof SuperAdminPlansRoute
   '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
-  '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin': typeof OrgAdminIndexRoute
@@ -461,7 +453,6 @@ export interface FileRoutesById {
   '/super-admin/plans': typeof SuperAdminPlansRoute
   '/super-admin/profile': typeof SuperAdminProfileRoute
   '/super-admin/settings': typeof SuperAdminSettingsRoute
-  '/super-admin/setup-guide': typeof SuperAdminSetupGuideRoute
   '/super-admin/sites': typeof SuperAdminSitesRoute
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin/': typeof OrgAdminIndexRoute
@@ -515,7 +506,6 @@ export interface FileRouteTypes {
     | '/super-admin/plans'
     | '/super-admin/profile'
     | '/super-admin/settings'
-    | '/super-admin/setup-guide'
     | '/super-admin/sites'
     | '/super-admin/toolkit'
     | '/org-admin/'
@@ -566,7 +556,6 @@ export interface FileRouteTypes {
     | '/super-admin/plans'
     | '/super-admin/profile'
     | '/super-admin/settings'
-    | '/super-admin/setup-guide'
     | '/super-admin/sites'
     | '/super-admin/toolkit'
     | '/org-admin'
@@ -618,7 +607,6 @@ export interface FileRouteTypes {
     | '/super-admin/plans'
     | '/super-admin/profile'
     | '/super-admin/settings'
-    | '/super-admin/setup-guide'
     | '/super-admin/sites'
     | '/super-admin/toolkit'
     | '/org-admin/'
@@ -787,13 +775,6 @@ declare module '@tanstack/react-router' {
       path: '/sites'
       fullPath: '/super-admin/sites'
       preLoaderRoute: typeof SuperAdminSitesRouteImport
-      parentRoute: typeof SuperAdminRoute
-    }
-    '/super-admin/setup-guide': {
-      id: '/super-admin/setup-guide'
-      path: '/setup-guide'
-      fullPath: '/super-admin/setup-guide'
-      preLoaderRoute: typeof SuperAdminSetupGuideRouteImport
       parentRoute: typeof SuperAdminRoute
     }
     '/super-admin/settings': {
@@ -1084,7 +1065,6 @@ interface SuperAdminRouteChildren {
   SuperAdminPlansRoute: typeof SuperAdminPlansRoute
   SuperAdminProfileRoute: typeof SuperAdminProfileRoute
   SuperAdminSettingsRoute: typeof SuperAdminSettingsRoute
-  SuperAdminSetupGuideRoute: typeof SuperAdminSetupGuideRoute
   SuperAdminSitesRoute: typeof SuperAdminSitesRoute
   SuperAdminToolkitRoute: typeof SuperAdminToolkitRoute
   SuperAdminOrganizationsOrgIdRoute: typeof SuperAdminOrganizationsOrgIdRoute
@@ -1104,7 +1084,6 @@ const SuperAdminRouteChildren: SuperAdminRouteChildren = {
   SuperAdminPlansRoute: SuperAdminPlansRoute,
   SuperAdminProfileRoute: SuperAdminProfileRoute,
   SuperAdminSettingsRoute: SuperAdminSettingsRoute,
-  SuperAdminSetupGuideRoute: SuperAdminSetupGuideRoute,
   SuperAdminSitesRoute: SuperAdminSitesRoute,
   SuperAdminToolkitRoute: SuperAdminToolkitRoute,
   SuperAdminOrganizationsOrgIdRoute: SuperAdminOrganizationsOrgIdRoute,

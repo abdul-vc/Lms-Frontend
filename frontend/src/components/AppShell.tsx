@@ -11,8 +11,10 @@ import { UserProfileDropdown } from './UserProfileDropdown';
 
 export function Header({
   activeWorkspaceKey,
+  onToggleSidebar,
 }: {
   activeWorkspaceKey?: string;
+  onToggleSidebar?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -42,73 +44,88 @@ export function Header({
 
   return (
     <header className="shell-header">
-      {/* Search */}
-      <div className="shell-search">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="pl-9"
-        />
-        {query && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl overflow-hidden z-50"
-            style={{ boxShadow: 'var(--shadow-overlay)' }}>
-            {isSearching ? (
-              <div className="p-4 text-xs text-muted-foreground text-center">Searching…</div>
-            ) : results.length > 0 ? (
-              <div className="max-h-72 overflow-y-auto custom-scrollbar">
-                {results.map((r, i) => {
-                  let toRoute = '/catalog';
-                  let paramsObj: any = undefined;
-
-                  if (r.type === 'page') {
-                    toRoute = String(r.id);
-                  } else if (r.type === 'course') {
-                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/courses' : '/courses/$courseId';
-                    paramsObj = activeWorkspaceKey === 'admin' ? undefined : { courseId: String(r.id) };
-                  } else if (r.type === 'path') {
-                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/paths' : '/paths';
-                  } else if (r.type === 'certificate') {
-                    toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/certificates' : '/certificates';
-                  } else if (r.type === 'user' || r.type === 'department') {
-                    toRoute = '/org-admin/departments';
-                  } else if (r.type === 'role') {
-                    toRoute = '/org-admin/roles';
-                  } else if (r.type === 'organization') {
-                    toRoute = '/super-admin/organizations';
-                  } else if (r.type === 'site') {
-                    toRoute = '/super-admin/sites';
-                  } else if (r.type === 'plan') {
-                    toRoute = '/super-admin/plans';
-                  }
-
-
-                  return (
-                    <Link
-                      key={i}
-                      to={toRoute as any}
-                      params={paramsObj}
-                      onClick={() => setQuery('')}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/50 last:border-0"
-                    >
-                      <div className="flex items-center gap-2.5 truncate min-w-0">
-                        <span className="badge-brand text-[10px] uppercase tracking-wider shrink-0">{r.type}</span>
-                        <span className="text-xs text-foreground font-semibold truncate">{r.name}</span>
-                      </div>
-                      {r.subtitle && (
-                        <span className="text-[10px] text-muted-foreground shrink-0 font-medium">{r.subtitle}</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-4 text-xs text-muted-foreground text-center">No results found</div>
-            )}
-          </div>
+      {/* Left side: Toggle button + Search */}
+      <div className="flex items-center gap-2 flex-1 min-w-0 pr-4">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 flex items-center justify-center cursor-pointer"
+            title="Toggle Sidebar"
+            aria-label="Toggle Sidebar"
+          >
+            <Menu className="size-5" />
+          </button>
         )}
+
+        {/* Search */}
+        <div className="shell-search">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder={placeholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+          {query && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl overflow-hidden z-50"
+              style={{ boxShadow: 'var(--shadow-overlay)' }}>
+              {isSearching ? (
+                <div className="p-4 text-xs text-muted-foreground text-center">Searching…</div>
+              ) : results.length > 0 ? (
+                <div className="max-h-72 overflow-y-auto custom-scrollbar">
+                  {results.map((r, i) => {
+                    let toRoute = '/catalog';
+                    let paramsObj: any = undefined;
+
+                    if (r.type === 'page') {
+                      toRoute = String(r.id);
+                    } else if (r.type === 'course') {
+                      toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/courses' : '/courses/$courseId';
+                      paramsObj = activeWorkspaceKey === 'admin' ? undefined : { courseId: String(r.id) };
+                    } else if (r.type === 'path') {
+                      toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/paths' : '/paths';
+                    } else if (r.type === 'certificate') {
+                      toRoute = activeWorkspaceKey === 'admin' ? '/org-admin/certificates' : '/certificates';
+                    } else if (r.type === 'user' || r.type === 'department') {
+                      toRoute = '/org-admin/departments';
+                    } else if (r.type === 'role') {
+                      toRoute = '/org-admin/roles';
+                    } else if (r.type === 'organization') {
+                      toRoute = '/super-admin/organizations';
+                    } else if (r.type === 'site') {
+                      toRoute = '/super-admin/sites';
+                    } else if (r.type === 'plan') {
+                      toRoute = '/super-admin/plans';
+                    }
+
+
+                    return (
+                      <Link
+                        key={i}
+                        to={toRoute as any}
+                        params={paramsObj}
+                        onClick={() => setQuery('')}
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted transition-colors border-b border-border/50 last:border-0"
+                      >
+                        <div className="flex items-center gap-2.5 truncate min-w-0">
+                          <span className="badge-brand text-[10px] uppercase tracking-wider shrink-0">{r.type}</span>
+                          <span className="text-xs text-foreground font-semibold truncate">{r.name}</span>
+                        </div>
+                        {r.subtitle && (
+                          <span className="text-[10px] text-muted-foreground shrink-0 font-medium">{r.subtitle}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 text-xs text-muted-foreground text-center">No results found</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right controls — order: Notifications → Theme → Profile */}
@@ -122,12 +139,32 @@ export function Header({
   );
 }
 
-export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { children: React.ReactNode, rightRail?: React.ReactNode, maxWidth?: string }) {
+export function AppShell({ children, rightRail, maxWidth = "w-full" }: { children: React.ReactNode, rightRail?: React.ReactNode, maxWidth?: string }) {
   const { data, loading } = useWorkspaces();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const toggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => {
+        const next = !prev;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('sidebar_collapsed', String(next));
+        }
+        return next;
+      });
+    }
+  };
 
   const [activeWorkspace, setActiveWorkspace] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -173,6 +210,15 @@ export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { chil
 
   const currentWorkspace = data.workspaces.find(w => w.workspace_key === activeWorkspace) || data.workspaces[0];
   const initials = user?.avatar_initials || "U";
+
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setSidebarCollapsed(true);
+      localStorage.setItem('sidebar_collapsed', 'true');
+    } else {
+      setMobileSidebarOpen(false);
+    }
+  };
 
   const SidebarContent = () => (
     <>
@@ -221,6 +267,7 @@ export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { chil
             <Link
               key={item.key}
               to={item.route}
+              onClick={handleNavClick}
               className={cn(isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item')}
             >
               <Icon
@@ -238,9 +285,11 @@ export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { chil
   return (
     <div className="min-h-screen bg-background text-foreground flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="w-60 lg:w-64 shrink-0 bg-sidebar border-r border-sidebar-border hidden lg:flex flex-col z-20">
-        <SidebarContent />
-      </aside>
+      {!sidebarCollapsed && (
+        <aside className="w-60 lg:w-64 shrink-0 bg-sidebar border-r border-sidebar-border hidden lg:flex flex-col z-20">
+          <SidebarContent />
+        </aside>
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
@@ -286,11 +335,12 @@ export function AppShell({ children, rightRail, maxWidth = "max-w-6xl" }: { chil
         <div className="hidden lg:block">
           <Header
             activeWorkspaceKey={currentWorkspace?.workspace_key}
+            onToggleSidebar={toggleSidebar}
           />
         </div>
 
         <main className="flex-1 overflow-y-auto min-w-0 bg-background">
-          <div className={cn("mx-auto w-full", maxWidth.includes("px-") ? maxWidth : `px-4 sm:px-6 lg:px-8 py-6 lg:py-8 ${maxWidth}`)}>
+          <div className={cn("w-full", maxWidth.includes("px-") ? maxWidth : `px-4 sm:px-6 lg:px-8 py-6 lg:py-8 ${maxWidth}`)}>
             {children}
           </div>
         </main>
