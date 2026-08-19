@@ -160,124 +160,238 @@ function PendingRegistration() {
             <p className="text-xs text-muted-foreground">There are no access requests matching the selected filter tab.</p>
           </div>
         ) : (
-          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-muted/50/80 text-muted-foreground text-[11px] uppercase tracking-widest font-bold border-b border-border/50">
-                <tr>
-                  <th className="pl-[4.5rem] pr-6 py-4 font-bold">Student</th>
-                  <th className="pl-[3rem] pr-6 py-4 font-bold">Requested Course</th>
-                  <th className="pl-[2.25rem] pr-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold">Requested Date</th>
-                  <th className="px-6 py-4 font-bold text-right pr-20">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {paginatedRequests.map(req => {
-                  const isProcessing = processingId === req.id;
-                  const courseTitle = (req as any).course_title || courses[req.course] || `Course #${req.course}`;
-                  const studentName = (req as any).student_name || req.student_details?.full_name || 'Unknown User';
-                  const studentEmail = (req as any).student_email || req.student_details?.email || '';
-                  const studentId = req.student_details?.id || req.student;
+          <div className="space-y-4">
+            {/* Desktop Table (lg: 1024px+) — Preserved 100% untouched */}
+            <div className="hidden lg:block bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-muted/50/80 text-muted-foreground text-[11px] uppercase tracking-widest font-bold border-b border-border/50">
+                  <tr>
+                    <th className="pl-14 pr-6 py-4 font-bold">Student</th>
+                    <th className="pl-3 pr-6 py-4 font-bold">Requested Course</th>
+                    <th className="pl-9 pr-6 py-4 font-bold">Status</th>
+                    <th className="pl-28 pr-6 py-4 font-bold">Requested Date</th>
+                    <th className="px-6 py-4 font-bold text-right pr-14">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {paginatedRequests.map(req => {
+                    const isProcessing = processingId === req.id;
+                    const courseTitle = (req as any).course_title || courses[req.course] || `Course #${req.course}`;
+                    const studentName = (req as any).student_name || req.student_details?.full_name || 'Unknown User';
+                    const studentEmail = (req as any).student_email || req.student_details?.email || '';
+                    const studentId = req.student_details?.id || req.student;
 
-                  return (
-                    <tr key={req.id} className="hover:bg-muted/50/60 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-9 rounded-full bg-indigo-50 text-indigo-700 font-bold grid place-items-center text-xs border border-indigo-100">
-                            <User className="size-4" />
+                    return (
+                      <tr key={req.id} className="hover:bg-muted/50/60 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="size-9 rounded-full bg-indigo-50 text-indigo-700 font-bold grid place-items-center text-xs border border-indigo-100">
+                              <User className="size-4" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-foreground">{studentName}</div>
+                              <div className="text-muted-foreground text-xs">{studentEmail}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-bold text-foreground">{studentName}</div>
-                            <div className="text-muted-foreground text-xs">{studentEmail}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="size-4 text-indigo-600 shrink-0" />
+                            <span className="font-semibold text-slate-800">{courseTitle}</span>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {req.status === 'accepted' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                              <CheckCircle2 className="size-3.5 text-emerald-600" /> Approved
+                            </span>
+                          ) : req.status === 'rejected' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+                              <XCircle className="size-3.5 text-rose-600" /> Rejected
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                              <Loader2 className="size-3.5 animate-spin text-amber-600" /> Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="pl-28 pr-6 py-4 text-muted-foreground text-xs">
+                          {new Date(req.requested_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to="/messenger"
+                              search={{ userId: studentId }}
+                              className="p-2 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs transition-colors"
+                            >
+                              <MessageSquare className="size-4" />
+                            </Link>
+
+                            {isProcessing ? (
+                              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                            ) : (
+                              <>
+                                {req.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleAction(req.id, 'accept')}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                      title="Approve Course Access"
+                                    >
+                                      <CheckCircle2 className="size-3.5" /> Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleAction(req.id, 'reject')}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                      title="Reject Course Access"
+                                    >
+                                      <XCircle className="size-3.5" /> Reject
+                                    </button>
+                                  </>
+                                )}
+                                {req.status === 'accepted' && (
+                                  <button
+                                    onClick={() => handleAction(req.id, 'reject')}
+                                    className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                    title="Revoke Access (Lock Course)"
+                                  >
+                                    <Lock className="size-3.5" /> Revoke Access
+                                  </button>
+                                )}
+                                {req.status === 'rejected' && (
+                                  <button
+                                    onClick={() => handleAction(req.id, 'accept')}
+                                    className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                    title="Re-approve Course Access"
+                                  >
+                                    <CheckCircle2 className="size-3.5" /> Re-Approve
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile / Tablet Card View (< lg: 1024px) */}
+            <div className="block lg:hidden space-y-3">
+              {paginatedRequests.map(req => {
+                const isProcessing = processingId === req.id;
+                const courseTitle = (req as any).course_title || courses[req.course] || `Course #${req.course}`;
+                const studentName = (req as any).student_name || req.student_details?.full_name || 'Unknown User';
+                const studentEmail = (req as any).student_email || req.student_details?.email || '';
+                const studentId = req.student_details?.id || req.student;
+
+                return (
+                  <div key={req.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                    {/* Top Row: Student & Direct Message */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="size-10 rounded-full bg-indigo-50 text-indigo-700 font-bold grid place-items-center text-xs border border-indigo-100 shrink-0">
+                          <User className="size-4" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="font-bold text-foreground text-sm truncate">{studentName}</div>
+                          <div className="text-muted-foreground text-xs truncate">{studentEmail}</div>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/messenger"
+                        search={{ userId: studentId }}
+                        className="p-2.5 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs transition-colors shrink-0"
+                        title="Send Message"
+                      >
+                        <MessageSquare className="size-4" />
+                      </Link>
+                    </div>
+
+                    {/* Middle Row: Requested Course & Status */}
+                    <div className="space-y-1.5 pt-1 border-t border-border/50">
+                      <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Requested Course</div>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
                           <BookOpen className="size-4 text-indigo-600 shrink-0" />
-                          <span className="font-semibold text-slate-800">{courseTitle}</span>
+                          <span className="font-semibold text-slate-800 text-xs sm:text-sm break-words">{courseTitle}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
+
                         {req.status === 'accepted' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold shrink-0">
                             <CheckCircle2 className="size-3.5 text-emerald-600" /> Approved
                           </span>
                         ) : req.status === 'rejected' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold shrink-0">
                             <XCircle className="size-3.5 text-rose-600" /> Rejected
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold shrink-0">
                             <Loader2 className="size-3.5 animate-spin text-amber-600" /> Pending
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground text-xs">
-                        {new Date(req.requested_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            to="/messenger"
-                            search={{ userId: studentId }}
-                            className="p-2 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs transition-colors"
-                          >
-                            <MessageSquare className="size-4" />
-                          </Link>
+                      </div>
+                    </div>
 
-                          {isProcessing ? (
-                            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                          ) : (
-                            <>
-                              {req.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => handleAction(req.id, 'accept')}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-foreground font-semibold text-xs transition-all shadow-sm"
-                                    title="Approve Course Access"
-                                  >
-                                    <CheckCircle2 className="size-3.5" /> Approve
-                                  </button>
-                                  <button
-                                    onClick={() => handleAction(req.id, 'reject')}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-foreground font-semibold text-xs transition-all shadow-sm"
-                                    title="Reject Course Access"
-                                  >
-                                    <XCircle className="size-3.5" /> Reject
-                                  </button>
-                                </>
-                              )}
-                              {req.status === 'accepted' && (
-                                <button
-                                  onClick={() => handleAction(req.id, 'reject')}
-                                  className="flex items-center justify-center gap-1 w-[122px] py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
-                                  title="Revoke Access (Lock Course)"
-                                >
-                                  <Lock className="size-3.5" /> Revoke Access
-                                </button>
-                              )}
-                              {req.status === 'rejected' && (
+                    {/* Bottom Row: Date & Touch Action Buttons */}
+                    <div className="pt-2 border-t border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        Requested: {new Date(req.requested_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {isProcessing ? (
+                          <Loader2 className="size-5 animate-spin text-muted-foreground mx-auto" />
+                        ) : (
+                          <>
+                            {req.status === 'pending' && (
+                              <div className="flex items-center gap-2 w-full">
                                 <button
                                   onClick={() => handleAction(req.id, 'accept')}
-                                  className="flex items-center justify-center gap-1 w-[122px] py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
-                                  title="Re-approve Course Access"
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-foreground font-semibold text-xs transition-all shadow-sm"
                                 >
-                                  <CheckCircle2 className="size-3.5" /> Re-Approve
+                                  <CheckCircle2 className="size-3.5" /> Approve
                                 </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            
+                                <button
+                                  onClick={() => handleAction(req.id, 'reject')}
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                                >
+                                  <XCircle className="size-3.5" /> Reject
+                                </button>
+                              </div>
+                            )}
+                            {req.status === 'accepted' && (
+                              <button
+                                onClick={() => handleAction(req.id, 'reject')}
+                                className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-foreground font-semibold text-xs transition-all shadow-sm"
+                              >
+                                <Lock className="size-3.5" /> Revoke Access
+                              </button>
+                            )}
+                            {req.status === 'rejected' && (
+                              <button
+                                onClick={() => handleAction(req.id, 'accept')}
+                                className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground font-semibold text-xs transition-all shadow-sm"
+                              >
+                                <CheckCircle2 className="size-3.5" /> Re-Approve
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
             {filteredRequests.length > 0 && (
-              <div className="px-4 py-2 border-t border-border">
+              <div className="px-4 py-2 border-t border-border bg-card rounded-b-2xl">
                 <PaginationControls
                   currentPage={currentPage}
                   pageSize={pageSize}

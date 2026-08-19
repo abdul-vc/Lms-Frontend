@@ -51,7 +51,7 @@ export function PaginationControls({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="appearance-none bg-card border border-border rounded-lg pl-3 pr-7 py-1 text-xs text-foreground font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors shadow-2xs"
+              className="appearance-none bg-card border border-border rounded-lg pl-3 pr-7 py-1 text-xs text-foreground font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors shadow-2xs"
             >
               {pageSizeOptions.map((option) => (
                 <option key={option} value={option}>

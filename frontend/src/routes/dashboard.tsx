@@ -91,25 +91,25 @@ function Dashboard() {
 
   return (
     <AppShell maxWidth="max-w-[1700px]">
-      <div className="space-y-8 bg-background text-foreground min-h-screen -m-6 lg:-m-8 p-6 lg:p-8">
+      <div className="space-y-6 sm:space-y-8 bg-background text-foreground">
         
         {/* Top Header / Dark Grey Hero Welcome Banner */}
         <div className="p-5 sm:p-7 rounded-2xl bg-card/90 border border-border/90 shadow-2xl relative overflow-hidden">
           {/* Subtle Background Glow Spheres */}
-          <div className="absolute -top-24 -right-24 size-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -top-24 -right-24 size-96 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute -bottom-24 -left-24 size-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             <div className="space-y-3 max-w-2xl">
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-accent text-accent-foreground border border-brand/20 uppercase tracking-widest">
                   {user_profile?.organization_name || "Enterprise Workspace"}
                 </span>
                 <span className="text-xs text-muted-foreground">•</span>
                 <span className="text-xs font-semibold text-muted-foreground">{user_profile?.job_title || "Learner"}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground leading-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground leading-tight">
                 {contextual_header?.greeting || `Welcome back, ${user_profile?.first_name}`} 👋
               </h1>
 
@@ -123,15 +123,15 @@ function Dashboard() {
                   <Link
                     to="/courses/$courseId"
                     params={{ courseId: String(resumeCourse.id) }}
-                    className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-sm shadow-xl shadow-emerald-600/20 transition-all hover:scale-[1.02] flex items-center gap-2.5 group"
+                    className="px-4 sm:px-6 py-3 rounded-2xl bg-brand hover:opacity-90 text-brand-foreground font-black text-sm shadow-sm transition-opacity flex items-center gap-2.5 group max-w-xs sm:max-w-none"
                   >
-                    <Play className="size-4 fill-slate-950 text-slate-950 group-hover:scale-110 transition-transform" />
-                    <span>Resume Learning ({resumeCourse.title})</span>
+                    <Play className="size-4 fill-current text-brand-foreground group-hover:scale-110 transition-transform shrink-0" />
+                    <span className="truncate">Resume: {resumeCourse.title}</span>
                   </Link>
                 ) : (
                   <Link
                     to="/catalog"
-                    className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-sm shadow-xl shadow-emerald-600/20 transition-all hover:scale-[1.02] flex items-center gap-2"
+                    className="px-6 py-3 rounded-2xl bg-brand hover:opacity-90 text-brand-foreground font-black text-sm shadow-sm transition-opacity flex items-center gap-2"
                   >
                     <Compass className="size-4" />
                     <span>Explore Course Catalog</span>
@@ -144,48 +144,48 @@ function Dashboard() {
                   className="px-4 py-3 rounded-2xl bg-muted hover:bg-muted text-foreground font-semibold text-xs transition-all border border-border flex items-center gap-2"
                   title="Refresh Dashboard Data"
                 >
-                  <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin text-emerald-400" : "text-muted-foreground"}`} />
+                  <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin text-brand" : "text-muted-foreground"}`} />
                   <span>{refreshing ? "Refreshing..." : "Sync Progress"}</span>
                 </button>
               </div>
             </div>
 
             {/* Micro-Metrics Grid Chips */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 shrink-0">
-              <div className="p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 shrink-0">
+              <div className="p-3 sm:p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
                 <div className="flex items-center gap-2 text-amber-400">
                   <Flame className="size-4 fill-amber-400" />
-                  <span className="text-[11px] font-extrabold uppercase text-muted-foreground">Streak</span>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold uppercase text-muted-foreground">Streak</span>
                 </div>
-                <p className="text-xl font-black text-foreground">{metrics?.streak_days || 0} Days</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Active Learning</p>
+                <p className="text-lg sm:text-xl font-black text-foreground">{metrics?.streak_days || 0} Days</p>
+                <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">Active Learning</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
+              <div className="p-3 sm:p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
                 <div className="flex items-center gap-2 text-indigo-400">
                   <Trophy className="size-4 text-indigo-400" />
-                  <span className="text-[11px] font-extrabold uppercase text-muted-foreground">Org Rank</span>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold uppercase text-muted-foreground">Org Rank</span>
                 </div>
-                <p className="text-xl font-black text-foreground">#{metrics?.rank_in_org || 1}</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Position</p>
+                <p className="text-lg sm:text-xl font-black text-foreground">#{metrics?.rank_in_org || 1}</p>
+                <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">Position</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
+              <div className="p-3 sm:p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
                 <div className="flex items-center gap-2 text-amber-400">
                   <Zap className="size-4 fill-amber-400 text-amber-400" />
-                  <span className="text-[11px] font-extrabold uppercase text-muted-foreground">Total XP</span>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold uppercase text-muted-foreground">Total XP</span>
                 </div>
-                <p className="text-xl font-black text-foreground">{(metrics?.total_xp || 0).toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Level {user_profile?.level || 1}</p>
+                <p className="text-lg sm:text-xl font-black text-foreground">{(metrics?.total_xp || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">Level {user_profile?.level || 1}</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
+              <div className="p-3 sm:p-4 rounded-2xl bg-background/90 border border-border shadow-md space-y-1">
                 <div className="flex items-center gap-2 text-emerald-400">
                   <CheckCircle2 className="size-4 text-emerald-400" />
-                  <span className="text-[11px] font-extrabold uppercase text-muted-foreground">Completed</span>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold uppercase text-muted-foreground">Done</span>
                 </div>
-                <p className="text-xl font-black text-foreground">{metrics?.completed_courses || 0}</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Certificates Earned</p>
+                <p className="text-lg sm:text-xl font-black text-foreground">{metrics?.completed_courses || 0}</p>
+                <p className="text-[10px] text-muted-foreground font-medium hidden sm:block">Certificates Earned</p>
               </div>
             </div>
           </div>
@@ -212,7 +212,7 @@ function Dashboard() {
                 {active_courses.map((course: any) => (
                   <div
                     key={course.id}
-                    className="p-5 rounded-2xl bg-card/90 border border-border hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group shadow-xl"
+                    className="p-5 rounded-2xl bg-card/90 border border-border hover:border-brand/40 transition-all duration-300 flex flex-col justify-between group shadow-xl"
                   >
                     <div className="space-y-3">
                       {/* Thumbnail / Header Pill */}
@@ -224,7 +224,7 @@ function Dashboard() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute top-3 left-3 flex items-center gap-2">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-background/90 text-emerald-300 border border-emerald-500/40 backdrop-blur-md">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-background/90 text-brand border border-brand/40 backdrop-blur-md">
                             {course.category}
                           </span>
                           {course.is_scorm && (
@@ -236,8 +236,8 @@ function Dashboard() {
                       </div>
 
                       <div>
-                        <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">{course.current_module_name}</p>
-                        <h3 className="text-sm font-extrabold text-foreground group-hover:text-emerald-300 transition-colors line-clamp-1">
+                        <p className="text-[11px] font-bold text-brand uppercase tracking-wider">{course.current_module_name}</p>
+                        <h3 className="text-sm font-extrabold text-foreground group-hover:text-brand transition-colors line-clamp-1">
                           {course.title}
                         </h3>
                       </div>
@@ -248,11 +248,11 @@ function Dashboard() {
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs font-bold">
                           <span className="text-muted-foreground">Progress</span>
-                          <span className="text-emerald-400">{course.progress_pct}%</span>
+                          <span className="text-brand">{course.progress_pct}%</span>
                         </div>
                         <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border">
                           <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+                            className="h-full bg-brand rounded-full transition-all duration-500"
                             style={{ width: `${course.progress_pct}%` }}
                           ></div>
                         </div>
@@ -261,7 +261,7 @@ function Dashboard() {
                       <Link
                         to="/courses/$courseId"
                         params={{ courseId: String(course.id) }}
-                        className="w-full py-2.5 rounded-xl bg-muted hover:bg-emerald-600 text-foreground hover:text-slate-950 font-black text-xs transition-all flex items-center justify-center gap-2 group/btn shadow-md"
+                        className="w-full py-2.5 rounded-xl bg-muted hover:bg-brand text-foreground hover:text-brand-foreground font-black text-xs transition-all flex items-center justify-center gap-2 group/btn shadow-md"
                       >
                         <span>{course.progress_pct > 0 ? "Resume Course" : "Start Course"}</span>
                         <ArrowRight className="size-3.5 group-hover/btn:translate-x-1 transition-transform" />
@@ -281,10 +281,10 @@ function Dashboard() {
           <div className="p-6 rounded-2xl bg-card/90 border border-border shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Target className="size-4 text-emerald-400" />
+                <Target className="size-4 text-brand" />
                 <h3 className="text-sm font-extrabold text-foreground">Weekly Velocity & Goals</h3>
               </div>
-              <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-3 py-1 rounded-full border border-emerald-500/30">
+              <span className="text-xs font-extrabold text-brand bg-accent px-3 py-1 rounded-full border border-brand/20">
                 {weekly_activity?.completed_this_week || 0}/{weekly_activity?.target_lessons || 5} Lessons Done
               </span>
             </div>
@@ -295,7 +295,7 @@ function Dashboard() {
                   key={i}
                   className={`p-3 rounded-xl text-center space-y-1.5 border transition-all ${
                     d.completed
-                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold"
+                      ? "bg-brand/20 border-brand/40 text-brand font-bold"
                       : "bg-background/60 border-border text-muted-foreground"
                   }`}
                 >
@@ -438,7 +438,7 @@ function Dashboard() {
                   <p className="text-[10px] text-muted-foreground">Milestones unlocked during your learning</p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 px-3 py-1 rounded-full border border-emerald-500/30">
+              <span className="text-xs font-bold text-brand bg-accent px-3 py-1 rounded-full border border-brand/20">
                 {achievements.filter((a: any) => a.unlocked).length}/{achievements.length} Unlocked
               </span>
             </div>
@@ -488,11 +488,11 @@ function Dashboard() {
                 {recommended_paths.map((path: any) => (
                   <div
                     key={path.id}
-                    className="p-5 rounded-2xl bg-card/90 border border-border hover:border-emerald-500/40 transition-all space-y-4 flex flex-col justify-between shadow-xl"
+                    className="p-5 rounded-2xl bg-card/90 border border-border hover:border-brand/40 transition-all space-y-4 flex flex-col justify-between shadow-xl"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-accent text-accent-foreground border border-brand/20">
                           {path.course_count} Courses
                         </span>
                         <span className="text-xs text-muted-foreground">•</span>
@@ -513,7 +513,7 @@ function Dashboard() {
 
                       <Link
                         to="/paths"
-                        className="text-xs font-extrabold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 shrink-0"
+                        className="text-xs font-extrabold text-brand hover:opacity-80 flex items-center gap-1 shrink-0 transition-opacity"
                       >
                         <span>Explore</span>
                         <ArrowRight className="size-3" />

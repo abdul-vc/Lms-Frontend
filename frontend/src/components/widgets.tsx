@@ -36,10 +36,10 @@ export function ActiveUsersCountWidget() {
   return (
     <div className="bg-card p-6 rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
-        <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center font-bold">
+        <div className="size-10 rounded-xl bg-accent text-accent-foreground border border-brand/20 grid place-items-center font-bold">
           <Users className="size-5" />
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-accent text-accent-foreground border border-brand/20">
           Live Metric
         </span>
       </div>
@@ -51,7 +51,7 @@ export function ActiveUsersCountWidget() {
       </div>
       <Link 
         to="/org-admin/departments" 
-        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:opacity-80 transition-opacity"
       >
         Manage Organization Users <ArrowRight className="size-3.5" />
       </Link>
@@ -155,7 +155,7 @@ export function OrgActivitySummaryWidget() {
     <div className="bg-card p-6 rounded-2xl shadow-sm border border-border col-span-full hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center font-bold">
+          <div className="size-9 rounded-xl bg-accent text-accent-foreground border border-brand/20 grid place-items-center font-bold">
             <Activity className="size-5" />
           </div>
           <div>
@@ -165,7 +165,7 @@ export function OrgActivitySummaryWidget() {
         </div>
         <Link 
           to="/org-admin/activity" 
-          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
+          className="text-xs font-bold text-brand hover:opacity-80 transition-opacity flex items-center gap-1"
         >
           View Full Audit Log <ArrowRight className="size-3.5" />
         </Link>
@@ -186,7 +186,7 @@ export function OrgActivitySummaryWidget() {
                 <div>
                   <span className="font-semibold text-foreground">{item.actor_name}</span>{' '}
                   <span className="text-muted-foreground">{item.action_display}</span>{' '}
-                  {item.target_label && <span className="font-medium text-emerald-700">({item.target_label})</span>}
+                  {item.target_label && <span className="font-medium text-brand">({item.target_label})</span>}
                 </div>
               </div>
               <div className="text-muted-foreground font-mono text-[11px] shrink-0">
@@ -301,7 +301,7 @@ export function ContinueLearningWidget() {
           {isCompleted ? (
             <Link 
               to="/certificates" 
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-foreground rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-brand-foreground rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm"
             >
               View Certificate <Award className="size-3.5" />
             </Link>
@@ -321,7 +321,7 @@ export function ContinueLearningWidget() {
           <p className="text-xs text-muted-foreground mb-4">Browse published courses in your catalog to start your learning path.</p>
           <Link 
             to="/catalog" 
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-foreground rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-brand-foreground rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm"
           >
             Browse Catalog <ArrowRight className="size-3.5" />
           </Link>
@@ -395,7 +395,7 @@ export function LeaderboardWidget() {
               key={item.id} 
               className={cn(
                 "flex justify-between items-center p-2.5 rounded-xl transition-colors",
-                item.is_current_user ? "bg-emerald-50 border border-emerald-200 font-semibold" : "bg-muted/50 border border-border/50"
+                item.is_current_user ? "bg-accent border border-brand/30 font-semibold" : "bg-muted/50 border border-border/50"
               )}
             >
               <div className="flex items-center gap-2.5 truncate">
@@ -408,7 +408,7 @@ export function LeaderboardWidget() {
                   <span className="text-[10px] text-muted-foreground block truncate">{item.job_title}</span>
                 </div>
               </div>
-              <span className="font-bold text-emerald-700 shrink-0 ml-2">{item.points} pts</span>
+              <span className="font-bold text-brand shrink-0 ml-2">{item.points} pts</span>
             </div>
           ))
         )}

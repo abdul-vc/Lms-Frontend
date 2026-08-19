@@ -198,67 +198,128 @@ function OrgAdminCoursesPage() {
           </div>
         </div>
       ) : (
-        <div className="data-table-wrapper">
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead className="data-table-thead">
-                <tr>
-                  <th className="data-table-th pl-16 pr-4">Course</th>
-                  <th className="data-table-th pl-18 pr-4">Status</th>
-                  <th className="data-table-th hidden pl-18 pr-4 sm:table-cell">Level</th>
-                  <th className="data-table-th hidden md:table-cell pl-20 pr-4">Duration</th>
-                  <th className="data-table-th text-right pr-12">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="data-table-tbody">
-                {filteredCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
-                  <tr key={c.id} className="data-table-row">
-                    <td className="data-table-td pl-14 pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-8 rounded-lg bg-accent grid place-items-center shrink-0">
-                          <BookOpen className="size-4 text-accent-foreground" />
+        <div className="space-y-4">
+          {/* Desktop Table (lg: 1024px+) */}
+          <div className="hidden lg:block data-table-wrapper">
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead className="data-table-thead">
+                  <tr>
+                    <th className="data-table-th pl-16 pr-4">Course</th>
+                    <th className="data-table-th pl-18 pr-4">Status</th>
+                    <th className="data-table-th hidden pl-18 pr-4 sm:table-cell">Level</th>
+                    <th className="data-table-th hidden md:table-cell pl-20 pr-4">Duration</th>
+                    <th className="data-table-th text-right pr-12">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="data-table-tbody">
+                  {filteredCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
+                    <tr key={c.id} className="data-table-row">
+                      <td className="data-table-td pl-14 pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-8 rounded-lg bg-accent grid place-items-center shrink-0">
+                            <BookOpen className="size-4 text-accent-foreground" />
+                          </div>
+                          <span className="font-medium text-foreground">{c.title}</span>
                         </div>
-                        <span className="font-medium text-foreground">{c.title}</span>
-                      </div>
-                    </td>
-                    <td className="data-table-td pl-16 pr-4">
-                      <StatusBadge status={c.status} />
-                    </td>
-                    <td className="data-table-td hidden sm:table-cell pl-16 pr-4">
-                      <span className="text-muted-foreground text-xs">{c.level}</span>
-                    </td>
-                    <td className="data-table-td hidden md:table-cell pl-[6.625rem] pr-4">
-                      <span className="text-muted-foreground text-xs">{c.duration_hrs}h</span>
-                    </td>
-                    <td className="data-table-td text-right pr-[2.25rem]">
-                      <div className="flex items-center justify-end gap-1">
-                        {canEdit && (
+                      </td>
+                      <td className="data-table-td pl-16 pr-4">
+                        <StatusBadge status={c.status} />
+                      </td>
+                      <td className="data-table-td hidden sm:table-cell pl-16 pr-4">
+                        <span className="text-muted-foreground text-xs">{c.level}</span>
+                      </td>
+                      <td className="data-table-td hidden md:table-cell pl-[6.625rem] pr-4">
+                        <span className="text-muted-foreground text-xs">{c.duration_hrs}h</span>
+                      </td>
+                      <td className="data-table-td text-right pr-[2.25rem]">
+                        <div className="flex items-center justify-end gap-1">
+                          {canEdit && (
+                            <Link
+                              to="/authoring"
+                              search={{ courseId: c.id }}
+                              className="btn-icon"
+                              title="Edit Course in Content Authoring"
+                            >
+                              <Pencil className="size-3.5" />
+                            </Link>
+                          )}
                           <Link
                             to="/authoring"
-                            search={{ courseId: c.id }}
+                            search={{ courseId: c.id, preview: true }}
                             className="btn-icon"
-                            title="Edit Course in Content Authoring"
+                            title="Preview Course in Content Authoring"
                           >
-                            <Pencil className="size-3.5" />
+                            <Eye className="size-3.5" />
                           </Link>
-                        )}
-                        <Link
-                          to="/authoring"
-                          search={{ courseId: c.id, preview: true }}
-                          className="btn-icon"
-                          title="Preview Course in Content Authoring"
-                        >
-                          <Eye className="size-3.5" />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {filteredCourses.length > 0 && (
+                <div className="px-4 py-2 border-t border-border">
+                  <PaginationControls
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={filteredCourses.length}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile / Tablet Course Cards (< lg: 1024px) */}
+          <div className="block lg:hidden space-y-3">
+            {filteredCourses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
+              <div key={c.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-9 rounded-xl bg-accent grid place-items-center shrink-0">
+                      <BookOpen className="size-4 text-accent-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-foreground text-sm truncate">{c.title}</h3>
+                      <div className="text-xs text-muted-foreground mt-0.5">Level: {c.level}</div>
+                    </div>
+                  </div>
+
+                  <StatusBadge status={c.status} />
+                </div>
+
+                <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground font-medium">Duration: {c.duration_hrs}h</span>
+
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <Link
+                        to="/authoring"
+                        search={{ courseId: c.id }}
+                        className="px-3 py-1.5 rounded-xl bg-brand hover:opacity-90 text-brand-foreground font-semibold text-xs flex items-center gap-1 transition-opacity shadow-sm"
+                        title="Edit Course"
+                      >
+                        <Pencil className="size-3.5" /> Edit
+                      </Link>
+                    )}
+                    <Link
+                      to="/authoring"
+                      search={{ courseId: c.id, preview: true }}
+                      className="px-3 py-1.5 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs flex items-center gap-1 transition-colors"
+                      title="Preview Course"
+                    >
+                      <Eye className="size-3.5" /> Preview
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
 
             {filteredCourses.length > 0 && (
-              <div className="px-4 py-2 border-t border-border">
+              <div className="px-4 py-2 border-t border-border bg-card rounded-b-2xl">
                 <PaginationControls
                   currentPage={currentPage}
                   pageSize={pageSize}

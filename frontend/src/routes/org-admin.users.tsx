@@ -178,7 +178,7 @@ function UsersPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -192,7 +192,7 @@ function UsersPage() {
         </div>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
         >
           <Plus className="size-4" /> Add User
         </button>
@@ -223,7 +223,7 @@ function UsersPage() {
                     <div className="text-xs text-muted-foreground mt-0.5">{u.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 uppercase tracking-wider">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-accent text-accent-foreground border border-brand/20 uppercase tracking-wider">
                       {typeof u.role === 'object' ? u.role?.name : roles.find(r => r.id === u.role)?.name || "None"}
                     </span>
                   </td>
@@ -231,7 +231,7 @@ function UsersPage() {
                     {typeof u.department === 'object' ? u.department?.name : departments.find(d => d.id === u.department)?.name || "—"}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => openEdit(u)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
+                    <button onClick={() => openEdit(u)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent">
                       <Pencil className="size-4" />
                     </button>
                     <button onClick={() => handleDelete(u)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 ml-1">
@@ -264,7 +264,7 @@ function UsersPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">First Name</label>
                   <input
@@ -272,7 +272,7 @@ function UsersPage() {
                     autoComplete="off"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   />
                 </div>
                 <div>
@@ -282,7 +282,7 @@ function UsersPage() {
                     autoComplete="off"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   />
                 </div>
                 <div>
@@ -293,7 +293,7 @@ function UsersPage() {
                     autoComplete="off"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   />
                 </div>
                 <div>
@@ -304,7 +304,7 @@ function UsersPage() {
                     autoComplete="off"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   />
                 </div>
                 <div>
@@ -314,7 +314,7 @@ function UsersPage() {
                     autoComplete="off"
                     value={formData.job_title}
                     onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   />
                 </div>
                 <div>
@@ -329,7 +329,7 @@ function UsersPage() {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder={editingUser ? '••••••••' : 'Password'}
-                      className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-background text-foreground"
+                      className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all bg-background text-foreground"
                     />
                     <button
                       type="button"
@@ -343,13 +343,13 @@ function UsersPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Department</label>
                   <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   >
                     <option value="">None</option>
                     {departments.map(d => (
@@ -362,7 +362,7 @@ function UsersPage() {
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                   >
                     <option value="">None</option>
                     {roles.map(r => (
@@ -383,7 +383,7 @@ function UsersPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-foreground bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-brand-foreground bg-brand hover:opacity-90 rounded-lg transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-sm"
                 >
                   {isSubmitting && <Loader2 className="size-4 animate-spin" />}
                   Save User

@@ -63,7 +63,7 @@ function Paths() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-[55ch] space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-[10px] uppercase tracking-widest text-accent-foreground font-extrabold px-2.5 py-0.5 rounded-full bg-accent border border-brand/20">
                         Curriculum Path
                       </span>
                       <span className="text-xs text-muted-foreground">•</span>
@@ -85,13 +85,13 @@ function Paths() {
                   <div className="w-full sm:w-48 bg-background/80 p-3 rounded-xl border border-border space-y-1.5 shrink-0">
                     <div className="flex justify-between text-xs font-bold">
                       <span className="text-muted-foreground">Path Progress</span>
-                      <span className={isCompleted ? "text-emerald-400 font-extrabold" : "text-foreground"}>
+                      <span className={isCompleted ? "text-emerald-500 font-extrabold" : "text-brand"}>
                         {progressPct}%
                       </span>
                     </div>
                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border">
                       <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+                        className="h-full bg-brand rounded-full transition-all duration-500"
                         style={{ width: `${progressPct}%` }}
                       ></div>
                     </div>
@@ -114,7 +114,7 @@ function Paths() {
                           className={`flex items-center gap-4 p-3 rounded-xl transition-all ${
                             isLocked
                               ? "opacity-50 cursor-not-allowed border border-transparent"
-                              : "bg-card hover:bg-muted border border-border hover:border-emerald-500/40 shadow-sm"
+                              : "bg-card hover:bg-muted border border-border hover:border-brand/40 shadow-sm"
                           }`}
                         >
                           <div className="w-8 text-center text-xs font-bold text-muted-foreground">
@@ -138,7 +138,7 @@ function Paths() {
                             {isLocked ? (
                               <Lock className="size-4 text-muted-foreground" />
                             ) : (
-                              <ArrowRight className="size-4 text-emerald-400" />
+                              <ArrowRight className="size-4 text-brand" />
                             )}
                           </div>
                         </Link>

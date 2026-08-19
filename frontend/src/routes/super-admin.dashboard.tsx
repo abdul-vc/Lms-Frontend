@@ -98,7 +98,7 @@ function SuperAdminDashboard() {
       )}
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {METRICS.map((m) => (
           <Link key={m.label} to={m.href} className="block group outline-none">
             <div className="stat-card hover:border-brand/30 transition-colors group-hover:shadow-elevated">

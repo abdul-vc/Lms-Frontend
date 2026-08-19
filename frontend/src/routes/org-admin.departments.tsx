@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { authFetch, useAuth, API_BASE } from '@/lib/auth';
-import { Users, Building2, Plus, Pencil, Trash2, Loader2, AlertCircle, Search, Mail, Lock, User as UserIcon, Shield, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Users, Building2, Plus, Pencil, Trash2, Loader2, AlertCircle, Search, Mail, Lock, User as UserIcon, Shield, Briefcase, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 
 export const Route = createFileRoute('/org-admin/departments')({
@@ -306,7 +306,7 @@ function UsersAndDepartmentsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -326,7 +326,7 @@ function UsersAndDepartmentsPage() {
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               activeTab === 'users'
-                ? 'bg-card text-emerald-700 shadow-sm'
+                ? 'bg-card text-brand shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -336,7 +336,7 @@ function UsersAndDepartmentsPage() {
             onClick={() => setActiveTab('departments')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               activeTab === 'departments'
-                ? 'bg-card text-emerald-700 shadow-sm'
+                ? 'bg-card text-brand shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -362,7 +362,7 @@ function UsersAndDepartmentsPage() {
                     setSearchQuery(e.target.value);
                     setUserPage(1);
                   }}
-                  className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
+                  className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium text-foreground"
                 />
               </div>
 
@@ -373,7 +373,7 @@ function UsersAndDepartmentsPage() {
                   setSelectedDeptFilter(e.target.value);
                   setUserPage(1);
                 }}
-                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
+                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium text-foreground"
               >
                 <option value="">All Departments</option>
                 {departments.map((d) => (
@@ -388,27 +388,44 @@ function UsersAndDepartmentsPage() {
                   setSelectedRoleFilter(e.target.value);
                   setUserPage(1);
                 }}
-                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-foreground"
+                className="w-full sm:w-auto px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium text-foreground"
               >
                 <option value="">All Roles</option>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id.toString()}>{r.name}</option>
                 ))}
               </select>
+
+              {/* Clear Filters Button — visible only when Department or Role filter is active */}
+              {(Boolean(selectedDeptFilter) || Boolean(selectedRoleFilter)) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDeptFilter('');
+                    setSelectedRoleFilter('');
+                    setUserPage(1);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-muted hover:bg-slate-200 text-muted-foreground hover:text-foreground rounded-lg text-xs font-semibold transition-colors shrink-0"
+                  title="Clear active filters"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Clear Filters</span>
+                </button>
+              )}
             </div>
 
             {canCreate && (
               <button
                 onClick={openAddUser}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shrink-0"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shrink-0 shadow-sm"
               >
                 <Plus className="size-4" /> Add User
               </button>
             )}
           </div>
 
-          {/* User Table */}
-          <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          {/* User Table (Desktop lg: 1024px+) */}
+          <div className="hidden lg:block bg-card rounded-xl shadow-sm border border-border overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                 <tr>
@@ -432,7 +449,7 @@ function UsersAndDepartmentsPage() {
                     <tr key={u.id} className="hover:bg-muted/50/50">
                       <td className="px-6 py-4 font-medium">
                         <div className="flex items-center gap-3">
-                          <div className="size-9 rounded-full bg-emerald-100 text-emerald-800 grid place-items-center font-bold text-xs shrink-0">
+                          <div className="size-9 rounded-full bg-accent text-accent-foreground border border-brand/20 grid place-items-center font-bold text-xs shrink-0">
                             {u.avatar_initials || 'U'}
                           </div>
                           <div>
@@ -456,7 +473,7 @@ function UsersAndDepartmentsPage() {
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {u.role ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent text-accent-foreground border border-brand/20 text-xs font-medium">
                             <Shield className="size-3" /> {u.role.name}
                           </span>
                         ) : (
@@ -472,7 +489,7 @@ function UsersAndDepartmentsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         {canEdit && (
-                          <button onClick={() => openEditUser(u)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50" title="Edit User">
+                          <button onClick={() => openEditUser(u)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent" title="Edit User">
                             <Pencil className="size-4" />
                           </button>
                         )}
@@ -500,6 +517,90 @@ function UsersAndDepartmentsPage() {
               </div>
             )}
           </div>
+
+          {/* User Cards (Mobile/Tablet < lg: 1024px) */}
+          <div className="block lg:hidden space-y-3">
+            {filteredUsers.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
+                No users found.
+              </div>
+            ) : (
+              paginatedUsers.map((u) => (
+                <div key={u.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                  {/* Top Row: Avatar, Name, Username, Actions */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="size-10 rounded-full bg-accent text-accent-foreground border border-brand/20 grid place-items-center font-bold text-xs shrink-0">
+                        {u.avatar_initials || 'U'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-foreground text-sm truncate">{u.full_name || u.username}</div>
+                        {u.job_title && <div className="text-xs text-muted-foreground truncate">{u.job_title}</div>}
+                        <div className="text-xs text-muted-foreground truncate">@{u.username}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canEdit && (
+                        <button onClick={() => openEditUser(u)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent" title="Edit User">
+                          <Pencil className="size-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => handleUserDelete(u)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50" title="Delete User">
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Email */}
+                  <div className="text-xs text-foreground font-medium break-all pt-1 border-t border-border/50">
+                    <span className="text-muted-foreground mr-1">Email:</span> {u.email}
+                  </div>
+
+                  {/* Bottom Row: Badges & Status */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {u.department ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                          <Building2 className="size-3" /> {u.department.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No Dept</span>
+                      )}
+
+                      {u.role ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent text-accent-foreground border border-brand/20 text-xs font-medium">
+                          <Shield className="size-3" /> {u.role.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No Role</span>
+                      )}
+                    </div>
+
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {filteredUsers.length > 0 && (
+              <div className="px-4 py-2 border-t border-border bg-card rounded-b-2xl">
+                <PaginationControls
+                  currentPage={userPage}
+                  pageSize={userPageSize}
+                  totalItems={filteredUsers.length}
+                  onPageChange={setUserPage}
+                  onPageSizeChange={setUserPageSize}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -514,14 +615,15 @@ function UsersAndDepartmentsPage() {
             {canCreate && (
               <button
                 onClick={openAddDept}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
               >
                 <Plus className="size-4" /> Add Department
               </button>
             )}
           </div>
 
-          <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          {/* Department Table (Desktop lg: 1024px+) */}
+          <div className="hidden lg:block bg-card rounded-xl shadow-sm border border-border overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                 <tr>
@@ -552,7 +654,7 @@ function UsersAndDepartmentsPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         {canEdit && (
-                          <button onClick={() => openEditDept(d)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50" title="Edit Department">
+                          <button onClick={() => openEditDept(d)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent" title="Edit Department">
                             <Pencil className="size-4" />
                           </button>
                         )}
@@ -570,6 +672,59 @@ function UsersAndDepartmentsPage() {
 
             {departments.length > 0 && (
               <div className="px-4 py-2 border-t border-border">
+                <PaginationControls
+                  currentPage={deptPage}
+                  pageSize={deptPageSize}
+                  totalItems={departments.length}
+                  onPageChange={setDeptPage}
+                  onPageSizeChange={setDeptPageSize}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Department Cards (Mobile/Tablet < lg: 1024px) */}
+          <div className="block lg:hidden space-y-3">
+            {departments.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
+                No departments found.
+              </div>
+            ) : (
+              paginatedDepts.map((d) => (
+                <div key={d.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-foreground capitalize text-base">{d.name}</h3>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Parent: {d.parent ? departments.find(x => x.id === d.parent)?.name || `ID: ${d.parent}` : 'None'}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canEdit && (
+                        <button onClick={() => openEditDept(d)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent" title="Edit Department">
+                          <Pencil className="size-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => handleDeptDelete(d)} className="p-2 text-muted-foreground hover:text-red-600 transition-colors rounded-lg hover:bg-red-50" title="Delete Department">
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-semibold">
+                      <Users className="size-3.5" /> {d.user_count} {d.user_count === 1 ? 'Member' : 'Members'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {departments.length > 0 && (
+              <div className="px-4 py-2 border-t border-border bg-card rounded-b-2xl">
                 <PaginationControls
                   currentPage={deptPage}
                   pageSize={deptPageSize}
@@ -611,7 +766,7 @@ function UsersAndDepartmentsPage() {
                     autoComplete="off"
                     value={userFormData.first_name}
                     onChange={(e) => setUserFormData({ ...userFormData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
                 <div>
@@ -621,7 +776,7 @@ function UsersAndDepartmentsPage() {
                     autoComplete="off"
                     value={userFormData.last_name}
                     onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
               </div>
@@ -635,7 +790,7 @@ function UsersAndDepartmentsPage() {
                     autoComplete="off"
                     value={userFormData.email}
                     onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
                 <div>
@@ -646,7 +801,7 @@ function UsersAndDepartmentsPage() {
                     autoComplete="off"
                     value={userFormData.username}
                     onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
               </div>
@@ -663,7 +818,7 @@ function UsersAndDepartmentsPage() {
                     value={userFormData.password}
                     onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
                     placeholder={editingUser ? '••••••••' : 'Password'}
-                    className="w-full px-3 py-2 pr-10 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-background text-foreground"
+                    className="w-full px-3 py-2 pr-10 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand bg-background text-foreground"
                   />
                   <button
                     type="button"
@@ -682,7 +837,7 @@ function UsersAndDepartmentsPage() {
                   <select
                     value={userFormData.department}
                     onChange={(e) => setUserFormData({ ...userFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-card"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand bg-card"
                   >
                     <option value="">No Department</option>
                     {departments.map((d) => (
@@ -695,7 +850,7 @@ function UsersAndDepartmentsPage() {
                   <select
                     value={userFormData.role}
                     onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-card"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand bg-card"
                   >
                     <option value="">No Role</option>
                     {roles.map((r) => (
@@ -712,7 +867,7 @@ function UsersAndDepartmentsPage() {
                   placeholder="e.g. Senior Software Engineer"
                   value={userFormData.job_title}
                   onChange={(e) => setUserFormData({ ...userFormData, job_title: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                 />
               </div>
 
@@ -722,7 +877,7 @@ function UsersAndDepartmentsPage() {
                   id="is_active_checkbox"
                   checked={userFormData.is_active}
                   onChange={(e) => setUserFormData({ ...userFormData, is_active: e.target.checked })}
-                  className="size-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                  className="size-4 text-brand rounded border-slate-300 focus:ring-brand"
                 />
                 <label htmlFor="is_active_checkbox" className="text-sm font-medium text-muted-foreground">Active User</label>
               </div>
@@ -738,7 +893,7 @@ function UsersAndDepartmentsPage() {
                 <button
                   type="submit"
                   disabled={isUserSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-foreground bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-brand-foreground bg-brand hover:opacity-90 rounded-lg transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-sm"
                 >
                   {isUserSubmitting && <Loader2 className="size-4 animate-spin" />}
                   {editingUser ? 'Save Changes' : 'Create User'}
@@ -772,7 +927,7 @@ function UsersAndDepartmentsPage() {
                   type="text"
                   value={deptFormData.name}
                   onChange={(e) => setDeptFormData({ ...deptFormData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
                 />
               </div>
 
@@ -781,7 +936,7 @@ function UsersAndDepartmentsPage() {
                 <select
                   value={deptFormData.parent}
                   onChange={(e) => setDeptFormData({ ...deptFormData, parent: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-card"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all bg-card"
                 >
                   <option value="">None (Top level)</option>
                   {departments
@@ -803,7 +958,7 @@ function UsersAndDepartmentsPage() {
                 <button
                   type="submit"
                   disabled={isDeptSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-foreground bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-brand-foreground bg-brand hover:opacity-90 rounded-lg transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-sm"
                 >
                   {isDeptSubmitting && <Loader2 className="size-4 animate-spin" />}
                   Save Department

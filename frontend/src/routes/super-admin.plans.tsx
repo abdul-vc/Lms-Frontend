@@ -150,7 +150,7 @@ function PlansPage() {
               <DialogTitle className="text-foreground font-bold">{editingPlanId ? 'Edit Subscription Plan' : 'Create Subscription Plan'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-foreground">Plan Name</Label>
                   <Input className="bg-background border-border text-foreground focus:border-emerald-500/50" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />

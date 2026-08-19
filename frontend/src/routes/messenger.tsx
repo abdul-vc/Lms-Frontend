@@ -197,8 +197,8 @@ function MessengerPage() {
         {/* Main Messenger Grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 min-h-0">
           
-          {/* Left Column: Conversations List */}
-          <div className="md:col-span-4 lg:col-span-4 border-r border-border/50 flex flex-col bg-muted/50/40 min-h-0">
+          {/* Left Column: Conversations List — hidden on mobile when chat is open */}
+          <div className={`md:col-span-4 lg:col-span-4 border-r border-border/50 flex flex-col bg-muted/50/40 min-h-0 ${selectedContact ? 'hidden md:flex' : 'flex'}`}>
             {/* Search Input */}
             <div className="p-4 border-b border-border/50">
               <div className="relative">
@@ -282,13 +282,21 @@ function MessengerPage() {
             </div>
           </div>
 
-          {/* Right Column: Chat Window */}
-          <div className="md:col-span-8 lg:col-span-8 flex flex-col bg-card min-h-0">
+          {/* Right Column: Chat Window — hidden on mobile when no contact selected */}
+          <div className={`md:col-span-8 lg:col-span-8 flex flex-col bg-card min-h-0 ${selectedContact ? 'flex' : 'hidden md:flex'}`}>
             {selectedContact ? (
               <>
                 {/* Active Chat Header */}
-                <div className="px-6 py-3.5 border-b border-border/50 flex items-center justify-between bg-card">
+                <div className="px-4 sm:px-6 py-3.5 border-b border-border/50 flex items-center justify-between bg-card">
                   <div className="flex items-center gap-3">
+                    {/* Back button — mobile only */}
+                    <button
+                      onClick={() => setSelectedContact(null)}
+                      className="md:hidden btn-icon mr-1 shrink-0"
+                      aria-label="Back to conversations"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
                     <div className="size-10 rounded-2xl bg-indigo-50 text-indigo-700 font-bold grid place-items-center text-xs border border-indigo-100">
                       {selectedContact.avatar_initials}
                     </div>
@@ -356,7 +364,7 @@ function MessengerPage() {
                             )}
 
                             <div
-                              className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                              className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words max-w-[85%] sm:max-w-[75%] ${
                                 isMe
                                   ? "bg-indigo-600 text-white rounded-br-none shadow-sm"
                                   : "bg-card border border-border/80 text-foreground rounded-bl-none shadow-2xs"
@@ -381,25 +389,25 @@ function MessengerPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input Bar */}
-                <div className="p-4 border-t border-border/50 bg-card">
+                {/* Input Bar — Flex-anchored at bottom */}
+                <div className="p-3 sm:p-4 border-t border-border/50 bg-card shrink-0">
                   <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
                     className="flex items-center gap-2"
                   >
                     <input
                       type="text"
-                      placeholder={`Type your message to ${selectedContact.full_name}...`}
+                      placeholder={`Type message to ${selectedContact.full_name.split(' ')[0]}...`}
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      className="flex-1 px-4 py-2.5 bg-muted/50 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      className="flex-1 px-3 sm:px-4 py-2.5 bg-muted/50 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all min-w-0"
                     />
                     <button
                       type="submit"
                       disabled={sending || !inputText.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
+                      className="px-3.5 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-foreground text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50 shadow-sm shrink-0"
                     >
-                      <span>Send</span>
+                      <span className="hidden sm:inline">Send</span>
                       <Send className="size-3.5" />
                     </button>
                   </form>

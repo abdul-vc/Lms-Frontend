@@ -935,7 +935,7 @@ function Authoring() {
                             <button
                               type="button"
                               onClick={() => handlePublishCourse(selection.courseId)}
-                              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                              className="px-3.5 py-2 rounded-lg bg-brand hover:opacity-90 text-brand-foreground text-xs font-bold transition-opacity shadow-sm flex items-center gap-1.5"
                             >
                               <Globe className="size-3.5" /> Validate & Publish
                             </button>

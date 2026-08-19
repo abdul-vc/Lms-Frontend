@@ -234,19 +234,19 @@ export function ScormPlayer({
       }`}
     >
       {/* Top SCORM Player HUD Bar */}
-      <div className="px-6 py-3.5 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl bg-indigo-600 text-white grid place-items-center font-bold text-xs shadow-md">
+      <div className="px-3 sm:px-6 py-3 sm:py-3.5 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="size-8 sm:size-9 rounded-xl bg-indigo-600 text-white grid place-items-center font-bold text-xs shadow-md shrink-0">
             <Sparkles className="size-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-slate-100 truncate max-w-md">{courseTitle}</h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <h2 className="text-sm font-bold text-slate-100 truncate max-w-[140px] sm:max-w-xs md:max-w-md">{courseTitle}</h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
                 SCORM {scormVersion}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[10px] text-slate-400 hidden sm:block">
               Interactive Enterprise SCORM Package • Articulate / Captivate Compatible
             </p>
           </div>

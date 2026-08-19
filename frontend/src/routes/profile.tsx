@@ -147,7 +147,7 @@ function Profile() {
     <AppShell>
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-emerald-400 size-8" />
+          <Loader2 className="animate-spin text-brand size-8" />
         </div>
       ) : (
         <div className="space-y-10">
@@ -168,10 +168,10 @@ function Profile() {
                   <img
                     src={previewUrl}
                     alt="Profile Preview"
-                    className="size-20 rounded-2xl object-cover ring-2 ring-emerald-500/40 shadow-sm"
+                    className="size-20 rounded-2xl object-cover ring-2 ring-brand/40 shadow-sm"
                   />
                 ) : (
-                  <div className="size-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 grid place-items-center text-emerald-400 text-xl font-bold">
+                  <div className="size-20 rounded-2xl bg-accent border border-brand/30 grid place-items-center text-accent-foreground text-xl font-bold">
                     {(((data?.first_name?.[0] || '') + (data?.last_name?.[0] || '')) || 'U').toUpperCase()}
                   </div>
                 )}
@@ -193,7 +193,7 @@ function Profile() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/25 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-foreground hover:opacity-90 border border-brand/20 rounded-xl text-xs font-bold transition-opacity"
                   >
                     <Upload className="size-3.5" />
                     {previewUrl ? 'Change Photo' : 'Upload Photo'}
@@ -216,15 +216,15 @@ function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">First Name</label>
-                <input type="text" name="first_name" value={data?.first_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+                <input type="text" name="first_name" value={data?.first_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">Last Name</label>
-                <input type="text" name="last_name" value={data?.last_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+                <input type="text" name="last_name" value={data?.last_name || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
-                <input type="email" name="email" value={data?.email || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50" />
+                <input type="email" name="email" value={data?.email || ''} onChange={handleProfileChange} className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" />
               </div>
             </div>
 
@@ -232,7 +232,7 @@ function Profile() {
               <button
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-foreground rounded-xl font-bold text-xs hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-brand text-brand-foreground rounded-xl font-bold text-xs hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50"
               >
                 {savingProfile ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 Save Profile
@@ -260,7 +260,7 @@ function Profile() {
                     type={showCurrent ? "text" : "password"}
                     value={pwd.current}
                     onChange={e => setPwd({...pwd, current: e.target.value})}
-                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                   <button
                     type="button"
@@ -280,7 +280,7 @@ function Profile() {
                     type={showNew ? "text" : "password"}
                     value={pwd.new}
                     onChange={e => setPwd({...pwd, new: e.target.value})}
-                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                   <button
                     type="button"
@@ -300,7 +300,7 @@ function Profile() {
                     type={showConfirm ? "text" : "password"}
                     value={pwd.confirm}
                     onChange={e => setPwd({...pwd, confirm: e.target.value})}
-                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-background border border-border rounded-xl pl-4 pr-10 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                   <button
                     type="button"

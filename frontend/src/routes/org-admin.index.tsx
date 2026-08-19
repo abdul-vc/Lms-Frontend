@@ -74,7 +74,7 @@ function OrgAdminOverview() {
   const activeUsersCount = orgUsers.filter(u => u.is_active !== false).length;
 
   const METRICS = [
-    { label: "Total Users", value: orgUsers.length, sub: "Registered Members", icon: Users, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+    { label: "Total Users", value: orgUsers.length, sub: "Registered Members", icon: Users, color: "text-brand", bg: "bg-accent border-brand/20" },
     { label: "Active Users", value: activeUsersCount, sub: "Active Accounts", icon: UserCheck, color: "text-teal-400", bg: "bg-teal-500/10 border-teal-500/20" },
     { label: "Departments", value: departments.length, sub: "Teams & Departments", icon: Building, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" },
     { label: "Courses", value: coursesCount, sub: "Published Courses", icon: BookOpen, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
@@ -82,7 +82,7 @@ function OrgAdminOverview() {
   ];
 
   const ADMIN_LINKS = [
-    { to: "/org-admin/departments", label: "Users & Departments", desc: "Manage members, teams & structure", icon: Users, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+    { to: "/org-admin/departments", label: "Users & Departments", desc: "Manage members, teams & structure", icon: Users, color: "text-brand", bg: "bg-accent border-brand/20" },
     { to: "/org-admin/roles", label: "Roles & Permissions", desc: "Custom RBAC matrix & privileges", icon: ShieldCheck, color: "text-teal-400", bg: "bg-teal-500/10 border-teal-500/20" },
     { to: "/org-admin/module-access", label: "Module Access", desc: "Enable/disable workspace modules", icon: Layers, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" },
     { to: "/org-admin/courses", label: "Content Authoring", desc: "Build SCORM courses & assessments", icon: Sparkles, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
@@ -163,55 +163,92 @@ function OrgAdminOverview() {
                 </div>
               </div>
             ) : (
-              <div className="data-table-wrapper">
-                <div className="overflow-x-auto">
-                  <table className="data-table">
-                    <thead className="data-table-thead">
-                      <tr>
-                        <th className="data-table-th pl-[3.5rem]">User</th>
-                        <th className="data-table-th hidden sm:table-cell pl-[1.75rem]">Role</th>
-                        <th className="data-table-th hidden md:table-cell">Department</th>
-                        <th className="data-table-th text-right pr-6">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="data-table-tbody">
-                      {orgUsers.slice(0, 5).map((u) => {
-                        const deptName = typeof u.department === 'object' && u.department ? u.department.name : 'General';
-                        const roleName = typeof u.role === 'object' && u.role ? u.role.name : (u.job_title || 'Learner');
-                        return (
-                          <tr key={u.id} className="data-table-row">
-                            <td className="data-table-td">
-                              <div className="flex items-center gap-3">
-                                <div className="size-7 rounded-full bg-accent border border-accent-foreground/20 text-accent-foreground font-semibold grid place-items-center text-xs shrink-0">
-                                  {u.first_name?.[0] || u.username?.[0] || 'U'}
+              <div className="space-y-3">
+                {/* Desktop Table (lg: 1024px+) */}
+                <div className="hidden lg:block data-table-wrapper">
+                  <div className="overflow-x-auto">
+                    <table className="data-table">
+                      <thead className="data-table-thead">
+                        <tr>
+                          <th className="data-table-th pl-[3.5rem]">User</th>
+                          <th className="data-table-th hidden sm:table-cell pl-[1.75rem]">Role</th>
+                          <th className="data-table-th hidden md:table-cell">Department</th>
+                          <th className="data-table-th text-right pr-6">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="data-table-tbody">
+                        {orgUsers.slice(0, 5).map((u) => {
+                          const deptName = typeof u.department === 'object' && u.department ? u.department.name : 'General';
+                          const roleName = typeof u.role === 'object' && u.role ? u.role.name : (u.job_title || 'Learner');
+                          return (
+                            <tr key={u.id} className="data-table-row">
+                              <td className="data-table-td">
+                                <div className="flex items-center gap-3">
+                                  <div className="size-7 rounded-full bg-accent border border-accent-foreground/20 text-accent-foreground font-semibold grid place-items-center text-xs shrink-0">
+                                    {u.first_name?.[0] || u.username?.[0] || 'U'}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-foreground truncate">{u.full_name || u.username}</p>
+                                    <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-foreground truncate">{u.full_name || u.username}</p>
-                                  <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="data-table-td hidden sm:table-cell">
-                              <span className="badge-muted">{roleName}</span>
-                            </td>
-                            <td className="data-table-td hidden md:table-cell">
-                              <span className="text-muted-foreground text-xs">{deptName}</span>
-                            </td>
-                            <td className="data-table-td text-right">
-                              <Link
-                                to="/messenger"
-                                search={{ userId: u.id }}
-                                className="btn-icon"
-                                title={`Chat with ${u.full_name || u.username}`}
-                              >
-                                <MessageSquare className="size-3.5" />
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td className="data-table-td hidden sm:table-cell">
+                                <span className="badge-muted">{roleName}</span>
+                              </td>
+                              <td className="data-table-td hidden md:table-cell">
+                                <span className="text-muted-foreground text-xs">{deptName}</span>
+                              </td>
+                              <td className="data-table-td text-right">
+                                <Link
+                                  to="/messenger"
+                                  search={{ userId: u.id }}
+                                  className="btn-icon"
+                                  title={`Chat with ${u.full_name || u.username}`}
+                                >
+                                  <MessageSquare className="size-3.5" />
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Mobile / Tablet Member Cards (< lg: 1024px) */}
+                <div className="block lg:hidden space-y-2.5">
+                  {orgUsers.slice(0, 5).map((u) => {
+                    const deptName = typeof u.department === 'object' && u.department ? u.department.name : 'General';
+                    const roleName = typeof u.role === 'object' && u.role ? u.role.name : (u.job_title || 'Learner');
+                    return (
+                      <div key={u.id} className="p-3.5 bg-card rounded-2xl border border-border shadow-sm flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="size-9 rounded-full bg-accent border border-accent-foreground/20 text-accent-foreground font-semibold grid place-items-center text-xs shrink-0">
+                            {u.first_name?.[0] || u.username?.[0] || 'U'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground truncate">{u.full_name || u.username}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="badge-muted text-[10px] py-0.5 px-2">{roleName}</span>
+                              <span className="text-[10px] text-muted-foreground font-medium">• {deptName}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Link
+                          to="/messenger"
+                          search={{ userId: u.id }}
+                          className="p-2.5 rounded-xl bg-muted hover:bg-slate-200 text-muted-foreground font-semibold text-xs transition-colors shrink-0"
+                          title={`Chat with ${u.full_name || u.username}`}
+                        >
+                          <MessageSquare className="size-4" />
+                        </Link>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

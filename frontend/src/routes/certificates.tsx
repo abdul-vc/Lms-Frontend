@@ -158,7 +158,7 @@ function Certificates() {
           <h2 className="text-xl font-black text-foreground mb-4">Earned Certificates ({loading ? '...' : apiCertificates.length})</h2>
           {loading ? (
             <div className="flex items-center justify-center p-12 bg-card/60 rounded-2xl border border-border">
-              <Loader2 className="size-6 animate-spin text-emerald-500" />
+              <Loader2 className="size-6 animate-spin text-brand" />
             </div>
           ) : (
             <div className="space-y-4">
@@ -174,19 +174,19 @@ function Certificates() {
                   <div
                     key={c.id || certId}
                     onClick={() => setSelectedCert(c)}
-                    className="rounded-2xl border border-border bg-card/90 p-5 hover:border-emerald-500/50 hover:shadow-2xl transition-all group relative overflow-hidden cursor-pointer"
+                    className="rounded-2xl border border-border bg-card/90 p-5 hover:border-brand/50 hover:shadow-2xl transition-all group relative overflow-hidden cursor-pointer"
                   >
                     <div className="flex items-start gap-4 relative z-10">
-                      <div className="size-12 rounded-xl bg-background grid place-items-center text-emerald-400 shadow-md border border-border shrink-0">
+                      <div className="size-12 rounded-xl bg-background grid place-items-center text-brand shadow-md border border-border shrink-0">
                         <Award className="size-6" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-extrabold leading-tight text-foreground group-hover:text-emerald-300 transition-colors truncate">{courseTitle}</h3>
+                        <h3 className="text-base font-extrabold leading-tight text-foreground group-hover:text-brand transition-colors truncate">{courseTitle}</h3>
                         <p className="text-xs text-muted-foreground font-medium mt-1 flex items-center gap-2">
-                          <Calendar className="size-3 text-emerald-400" /> Issued {formattedDate}
+                          <Calendar className="size-3 text-brand" /> Issued {formattedDate}
                         </p>
                         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border">
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                          <span className="text-[10px] font-bold text-accent-foreground bg-accent uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-brand/20">
                             ID: {displayId}
                           </span>
                           <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
@@ -196,7 +196,7 @@ function Certificates() {
                       </div>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDownloadPdf(c); }} 
-                        className="p-2.5 bg-muted text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-xl border border-border transition-all shadow-md shrink-0" 
+                        className="p-2.5 bg-muted text-foreground hover:bg-brand hover:text-brand-foreground rounded-xl border border-border transition-all shadow-md shrink-0" 
                         title="Download / Print PDF Certificate"
                       >
                         <Download className="size-4" />
@@ -236,14 +236,14 @@ function Certificates() {
             {apiCourses.filter((c) => c.progress > 0 && c.progress < 1).map((c) => (
               <div key={c.id} className="rounded-2xl border border-border bg-card/90 p-5">
                 <div className="flex items-start gap-4">
-                  <div className="size-12 rounded-xl bg-background grid place-items-center text-emerald-400 border border-border shrink-0">
+                  <div className="size-12 rounded-xl bg-background grid place-items-center text-brand border border-border shrink-0">
                     <Award className="size-5" />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-base font-extrabold leading-tight text-foreground">{c.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1 font-medium">{Math.round(c.progress * 100)}% complete · Pass score: {c.passingScore}%</p>
                     <div className="mt-3 h-2 bg-background rounded-full overflow-hidden border border-border">
-                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${c.progress * 100}%` }} />
+                      <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${c.progress * 100}%` }} />
                     </div>
                   </div>
                 </div>
@@ -256,7 +256,7 @@ function Certificates() {
       {/* INTERACTIVE CERTIFICATE PREVIEW & DOWNLOAD MODAL */}
       {selectedCert && (
         <div className="fixed inset-0 z-50 bg-background/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-card border border-emerald-500/30 rounded-3xl max-w-3xl w-full p-6 sm:p-8 text-foreground shadow-2xl shadow-emerald-950/50 relative">
+          <div className="bg-card border border-brand/30 rounded-3xl max-w-3xl w-full p-6 sm:p-8 text-foreground shadow-2xl relative">
             <button
               onClick={() => setSelectedCert(null)}
               className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground rounded-full bg-muted hover:bg-muted transition-colors"
@@ -264,17 +264,17 @@ function Certificates() {
               <X className="size-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">
+            <div className="flex items-center gap-2 text-brand text-xs font-bold uppercase tracking-widest mb-4">
               <ShieldCheck className="size-4" /> Official Verified Certificate
             </div>
 
             {/* Certificate Display Area */}
-            <div className="border-4 double border-emerald-600 rounded-2xl p-8 bg-card text-center relative overflow-hidden my-4 shadow-xl">
-              <div className="size-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <div className="border-4 double border-brand rounded-2xl p-8 bg-card text-center relative overflow-hidden my-4 shadow-xl">
+              <div className="size-16 rounded-full bg-accent border border-brand/20 text-brand flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <Award className="size-8" />
               </div>
 
-              <span className="text-[10px] font-mono tracking-[0.3em] text-emerald-700 font-extrabold uppercase block mb-1">
+              <span className="text-[10px] font-mono tracking-[0.3em] text-brand font-extrabold uppercase block mb-1">
                 {selectedCert.organization_name || orgName}
               </span>
 
@@ -284,7 +284,7 @@ function Certificates() {
 
               <p className="text-xs text-muted-foreground font-medium mb-4">This certifies that</p>
 
-              <h3 className="text-2xl font-bold text-emerald-700 italic mb-4 font-serif">
+              <h3 className="text-2xl font-bold text-brand italic mb-4 font-serif">
                 {selectedCert.user_name || user?.first_name || user?.username || "Learner"}
               </h3>
 
@@ -319,7 +319,7 @@ function Certificates() {
                     }
                     return <img src={sig} alt="Signature" className="h-10 object-contain ml-auto my-1" />;
                   })()}
-                  <p className="font-mono font-bold text-emerald-700">
+                  <p className="font-mono font-bold text-brand">
                     {selectedCert.certificate_id || `CERT-${selectedCert.id}`}
                   </p>
                 </div>
@@ -336,7 +336,7 @@ function Certificates() {
               </button>
               <button
                 onClick={() => handleDownloadPdf(selectedCert)}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-foreground font-bold text-xs shadow-lg shadow-emerald-950 flex items-center gap-2 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-brand hover:opacity-90 text-brand-foreground font-bold text-xs shadow-sm flex items-center gap-2 transition-opacity"
               >
                 <Download className="size-4" /> Download / Print PDF Certificate
               </button>

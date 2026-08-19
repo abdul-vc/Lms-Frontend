@@ -47,7 +47,7 @@ describe('Org Admin Profile Route Guard & Access Control', () => {
 
   it('ensures Core Module My Profile is unconditionally visible', () => {
     const CORE_NAV = [
-      { to: '/org-admin/profile', label: 'My Profile', show: () => true }
+      { to: '/org-admin/profile', label: 'My Profile', show: (_role?: Record<string, any>) => true }
     ];
 
     const emptyRoleDict = {};

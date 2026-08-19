@@ -122,8 +122,8 @@ function OrganizationsPage() {
                 <th className="px-5 py-3.5">Entity Name</th>
                 <th className="px-5 py-3.5 text-center">Total Sites</th>
                 <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5">Created</th>
-                <th className="px-5 py-3.5 text-right">Actions</th>
+                <th className="pl-18 pr-5 py-3.5">Created At</th>
+                <th className="px-5 py-3.5 text-right pr-7">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -154,7 +154,7 @@ function OrganizationsPage() {
                       <td className="px-5 py-4">
                         <StatusBadge status={org.status} />
                       </td>
-                      <td className="px-5 py-4 text-muted-foreground">
+                      <td className="pl-18 pr-5 py-4 text-muted-foreground">
                         {org.created_at ? new Date(org.created_at).toLocaleString() : '-'}
                       </td>
                     </>

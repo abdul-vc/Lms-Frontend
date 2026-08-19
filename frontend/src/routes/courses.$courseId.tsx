@@ -123,15 +123,15 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
           <div className="p-8 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] uppercase tracking-widest text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-extrabold">{course.category}</span>
+                <span className="text-[10px] uppercase tracking-widest text-accent-foreground bg-accent px-2.5 py-0.5 rounded-full border border-brand/20 font-extrabold">{course.category}</span>
                 <span className="text-[10px] text-muted-foreground font-bold">· {course.level}</span>
               </div>
               <h1 className="text-2xl font-black tracking-tight text-foreground mb-3">{course.title}</h1>
               <p className="text-sm text-muted-foreground leading-relaxed font-medium mb-6">{course.subtitle}</p>
               <div className="grid grid-cols-3 gap-4 text-sm mb-6">
-                <Meta icon={<Clock className="size-4 text-emerald-600" />} label="Duration" value={`${course.durationHrs}h`} />
-                <Meta icon={<BookOpen className="size-4 text-emerald-600" />} label="Modules" value={`${course.modules.length}`} />
-                <Meta icon={<Award className="size-4 text-emerald-600" />} label="Pass" value={`${course.passingScore}%`} />
+                <Meta icon={<Clock className="size-4 text-brand" />} label="Duration" value={`${course.durationHrs}h`} />
+                <Meta icon={<BookOpen className="size-4 text-brand" />} label="Modules" value={`${course.modules.length}`} />
+                <Meta icon={<Award className="size-4 text-brand" />} label="Pass" value={`${course.passingScore}%`} />
               </div>
             </div>
 
@@ -148,7 +148,7 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
                 <Link
                   to="/courses/$courseId/play/$lessonId"
                   params={{ courseId: course.id, lessonId: resumeLessonId! }}
-                  className="bg-emerald-600 text-foreground hover:bg-emerald-700 text-xs font-black px-5 py-3 rounded-xl inline-flex items-center gap-2 transition-colors shadow-md"
+                  className="bg-brand text-brand-foreground hover:opacity-90 text-xs font-black px-5 py-3 rounded-xl inline-flex items-center gap-2 transition-opacity shadow-sm"
                 >
                   <PlayCircle className="size-4" /> {isStarted ? "Resume Course" : "Start Course"}
                 </Link>
@@ -224,7 +224,7 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
           {course.modules.map((m: Module, idx: number) => (
             <div key={m.id} className="rounded-2xl border border-border bg-card text-foreground p-6 shadow-md">
               <div className="flex items-start gap-4">
-                <div className="size-10 rounded-xl grid place-items-center text-sm font-black bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                <div className="size-10 rounded-xl grid place-items-center text-sm font-black bg-accent text-accent-foreground border border-brand/20 shrink-0">
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -242,14 +242,14 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
                               params={{ courseId: course.id, lessonId: l.id }}
                               className={`flex items-center gap-3 text-xs py-2 px-3 rounded-xl transition-all ${
                                 isCurrent
-                                  ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200"
+                                  ? "bg-accent text-accent-foreground font-bold border border-brand/20"
                                   : "hover:bg-muted text-slate-800 font-semibold"
                               }`}
                             >
-                              <CheckCircle2 className={`size-4 shrink-0 ${done ? "text-emerald-600 fill-emerald-100" : "text-foreground"}`} />
+                              <CheckCircle2 className={`size-4 shrink-0 ${done ? "text-emerald-500 fill-emerald-100" : "text-foreground"}`} />
                               <span className="flex-1 font-bold text-foreground">{l.title}</span>
                               {l.type === "video" && (
-                                <span className="text-[9px] uppercase tracking-widest bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-black border border-emerald-200">
+                                <span className="text-[9px] uppercase tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded font-black border border-brand/20">
                                   Video
                                 </span>
                               )}
@@ -344,9 +344,9 @@ function RequestAccessControl({
     <button
       onClick={handleRequest}
       disabled={requesting}
-      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-emerald-600 text-foreground hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand text-brand-foreground hover:opacity-90 transition-opacity text-sm font-medium shadow-sm disabled:opacity-60"
     >
-      {requesting ? <Clock className="size-4 animate-spin text-foreground" /> : <Lock className="size-4 text-foreground" />}
+      {requesting ? <Clock className="size-4 animate-spin text-brand-foreground" /> : <Lock className="size-4 text-brand-foreground" />}
       {requesting ? "Submitting..." : "Request Access 🔒"}
     </button>
   );

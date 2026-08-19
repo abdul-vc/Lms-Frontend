@@ -197,7 +197,7 @@ function OrgAdminPathsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -214,7 +214,7 @@ function OrgAdminPathsPage() {
         {canCreate && (
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shrink-0"
+            className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shrink-0 shadow-sm"
           >
             <Plus className="size-4" /> Create Learning Path
           </button>
@@ -237,7 +237,7 @@ function OrgAdminPathsPage() {
             placeholder="Search learning paths..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+            className="w-full pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium"
           />
         </div>
       </div>
@@ -252,7 +252,7 @@ function OrgAdminPathsPage() {
             {canCreate && (
               <button
                 onClick={openAddModal}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-xs font-semibold"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-xs font-semibold shadow-sm"
               >
                 <Plus className="size-4" /> Add Path
               </button>
@@ -264,7 +264,7 @@ function OrgAdminPathsPage() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-accent text-accent-foreground border border-brand/20 uppercase tracking-wider">
                       {path.path_courses.length} Courses
                     </span>
                     {path.total_duration_hrs !== undefined && (
@@ -283,7 +283,7 @@ function OrgAdminPathsPage() {
                   {canEdit && (
                     <button
                       onClick={() => openEditModal(path)}
-                      className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50"
+                      className="p-2 text-muted-foreground hover:text-brand hover:bg-accent transition-colors rounded-lg"
                       title="Edit Path"
                     >
                       <Pencil className="size-4" />
@@ -308,7 +308,7 @@ function OrgAdminPathsPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {path.path_courses.map((pc, idx) => (
                       <div key={pc.id || idx} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/40 border border-border/50">
-                        <span className="size-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] grid place-items-center shrink-0">
+                        <span className="size-5 rounded-full bg-accent text-accent-foreground font-bold text-[10px] grid place-items-center shrink-0">
                           {idx + 1}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -366,7 +366,7 @@ function OrgAdminPathsPage() {
                   placeholder="e.g., Full-Stack Web Engineering Pathway"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 text-sm text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                  className="w-full px-3 py-2 text-sm text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium"
                 />
               </div>
 
@@ -377,7 +377,7 @@ function OrgAdminPathsPage() {
                   placeholder="Describe the curriculum goals and targeted competencies..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 text-sm text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium resize-none"
+                  className="w-full px-3 py-2 text-sm text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium resize-none"
                 />
               </div>
 
@@ -399,7 +399,7 @@ function OrgAdminPathsPage() {
                           className="flex items-center justify-between p-2 rounded-lg bg-card border border-border text-xs"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <span className="size-5 rounded bg-emerald-100 text-emerald-800 grid place-items-center font-bold text-[10px]">
+                            <span className="size-5 rounded bg-accent text-accent-foreground grid place-items-center font-bold text-[10px]">
                               {idx + 1}
                             </span>
                             <span className="font-semibold text-foreground truncate">{c?.title || `Course ID ${cid}`}</span>
@@ -447,7 +447,7 @@ function OrgAdminPathsPage() {
                         <label
                           key={c.id}
                           className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors ${
-                            isSelected ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-muted/50'
+                            isSelected ? 'bg-accent border border-brand/30' : 'hover:bg-muted/50'
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -455,7 +455,7 @@ function OrgAdminPathsPage() {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleCourse(c.id)}
-                              className="rounded text-emerald-600 focus:ring-emerald-500"
+                              className="rounded text-brand focus:ring-brand"
                             />
                             <span className="font-medium text-foreground">{c.title}</span>
                           </div>
@@ -478,7 +478,7 @@ function OrgAdminPathsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 text-xs font-bold transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 text-xs font-bold transition-opacity disabled:opacity-50 shadow-sm"
                 >
                   {submitting && <Loader2 className="size-3.5 animate-spin" />}
                   {submitting ? 'Saving...' : editingPath ? 'Save Changes' : 'Create Path'}

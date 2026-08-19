@@ -117,7 +117,7 @@ function ModuleAccessPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -153,7 +153,7 @@ function ModuleAccessPage() {
               <div key={site.id} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                 <div className="px-6 py-5 border-b border-border/50 bg-muted/50/50 flex justify-between items-center flex-wrap gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center">
+                    <div className="size-10 rounded-xl bg-accent text-accent-foreground border border-brand/20 grid place-items-center">
                       <Layers className="size-5" />
                     </div>
                     <div>
@@ -173,7 +173,7 @@ function ModuleAccessPage() {
                       <button
                         onClick={() => handleSave(site)}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-card text-foreground rounded-xl hover:bg-muted transition-colors text-xs font-bold disabled:opacity-70 shadow-sm"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-brand text-brand-foreground rounded-xl hover:opacity-90 transition-opacity text-xs font-bold disabled:opacity-70 shadow-sm"
                       >
                         {isSaving ? (
                           <Loader2 className="size-4 animate-spin" />
@@ -187,12 +187,12 @@ function ModuleAccessPage() {
                 </div>
 
                 <div className="p-6 md:p-8">
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8">
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 lg:gap-x-12 gap-y-8">
                     
                     {/* CORE PLATFORM */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 border-b border-border/50 pb-2">
-                        <ShieldCheck className="size-4 text-emerald-600" />
+                        <ShieldCheck className="size-4 text-brand" />
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Core Platform
                         </h3>
@@ -222,7 +222,7 @@ function ModuleAccessPage() {
                     {/* ADVANCED FEATURES */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 border-b border-border/50 pb-2">
-                        <ShieldCheck className="size-4 text-indigo-600" />
+                        <ShieldCheck className="size-4 text-brand" />
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Advanced Features
                         </h3>
@@ -268,7 +268,7 @@ function ModuleToggle({ label, checked, onChange }: { label: string; checked: bo
           checked={checked} 
           onChange={(e) => onChange(e.target.checked)} 
         />
-        <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 shadow-sm" />
+        <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand shadow-sm" />
       </div>
     </label>
   );

@@ -34,7 +34,7 @@ const DEVICE_CONFIG: Record<DeviceMode, { label: string; icon: typeof Monitor; w
 };
 
 const LESSON_ICONS: Record<string, React.ReactElement> = {
-  video:          <PlayCircle className="size-3.5 text-emerald-400 shrink-0" />,
+  video:          <PlayCircle className="size-3.5 text-brand shrink-0" />,
   interactive:    <Sparkles className="size-3.5 text-purple-400 shrink-0" />,
   knowledge_check:<HelpCircle className="size-3.5 text-amber-400 shrink-0" />,
   scenario:       <GitFork className="size-3.5 text-sky-400 shrink-0" />,

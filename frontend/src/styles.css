@@ -513,6 +513,12 @@
   .data-table-wrapper {
     @apply bg-card border border-border rounded-xl overflow-hidden;
     box-shadow: var(--shadow-card);
+    overflow-x: auto;
+  }
+
+  /* Ensure table columns retain structure when wrapper scrolls horizontally */
+  .data-table-wrapper .data-table {
+    min-width: 600px;
   }
 
   .data-table {
@@ -639,14 +645,11 @@
   }
 
   .badge-brand {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap bg-accent text-accent-foreground;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap bg-accent text-accent-foreground border border-brand/20;
   }
 
   .badge-success {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap;
-    background: var(--pill-active-bg);
-    color: var(--pill-active-text);
-    border: 1px solid var(--pill-active-border);
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30;
   }
 
   .badge-muted {
@@ -717,8 +720,10 @@
   }
 
   .modal-panel {
-    @apply bg-card rounded-2xl max-w-lg w-full p-6 border border-border relative;
+    @apply bg-card rounded-2xl max-w-lg w-full p-4 sm:p-6 border border-border relative;
     box-shadow: var(--shadow-overlay);
+    max-height: 90dvh;
+    overflow-y: auto;
   }
 
   /* ── Misc utilities ────────────────────────────────────────────────────── */
@@ -787,4 +792,36 @@
   .safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }
+
+  /* Bottom nav offset — prevents content being hidden behind the 60px bottom nav on mobile */
+  .pb-bottom-nav {
+    padding-bottom: 60px;
+  }
+
+  @media (min-width: 1024px) {
+    .pb-bottom-nav {
+      padding-bottom: 0;
+    }
+  }
+}
+
+/* Native Video Fullscreen mobile & WebKit support */
+:fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #000000 !important;
+}
+
+:fullscreen video, :-webkit-full-screen video, :-moz-full-screen video, :-ms-fullscreen video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
 }

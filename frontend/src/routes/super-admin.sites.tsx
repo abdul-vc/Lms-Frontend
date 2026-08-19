@@ -82,7 +82,7 @@ function SitesPage() {
         <div className="p-5 border-b border-border bg-background/60">
           <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Filters</div>
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full sm:min-w-[200px] sm:flex-1">
               <input 
                 type="text" 
                 placeholder="Search site..." 
@@ -100,7 +100,7 @@ function SitesPage() {
                 setProductTypeFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-emerald-500/50 transition-all min-w-[200px] appearance-none"
+              className="w-full sm:min-w-[200px] bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
             >
               <option value="">All Product Types</option>

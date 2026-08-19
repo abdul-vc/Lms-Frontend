@@ -58,26 +58,62 @@ export function RestrictedVideoPlayer({ src, lessonId, onComplete }: RestrictedV
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFs = Boolean(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isFs);
     };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
   }, []);
 
-  const toggleFullscreen = () => {
-    const container = videoRef.current?.parentElement;
+  const toggleFullscreen = useCallback(() => {
+    const container = videoRef.current?.parentElement as any;
     if (!container) return;
-    
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
+
+    const fsElement = 
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement;
+
+    if (!fsElement) {
+      const req = 
+        container.requestFullscreen ||
+        container.webkitRequestFullscreen ||
+        container.mozRequestFullScreen ||
+        container.msRequestFullscreen;
+
+      if (req) {
+        req.call(container).catch((err: any) => {
+          console.error(`Error attempting to enable fullscreen: ${err?.message || err}`);
+        });
+      }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
+      const exit = 
+        document.exitFullscreen ||
+        (document as any).webkitExitFullscreen ||
+        (document as any).mozCancelFullScreen ||
+        (document as any).msExitFullscreen;
+
+      if (exit) {
+        exit.call(document).catch(() => {});
       }
     }
-  };
+  }, []);
 
   // ─── Load saved position on mount ────────────────────────────────
   useEffect(() => {
@@ -268,13 +304,13 @@ export function RestrictedVideoPlayer({ src, lessonId, onComplete }: RestrictedV
   const maxProgress = duration > 0 ? maxReached / duration : 0;
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden bg-black shadow-2xl select-none">
+    <div className={`relative w-full rounded-2xl overflow-hidden bg-black shadow-2xl select-none flex flex-col justify-center items-center ${isFullscreen ? 'fixed inset-0 z-50 rounded-none w-screen h-screen' : ''}`}>
 
       {/* ── Video element (native controls HIDDEN) ── */}
       <video
         ref={videoRef}
         src={src}
-        className="w-full aspect-video object-contain bg-black"
+        className={`w-full bg-black object-contain ${isFullscreen ? 'h-full max-h-full max-w-full flex-1' : 'aspect-video'}`}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
         onEnded={handleEnded}

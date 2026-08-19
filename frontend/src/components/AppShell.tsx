@@ -145,26 +145,7 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sidebar_collapsed') === 'true';
-    }
-    return false;
-  });
-
-  const toggleSidebar = () => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setMobileSidebarOpen((prev) => !prev);
-    } else {
-      setSidebarCollapsed((prev) => {
-        const next = !prev;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('sidebar_collapsed', String(next));
-        }
-        return next;
-      });
-    }
-  };
+  const [desktopHovered, setDesktopHovered] = useState(false);
 
   const [activeWorkspace, setActiveWorkspace] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -212,35 +193,34 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
   const initials = user?.avatar_initials || "U";
 
   const handleNavClick = () => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setSidebarCollapsed(true);
-      localStorage.setItem('sidebar_collapsed', 'true');
-    } else {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setMobileSidebarOpen(false);
     }
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ isExpanded = true }: { isExpanded?: boolean }) => (
     <>
       {/* Logo + org block */}
-      <div className="px-4 py-4 border-b border-border/60 shrink-0">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="px-3 py-4 border-b border-border/60 shrink-0">
+        <div className={cn("flex items-center gap-3 mb-2", !isExpanded && "justify-center mb-0")}>
           {user?.organization?.logo_url ? (
-            <img src={user.organization.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5" />
+            <img src={user.organization.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5 shrink-0" />
           ) : (
-            <div className="size-8 rounded-lg flex items-center justify-center text-slate-950 font-bold text-sm bg-brand shadow-sm">
+            <div className="size-8 rounded-lg flex items-center justify-center text-brand-foreground font-bold text-sm bg-brand shadow-sm shrink-0">
               {(data.organization_name || "LMS")[0]}
             </div>
           )}
-          <div className="leading-tight min-w-0">
-            <div className="text-sm font-semibold text-foreground truncate">{data.organization_name || "Learning Platform"}</div>
-            <span className="text-[10px] font-semibold text-accent-foreground bg-accent px-2 py-0.5 rounded-full inline-block mt-0.5">Enterprise</span>
-          </div>
+          {isExpanded && (
+            <div className="leading-tight min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">{data.organization_name || "Learning Platform"}</div>
+              <span className="text-[10px] font-semibold text-accent-foreground bg-accent px-2 py-0.5 rounded-full inline-block mt-0.5">Enterprise</span>
+            </div>
+          )}
         </div>
 
         {/* Workspace Switcher */}
-        {data.workspaces.length > 1 && (
-          <div className="relative">
+        {data.workspaces.length > 1 && isExpanded && (
+          <div className="relative mt-2">
             <select
               value={currentWorkspace?.workspace_key}
               onChange={(e) => setActiveWorkspace(e.target.value)}
@@ -257,7 +237,7 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-2 py-3 custom-scrollbar space-y-1">
         {currentWorkspace?.nav_items.map(item => {
           const isBaseOverview = item.route === "/org-admin" || item.route === "/super-admin" || item.route === "/dashboard" || item.route === "/";
           const isActive = isBaseOverview
@@ -268,13 +248,17 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
               key={item.key}
               to={item.route}
               onClick={handleNavClick}
-              className={cn(isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item')}
+              title={item.label}
+              className={cn(
+                isActive ? 'sidebar-nav-item-active' : 'sidebar-nav-item',
+                !isExpanded && "justify-center px-0 gap-0"
+              )}
             >
               <Icon
                 icon={resolveIcon(item.icon)}
                 className={cn("size-4 shrink-0", isActive ? "text-accent-foreground" : "text-muted-foreground")}
               />
-              <span className="truncate text-sm">{item.label}</span>
+              {isExpanded && <span className="truncate text-sm ml-2">{item.label}</span>}
             </Link>
           );
         })}
@@ -284,12 +268,17 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
 
   return (
     <div className="min-h-screen bg-background text-foreground flex h-screen overflow-hidden">
-      {/* Desktop Sidebar */}
-      {!sidebarCollapsed && (
-        <aside className="w-60 lg:w-64 shrink-0 bg-sidebar border-r border-sidebar-border hidden lg:flex flex-col z-20">
-          <SidebarContent />
-        </aside>
-      )}
+      {/* Desktop Sidebar — Collapsed by default (w-16), expands to w-64 on hover */}
+      <aside
+        onMouseEnter={() => setDesktopHovered(true)}
+        onMouseLeave={() => setDesktopHovered(false)}
+        className={cn(
+          "hidden lg:flex flex-col shrink-0 bg-sidebar border-r border-sidebar-border z-30 transition-all duration-300 ease-in-out overflow-hidden",
+          desktopHovered ? "w-64" : "w-16"
+        )}
+      >
+        <SidebarContent isExpanded={desktopHovered} />
+      </aside>
 
       {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
@@ -303,7 +292,7 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <SidebarContent />
+              <SidebarContent isExpanded={true} />
             </div>
           </aside>
         </div>
@@ -335,12 +324,11 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
         <div className="hidden lg:block">
           <Header
             activeWorkspaceKey={currentWorkspace?.workspace_key}
-            onToggleSidebar={toggleSidebar}
           />
         </div>
 
         <main className="flex-1 overflow-y-auto min-w-0 bg-background">
-          <div className={cn("w-full", maxWidth.includes("px-") ? maxWidth : `px-4 sm:px-6 lg:px-8 py-6 lg:py-8 ${maxWidth}`)}>
+          <div className={cn("w-full pb-bottom-nav", maxWidth.includes("px-") ? maxWidth : `px-4 sm:px-6 lg:px-8 py-6 lg:py-8 ${maxWidth}`)}>
             {children}
           </div>
         </main>
@@ -354,7 +342,7 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
       )}
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-card/98 backdrop-blur-xl border-t border-border flex items-stretch justify-around safe-bottom" style={{ height: 60 }}>
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-card/98 backdrop-blur-xl border-t border-border flex items-stretch justify-around safe-bottom h-[60px]">
         {currentWorkspace?.nav_items.slice(0, 5).map(item => {
           const isActive = pathname === item.route || pathname.startsWith(item.route + "/");
           return (

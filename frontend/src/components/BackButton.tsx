@@ -24,7 +24,7 @@ export function BackButton({ to, fallbackPath, label, params, search, className 
         className
       )}
     >
-      <ArrowLeft className="size-3.5 mr-1.5 text-black dark:text-white group-hover:text-emerald-500 group-hover:-translate-x-0.5 transition-all" />
+      <ArrowLeft className="size-3.5 mr-1.5 text-black dark:text-white group-hover:text-brand group-hover:-translate-x-0.5 transition-all" />
       <span>{displayLabel}</span>
     </Link>
   );

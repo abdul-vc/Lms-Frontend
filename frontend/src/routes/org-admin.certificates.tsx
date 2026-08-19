@@ -285,7 +285,7 @@ function CertificatesPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -300,7 +300,7 @@ function CertificatesPage() {
         {canCreate && (
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
           >
             <Plus className="size-4" /> New Certificate Template
           </button>
@@ -324,7 +324,7 @@ function CertificatesPage() {
               {canCreate && (
                 <button
                   onClick={openAddModal}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-xs font-semibold"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-xs font-semibold shadow-sm"
                 >
                   <Plus className="size-4" /> Add Template
                 </button>
@@ -334,7 +334,7 @@ function CertificatesPage() {
             templates.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((template) => (
               <div key={template.id} className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
                 <div className="p-6 flex-1">
-                  <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+                  <div className="size-10 rounded-xl bg-accent text-accent-foreground border border-brand/20 flex items-center justify-center mb-4">
                     <Award className="size-5" />
                   </div>
                   <h3 className="font-bold text-foreground truncate mb-1 text-base">{template.title}</h3>
@@ -347,7 +347,7 @@ function CertificatesPage() {
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Assigned Courses</p>
                       <div className="flex flex-wrap gap-1.5">
                         {(template.assigned_courses || []).map(c => (
-                          <span key={c.id} className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                          <span key={c.id} className="inline-flex items-center gap-1 text-[10px] font-semibold bg-accent text-accent-foreground border border-brand/20 rounded-full px-2 py-0.5">
                             <BookOpen className="size-2.5" />{c.title}
                           </span>
                         ))}
@@ -367,7 +367,7 @@ function CertificatesPage() {
                     {canEdit && (
                       <button
                         onClick={() => openEditModal(template)}
-                        className="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 transition-colors p-1.5 hover:bg-emerald-50 rounded-lg"
+                        className="text-brand hover:opacity-80 text-xs font-bold flex items-center gap-1 transition-opacity p-1.5 hover:bg-accent rounded-lg"
                         title="Edit Template"
                       >
                         <Pencil className="size-3.5" /> Edit
@@ -408,7 +408,7 @@ function CertificatesPage() {
           <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl my-8 overflow-hidden border border-border/50">
             <div className="px-8 py-5 border-b border-border/50 flex justify-between items-center bg-muted/50/50">
               <div className="flex items-center gap-2">
-                <Sparkles className="size-5 text-emerald-600" />
+                <Sparkles className="size-5 text-brand" />
                 <h2 className="font-bold text-foreground text-lg">
                   {editingTemplate ? 'Edit Certificate Template' : 'New Certificate Template'}
                 </h2>
@@ -436,7 +436,7 @@ function CertificatesPage() {
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="e.g. Standard Completion Template"
-                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
 
@@ -447,7 +447,7 @@ function CertificatesPage() {
                     value={formData.cert_title}
                     onChange={(e) => setFormData({ ...formData, cert_title: e.target.value })}
                     placeholder="Certificate of Completion"
-                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
 
@@ -457,7 +457,7 @@ function CertificatesPage() {
                     rows={4}
                     value={formData.body_text}
                     onChange={(e) => setFormData({ ...formData, body_text: e.target.value })}
-                    className="w-full px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Use placeholders: <code>{"{{employee_name}}"}</code> or <code>{"{{course_title}}"}</code>.
@@ -471,7 +471,7 @@ function CertificatesPage() {
                     value={formData.signatory_title}
                     onChange={(e) => setFormData({ ...formData, signatory_title: e.target.value })}
                     placeholder="Director of Education"
-                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-card font-medium border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                   />
                 </div>
 
@@ -496,12 +496,12 @@ function CertificatesPage() {
                             key={course.id}
                             className={cn(
                               'flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors text-xs',
-                              checked && 'bg-emerald-50'
+                              checked && 'bg-accent/40'
                             )}
                           >
                             <input
                               type="checkbox"
-                              className="accent-emerald-600 size-3.5 shrink-0"
+                              className="accent-brand size-3.5 shrink-0"
                               checked={checked}
                               onChange={() => {
                                 setSelectedCourseIds(prev =>
@@ -509,7 +509,7 @@ function CertificatesPage() {
                                 );
                               }}
                             />
-                            <span className={cn('font-medium truncate flex-1', checked ? 'text-emerald-700' : 'text-foreground')}>
+                            <span className={cn('font-medium truncate flex-1', checked ? 'text-brand font-bold' : 'text-foreground')}>
                               {course.title}
                             </span>
                             <span className={cn(
@@ -526,7 +526,7 @@ function CertificatesPage() {
                     </div>
                   )}
                   {selectedCourseIds.length > 0 && (
-                    <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                    <p className="text-[10px] text-brand font-semibold mt-1">
                       {selectedCourseIds.length} course{selectedCourseIds.length > 1 ? 's' : ''} selected
                     </p>
                   )}
@@ -536,14 +536,14 @@ function CertificatesPage() {
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-semibold text-muted-foreground">Signature Image</label>
                     <div className="flex items-center gap-3">
-                      <label className="cursor-pointer text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                      <label className="cursor-pointer text-[11px] font-bold text-brand hover:opacity-80 flex items-center gap-1">
                         <Upload className="size-3" /> Upload File
                         <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
                       </label>
                       <button
                         type="button"
                         onClick={() => setIsDrawModalOpen(true)}
-                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                        className="text-[11px] font-bold text-brand hover:opacity-80 flex items-center gap-1"
                       >
                         <Pencil className="size-3" /> Draw Signature
                       </button>
@@ -558,7 +558,7 @@ function CertificatesPage() {
                         className={cn(
                           "cursor-pointer p-2 rounded-lg bg-card border transition-all text-center flex flex-col items-center justify-center relative shadow-2xs group/sig",
                           selectedSignatureUrl === sig.url
-                            ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm"
+                            ? "border-brand ring-2 ring-brand/20 shadow-sm"
                             : "border-border hover:border-slate-300"
                         )}
                       >
@@ -575,7 +575,7 @@ function CertificatesPage() {
                         <img src={sig.url} alt={sig.name} className="h-7 object-contain mb-1" />
                         <span className="text-[9px] font-semibold text-muted-foreground truncate w-full">{sig.name}</span>
                         {selectedSignatureUrl === sig.url && (
-                          <div className="absolute top-1 right-1 size-3.5 bg-emerald-600 text-foreground rounded-full grid place-items-center text-[8px] font-bold">
+                          <div className="absolute top-1 right-1 size-3.5 bg-brand text-brand-foreground rounded-full grid place-items-center text-[8px] font-bold">
                             ✓
                           </div>
                         )}
@@ -595,7 +595,7 @@ function CertificatesPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-5 py-2 text-xs font-semibold text-foreground bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                    className="px-5 py-2 text-xs font-semibold text-brand-foreground bg-brand hover:opacity-90 rounded-lg transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-sm"
                   >
                     {submitting && <Loader2 className="size-3.5 animate-spin" />}
                     Create Template
@@ -737,7 +737,7 @@ function SignatureDrawerModal({
       <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-border/50">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-foreground text-base flex items-center gap-2">
-            <Pencil className="size-4 text-emerald-600" /> Draw Live Signature
+            <Pencil className="size-4 text-brand" /> Draw Live Signature
           </h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground text-sm font-semibold">✕</button>
         </div>
@@ -748,7 +748,7 @@ function SignatureDrawerModal({
             type="text"
             value={sigName}
             onChange={(e) => setSigName(e.target.value)}
-            className="w-full px-3 py-1.5 text-xs text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+            className="w-full px-3 py-1.5 text-xs text-foreground bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand font-medium"
           />
         </div>
 
@@ -793,7 +793,7 @@ function SignatureDrawerModal({
               type="button"
               disabled={isEmpty}
               onClick={handleSave}
-              className="px-4 py-1.5 text-xs font-semibold text-foreground bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg transition-colors shadow-sm"
+              className="px-4 py-1.5 text-xs font-semibold text-brand-foreground bg-brand hover:opacity-90 disabled:opacity-50 rounded-lg transition-opacity shadow-sm"
             >
               Save Signature
             </button>

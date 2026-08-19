@@ -431,7 +431,7 @@ function RolesPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-emerald-600" />
+        <Loader2 className="size-8 animate-spin text-brand" />
       </div>
     );
   }
@@ -451,7 +451,7 @@ function RolesPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all",
               activeTab === 'roles' 
-                ? "bg-card text-emerald-700 shadow-sm" 
+                ? "bg-card text-brand shadow-sm" 
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -462,7 +462,7 @@ function RolesPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all",
               activeTab === 'matrix' 
-                ? "bg-card text-emerald-700 shadow-sm" 
+                ? "bg-card text-brand shadow-sm" 
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -477,13 +477,14 @@ function RolesPage() {
           <div className="flex justify-end mb-4">
             <button
               onClick={openAdd}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-foreground rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-brand-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
             >
               <Plus className="size-4" /> Create Role
             </button>
           </div>
 
-          <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+          {/* Roles Table (Desktop lg: 1024px+) */}
+          <div className="hidden lg:block bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50/50 text-muted-foreground font-semibold border-b border-border text-xs uppercase tracking-wider">
                 <tr>
@@ -522,12 +523,12 @@ function RolesPage() {
                         </td>
                         <td className="py-4 pl-24 pr-6 text-muted-foreground">
                           <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
-                            <Shield className="size-4 text-emerald-600 shrink-0" />
+                            <Shield className="size-4 text-brand shrink-0" />
                             <span>{activePerms} active permissions</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => openEdit(r)} className="p-2 text-muted-foreground hover:text-emerald-600 transition-colors rounded-lg hover:bg-emerald-50">
+                          <button onClick={() => openEdit(r)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent">
                             <Pencil className="size-4" />
                           </button>
                           <button 
@@ -563,19 +564,88 @@ function RolesPage() {
               </div>
             )}
           </div>
+
+          {/* Role Cards (Mobile/Tablet < lg: 1024px) */}
+          <div className="block lg:hidden space-y-3">
+            {roles.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground bg-card rounded-2xl border border-border">
+                No roles found.
+              </div>
+            ) : (
+              roles.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r) => {
+                const activePerms = Object.keys(r).filter(k => k.startsWith('can_') && (r as any)[k]).length;
+                return (
+                  <div key={r.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base font-bold text-foreground">{r.name}</span>
+                        {r.is_default && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 uppercase tracking-wider border border-blue-100">
+                            Default
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => openEdit(r)} className="p-2 text-muted-foreground hover:text-brand transition-colors rounded-lg hover:bg-accent" title="Edit Role">
+                          <Pencil className="size-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(r)} 
+                          disabled={r.is_default}
+                          className={cn(
+                            "p-2 rounded-lg transition-colors",
+                            r.is_default 
+                              ? "text-foreground cursor-not-allowed" 
+                              : "text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                          )}
+                          title={r.is_default ? "Default roles cannot be deleted" : "Delete role"}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2 flex-wrap text-xs">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground font-semibold">
+                        <Users className="size-3.5" /> {r.user_count} {r.user_count === 1 ? 'User' : 'Users'}
+                      </span>
+
+                      <div className="flex items-center gap-1.5 font-medium text-foreground/80">
+                        <Shield className="size-4 text-brand shrink-0" />
+                        <span>{activePerms} active permissions</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {roles.length > 0 && (
+              <div className="px-4 py-2 border-t border-border bg-card rounded-b-2xl">
+                <PaginationControls
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalItems={roles.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
 
       {/* --- TAB 2: ROLE PERMISSIONS MATRIX (Matching Reference Page 16) --- */}
       {activeTab === 'matrix' && (
-        <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8 space-y-6">
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-4 sm:p-6 md:p-8 space-y-6">
           <div className="flex justify-between items-center flex-wrap gap-4 border-b border-border/50 pb-6">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Configuring permissions for:</label>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0">Configuring permissions for:</label>
               <select
                 value={selectedRoleForMatrix || ''}
                 onChange={(e) => setSelectedRoleForMatrix(Number(e.target.value))}
-                className="px-4 py-2 text-sm font-semibold border border-border rounded-xl bg-muted/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-semibold border border-border rounded-xl bg-muted/50 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
               >
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name} Role</option>
@@ -585,7 +655,7 @@ function RolesPage() {
 
             <button
               onClick={handleSaveMatrix}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-foreground rounded-xl hover:bg-emerald-700 transition-colors text-xs font-bold shadow-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-brand text-brand-foreground rounded-xl hover:opacity-90 transition-opacity text-xs font-bold shadow-sm"
             >
               Save Matrix Changes
             </button>
@@ -598,7 +668,8 @@ function RolesPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table Matrix (lg: 1024px+) */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50/50 text-muted-foreground font-semibold border-b border-border text-xs uppercase tracking-wider">
                 <tr>
@@ -629,7 +700,7 @@ function RolesPage() {
                               onChange={() => handleToggleMatrix(mod.key, field)}
                               className="sr-only peer"
                             />
-                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand" />
                           </label>
                         </td>
                       ))}
@@ -638,6 +709,38 @@ function RolesPage() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile / Tablet Permission Matrix Cards (< lg: 1024px) */}
+          <div className="block lg:hidden space-y-3">
+            {MATRIX_MODULES.map((mod) => {
+              const state = matrixState[mod.key] || { view: false, create: false, edit: false, delete: false };
+              return (
+                <div key={mod.key} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-bold text-foreground text-sm">{mod.name}</h3>
+                    <p className="text-[11px] font-mono text-muted-foreground">{mod.path}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                    {(['view', 'create', 'edit', 'delete'] as const).map((field) => (
+                      <div key={field} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border/40">
+                        <span className="text-xs font-semibold capitalize text-foreground">{field} Access</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={state[field]}
+                            onChange={() => handleToggleMatrix(mod.key, field)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand" />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -670,7 +773,7 @@ function RolesPage() {
                     value={formData.name || ''}
                     disabled={editingRole?.is_default}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all disabled:bg-muted/50 disabled:text-muted-foreground"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all disabled:bg-muted/50 disabled:text-muted-foreground"
                     placeholder="e.g., Senior Developer"
                   />
                   {editingRole?.is_default && (
@@ -697,9 +800,9 @@ function RolesPage() {
                                   checked={(formData as any)[key] || false}
                                   onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
                                 />
-                                <div className="w-5 h-5 rounded-md border-2 border-slate-300 peer-checked:border-emerald-600 peer-checked:bg-emerald-600 transition-colors" />
+                                <div className="w-5 h-5 rounded-md border-2 border-slate-300 peer-checked:border-brand peer-checked:bg-brand transition-colors" />
                                 <svg
-                                  className="absolute w-3 h-3 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100"
+                                  className="absolute w-3 h-3 text-brand-foreground pointer-events-none opacity-0 peer-checked:opacity-100"
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
@@ -731,7 +834,7 @@ function RolesPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 text-xs font-semibold text-foreground bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
+                  className="px-5 py-2 text-xs font-semibold text-brand-foreground bg-brand hover:opacity-90 rounded-lg transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-sm"
                 >
                   {isSubmitting && <Loader2 className="size-3.5 animate-spin" />}
                   Save Role

@@ -421,7 +421,7 @@ function SuperAdminToolkitPage() {
 
       {/* ── TAB 2: KNOWLEDGE BASE BROWSER ────────────────────────────────── */}
       {activeTab === "knowledge" && (
-        <div className="grid lg:grid-cols-[280px_1fr] gap-6" style={{ minHeight: "calc(100vh - 240px)" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6" style={{ minHeight: "calc(100vh - 240px)" }}>
           {/* Categories Sidebar */}
           <aside className="space-y-4">
             <div className="p-3.5 rounded-2xl border border-border bg-card space-y-3">
