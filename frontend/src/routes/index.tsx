@@ -1,20 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, redirect, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  component: IndexRedirect,
+  beforeLoad: () => {
+    throw redirect({ to: "/login" });
+  },
+  component: () => <Navigate to="/login" replace />,
 });
 
-function IndexRedirect() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate({ to: "/login", replace: true });
-  }, [navigate]);
-
-  return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
-      Redirecting to login...
-    </div>
-  );
-}

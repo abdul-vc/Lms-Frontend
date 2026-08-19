@@ -26,8 +26,7 @@ export default {
       return await handler.fetch(request, env, ctx);
     } catch (error) {
       console.error("Server fetch error:", error);
-      const handler = await getServerEntry();
-      return await handler.fetch(request, env, ctx);
+      return new Response("Internal Server Error", { status: 500 });
     }
   },
 };
