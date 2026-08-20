@@ -65,15 +65,15 @@ export interface ApiCourse {
   user_progress?: number;
   is_scorm?: boolean;
   scorm_package?: ApiScormPackage | null;
+  has_assessment?: boolean;
+  assessment_question_count?: number;
 }
 
 // ─── Adapter: ApiCourse → frontend Course type ────────────────────────────────
 
-export const FALLBACK_HERO = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80";
-
 export function getCourseHeroUrl(heroUrl?: string | null): string {
   if (!heroUrl || !heroUrl.trim()) {
-    return FALLBACK_HERO;
+    return "";
   }
   return normalizeUrl(heroUrl);
 }
@@ -122,6 +122,8 @@ export function adaptApiCourse(c: ApiCourse): Course {
     accent: c.accent || "var(--brand)",
     is_scorm: c.is_scorm,
     scorm_package: c.scorm_package,
+    has_assessment: Boolean(c.has_assessment),
+    assessment_question_count: c.assessment_question_count || 0,
   };
 }
 
@@ -267,6 +269,7 @@ export interface ApiAssessmentQuestion {
   option_c: string;
   option_d: string;
   correct_option: "A" | "B" | "C" | "D";
+  explanation?: string;
 }
 
 export async function downloadAssessmentCsvTemplate(courseId: number): Promise<void> {
@@ -300,6 +303,83 @@ export async function fetchAssessmentQuestions(courseId: number): Promise<ApiAss
   const res = await authFetch(`${BASE}/courses/${courseId}/assessment/questions/`);
   if (!res.ok) throw new Error("Failed to fetch assessment questions");
   return res.json();
+}
+
+export async function deleteAssessmentQuestions(courseId: number): Promise<{ message?: string; deleted_count?: number; error?: string }> {
+  const res = await authFetch(`${BASE}/courses/${courseId}/assessment/delete/`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    try {
+      const errData = await res.json();
+      return { error: errData.error || errData.message || `Server returned error (${res.status})` };
+    } catch {
+      return { error: `Server returned error (${res.status})` };
+    }
+  }
+  return res.json();
+}
+
+// ─── Lesson-Specific Assessment APIs ──────────────────────────────────────────
+
+export async function downloadLessonAssessmentCsvTemplate(lessonId: number): Promise<void> {
+  const res = await authFetch(`${BASE}/lessons/${lessonId}/assessment/template/`);
+  if (!res.ok) throw new Error("Failed to download template");
+  
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lesson_${lessonId}_assessment_template.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function uploadLessonAssessmentCsv(lessonId: number, file: File): Promise<{ message?: string; count?: number; questions?: ApiAssessmentQuestion[]; error?: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await authFetch(`${BASE}/lessons/${lessonId}/assessment/import/`, {
+    method: "POST",
+    body: formData,
+  });
+  
+  return res.json();
+}
+
+export async function fetchLessonAssessmentQuestions(lessonId: number): Promise<ApiAssessmentQuestion[]> {
+  const res = await authFetch(`${BASE}/lessons/${lessonId}/assessment/questions/`);
+  if (!res.ok) throw new Error("Failed to fetch lesson assessment questions");
+  return res.json();
+}
+
+export async function startLessonAssessment(lessonId: number): Promise<{ id: number; question_ids: number[]; questions: ApiAssessmentQuestion[] }> {
+  const res = await authFetch(`${BASE}/lessons/${lessonId}/assessment/start/`, { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to start lesson assessment");
+  }
+  return res.json();
+}
+
+export async function submitLessonAssessment(lessonId: number, attemptId: number, data: { answers: Record<string, string>; auto_submitted?: boolean }): Promise<{ id: number; score_percent: number; passed: boolean; correct_count: number; total_questions: number }> {
+  const res = await authFetch(`${BASE}/lessons/${lessonId}/assessment/${attemptId}/submit/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to submit lesson assessment");
+  }
+  return res.json();
+}
+
+export async function restartCourse(courseId: number): Promise<void> {
+  const res = await authFetch(`${BASE}/courses/${courseId}/restart/`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to restart course");
 }
 
 export interface ApiAccessRequest {

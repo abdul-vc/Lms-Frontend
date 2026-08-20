@@ -9,7 +9,8 @@ import {
   ReadingPayloadEditor,
   InteractionPayloadEditor,
   QuizPayloadEditor,
-  ScenarioPayloadEditor
+  ScenarioPayloadEditor,
+  AssessmentPayloadEditor
 } from "@/components/BlockPayloadEditors";
 
 export interface LessonBlockItem {
@@ -44,16 +45,18 @@ const BLOCK_TYPES = [
   { type: "interaction", label: "Interaction", icon: Puzzle },
   { type: "quiz", label: "Knowledge Check", icon: CheckSquare },
   { type: "scenario", label: "Scenario", icon: GitBranch },
+  { type: "assessment", label: "Assessment", icon: CheckSquare },
 ];
 
 interface BlockEditorCanvasProps {
   tree: BlockTreeData;
+  lessonId?: number | string;
   onTreeUpdated: () => void;
   onBlockPayloadUpdated?: (blockId: string, updatedPayload: any) => void;
   showToast: (msg: string, ok?: boolean) => void;
 }
 
-export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, showToast }: BlockEditorCanvasProps) {
+export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloadUpdated, showToast }: BlockEditorCanvasProps) {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [addingType, setAddingType] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
@@ -218,7 +221,22 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
 
                   {/* Block Content Display */}
                   <div className="text-sm text-foreground">
-                    {block.block_type === "quiz" && block.kc_questions && block.kc_questions.length > 0 ? (
+                    {block.block_type === "assessment" ? (
+                      <div className="text-xs text-brand font-semibold bg-brand/10 p-3 rounded-xl border border-brand/20 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <CheckSquare className="size-4 text-brand" />
+                            <span className="font-bold text-foreground">Lesson Assessment Question Bank</span>
+                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand/20 text-brand">
+                            CSV Bank
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-normal">
+                          Configured specifically for this lesson. Click to download template, import CSV, or view question bank.
+                        </div>
+                      </div>
+                    ) : block.block_type === "quiz" && block.kc_questions && block.kc_questions.length > 0 ? (
                       <div className="text-xs text-amber-300 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20 space-y-1">
                         <div className="flex items-center gap-1.5"><CheckSquare className="size-3.5 text-amber-400" /> {block.kc_questions[0].prompt || "Knowledge Check Question"}</div>
                         <div className="text-[10px] text-muted-foreground font-normal">{block.kc_questions[0].choices?.length || 0} choice options configured</div>
@@ -229,8 +247,24 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
                         <div className="text-[10px] text-muted-foreground font-normal">{block.scenario_nodes[0].content}</div>
                       </div>
                     ) : block.interaction_payload ? (
-                      <div className="text-xs text-indigo-300 font-semibold bg-indigo-500/10 p-2.5 rounded-lg border border-indigo-500/20">
-                        Widget: {block.interaction_payload.interaction_type.toUpperCase()} ({block.interaction_payload.config?.items?.length || 0} items)
+                      <div className="text-xs text-indigo-300 font-semibold bg-indigo-500/10 p-2.5 rounded-lg border border-indigo-500/20 flex items-center justify-between">
+                        <span>
+                          Widget:{" "}
+                          {block.interaction_payload.interaction_type === "tabs" ? "Tabs" :
+                           block.interaction_payload.interaction_type === "accordion" ? "Accordion" :
+                           block.interaction_payload.interaction_type === "timeline" ? "Interactive Timeline" :
+                           block.interaction_payload.interaction_type === "flashcards" ? "Flashcards" :
+                           block.interaction_payload.interaction_type === "hotspots" ? "Interactive Hotspots" :
+                           block.interaction_payload.interaction_type === "before_after" ? "Before / After Comparison" :
+                           block.interaction_payload.interaction_type === "clickable_cards" ? "Clickable Cards" :
+                           block.interaction_payload.interaction_type === "process_flow" ? "Process Step Flow" :
+                           block.interaction_payload.interaction_type?.toUpperCase() || "Widget"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {block.interaction_payload.interaction_type === "before_after"
+                            ? (block.interaction_payload.config?.before_image && block.interaction_payload.config?.after_image ? "2 images configured" : "Configured")
+                            : `${block.interaction_payload.config?.items?.length || 0} items`}
+                        </span>
                       </div>
                     ) : block.reading_payload?.meta_data?.url ? (
                       <div className="space-y-1">
@@ -354,11 +388,22 @@ export function BlockEditorCanvas({ tree, onTreeUpdated, onBlockPayloadUpdated, 
             </div>
 
             {/* Render Specific Payload Editors */}
-            {selectedBlock.block_type === "interaction" ? (
+            {selectedBlock.block_type === "assessment" ? (
+              <AssessmentPayloadEditor
+                lessonId={lessonId}
+                blockId={selectedBlock.id}
+                showToast={showToast}
+              />
+            ) : selectedBlock.block_type === "interaction" ? (
               <InteractionPayloadEditor
                 blockId={selectedBlock.id}
                 payload={selectedBlock.interaction_payload}
                 onSave={onTreeUpdated}
+                onPayloadChange={(updatedPayload) => {
+                  if (onBlockPayloadUpdated) {
+                    onBlockPayloadUpdated(selectedBlock.id, { interaction_payload: updatedPayload });
+                  }
+                }}
                 showToast={showToast}
               />
             ) : selectedBlock.block_type === "quiz" ? (

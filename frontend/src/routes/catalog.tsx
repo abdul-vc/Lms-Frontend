@@ -133,11 +133,13 @@ function Catalog() {
                           </button>
                         </div>
                       )}
-                      <img
-                        src={c.hero}
-                        alt=""
-                        className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
-                      />
+                      {c.hero ? (
+                        <img
+                          src={c.hero}
+                          alt=""
+                          className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                      ) : null}
                     </div>
                     <div className="p-5 space-y-2">
                       <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand">

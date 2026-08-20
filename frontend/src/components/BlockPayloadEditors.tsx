@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
   Upload, Loader2, Plus, Trash2, Check, FileText, Image as ImageIcon,
-  Video, Music, Code, AlertTriangle, Table as TableIcon, Sparkles, CheckSquare, GitBranch, Link2, Eye
+  Video, Music, Code, AlertTriangle, Table as TableIcon, Sparkles, CheckSquare, GitBranch, Link2, Eye, MapPin, RotateCw
 } from "lucide-react";
-import { authFetch, API_BASE } from "@/lib/auth";
+import { authFetch, API_BASE, normalizeUrl } from "@/lib/auth";
 
 interface ReadingPayloadEditorProps {
   blockId: string;
@@ -407,18 +407,43 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
 
 // ─── INTERACTION PAYLOAD EDITOR ────────────────────────────────────────────
 
-export function InteractionPayloadEditor({ blockId, payload, onSave, showToast }: { blockId: string; payload: any; onSave: () => void; showToast: (msg: string, ok?: boolean) => void }) {
-  const [type, setType] = useState(payload?.interaction_type || "hotspots");
+export function InteractionPayloadEditor({
+  blockId,
+  payload,
+  onSave,
+  onPayloadChange,
+  showToast,
+}: {
+  blockId: string;
+  payload: any;
+  onSave: () => void;
+  onPayloadChange?: (updatedPayload: any) => void;
+  showToast: (msg: string, ok?: boolean) => void;
+}) {
+  const [type, setType] = useState(payload?.interaction_type || "tabs");
   const [config, setConfig] = useState<Record<string, any>>(payload?.config || { items: [] });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedHotspotIdx, setSelectedHotspotIdx] = useState<number>(0);
 
   useEffect(() => {
-    setType(payload?.interaction_type || "hotspots");
+    setType(payload?.interaction_type || "tabs");
     setConfig(payload?.config || { items: [] });
   }, [payload]);
 
+  const notifyChange = (updatedType: string, updatedConfig: Record<string, any>) => {
+    if (onPayloadChange) {
+      onPayloadChange({
+        id: payload?.id,
+        interaction_type: updatedType,
+        config: updatedConfig,
+      });
+    }
+  };
+
   const handleSave = async (updatedType = type, updatedConfig = config) => {
     setSaving(true);
+    notifyChange(updatedType, updatedConfig);
     try {
       if (payload?.id) {
         await authFetch(`${API_BASE}/authoring/interactions/${payload.id}/`, {
@@ -427,14 +452,18 @@ export function InteractionPayloadEditor({ blockId, payload, onSave, showToast }
           body: JSON.stringify({ interaction_type: updatedType, config: updatedConfig }),
         });
       } else {
-        await authFetch(`${API_BASE}/authoring/interactions/`, {
+        const res = await authFetch(`${API_BASE}/authoring/interactions/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ block: blockId, interaction_type: updatedType, config: updatedConfig }),
         });
+        if (res.ok) {
+          const created = await res.json();
+          notifyChange(updatedType, created.config || updatedConfig);
+        }
       }
       onSave();
-      showToast("Interaction payload saved");
+      showToast("Interaction widget saved ✓");
     } catch (e) {
       showToast("Failed to save interaction", false);
     } finally {
@@ -442,40 +471,122 @@ export function InteractionPayloadEditor({ blockId, payload, onSave, showToast }
     }
   };
 
-  const items = config.items || [];
-
-  const addItem = () => {
-    const newItems = [...items, { title: `Item ${items.length + 1}`, content: "Interactive description content" }];
-    const newConfig = { ...config, items: newItems };
-    setConfig(newConfig);
-    handleSave(type, newConfig);
+  const uploadAsset = async (file: File): Promise<string | null> => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await authFetch(`${API_BASE}/authoring/assets/`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const asset = await res.json();
+        const fileUrl = asset.file.startsWith("http") ? asset.file : `${API_BASE.replace('/api', '')}${asset.file}`;
+        showToast("Image uploaded successfully ✓");
+        return fileUrl;
+      }
+      showToast("Asset upload failed", false);
+      return null;
+    } catch (e: any) {
+      showToast(e.message || "Asset upload error", false);
+      return null;
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const updateItem = (index: number, field: string, val: string) => {
-    const newItems = items.map((it: any, i: number) => i === index ? { ...it, [field]: val } : it);
-    const newConfig = { ...config, items: newItems };
+  const items: any[] = Array.isArray(config.items) ? config.items : [];
+
+  const updateConfig = (newConfig: Record<string, any>, persist = false) => {
     setConfig(newConfig);
+    notifyChange(type, newConfig);
+    if (persist) {
+      handleSave(type, newConfig);
+    }
+  };
+
+  const updateItems = (newItems: any[], persist = false) => {
+    updateConfig({ ...config, items: newItems }, persist);
+  };
+
+  const addItem = (defaultItem: Record<string, any>) => {
+    const newItems = [...items, defaultItem];
+    updateItems(newItems, true);
+  };
+
+  const updateItem = (index: number, field: string, val: any) => {
+    const newItems = items.map((it: any, i: number) => (i === index ? { ...it, [field]: val } : it));
+    updateItems(newItems, false);
   };
 
   const removeItem = (index: number) => {
     const newItems = items.filter((_: any, i: number) => i !== index);
-    const newConfig = { ...config, items: newItems };
+    updateItems(newItems, true);
+  };
+
+  const handleTypeChange = (newType: string) => {
+    setType(newType);
+    let newConfig = { ...config };
+    if (!newConfig.items || newConfig.items.length === 0) {
+      if (newType === "tabs") {
+        newConfig.items = [
+          { title: "Tab 1", content: "Content for tab 1" },
+          { title: "Tab 2", content: "Content for tab 2" },
+        ];
+      } else if (newType === "accordion") {
+        newConfig.items = [
+          { title: "Section 1", content: "Content for section 1" },
+          { title: "Section 2", content: "Content for section 2" },
+        ];
+      } else if (newType === "timeline") {
+        newConfig.items = [
+          { date: "Step 1", title: "Milestone 1", content: "Milestone 1 description" },
+          { date: "Step 2", title: "Milestone 2", content: "Milestone 2 description" },
+        ];
+      } else if (newType === "flashcards") {
+        newConfig.items = [
+          { front: "Concept / Term 1", back: "Definition / Explanation 1" },
+          { front: "Concept / Term 2", back: "Definition / Explanation 2" },
+        ];
+      } else if (newType === "hotspots") {
+        newConfig.items = [
+          { label: "Hotspot 1", title: "Hotspot 1", content: "Information for hotspot 1", x: 35, y: 45 },
+        ];
+      } else if (newType === "before_after") {
+        newConfig = {
+          before_image: newConfig.before_image || "",
+          after_image: newConfig.after_image || "",
+          before_label: newConfig.before_label || "Before",
+          after_label: newConfig.after_label || "After",
+        };
+      } else if (newType === "clickable_cards") {
+        newConfig.items = [
+          { title: "Card 1", content: "Detailed content for card 1", image_url: "" },
+          { title: "Card 2", content: "Detailed content for card 2", image_url: "" },
+        ];
+      } else if (newType === "process_flow") {
+        newConfig.items = [
+          { title: "Step 1", content: "Description of step 1" },
+          { title: "Step 2", content: "Description of step 2" },
+        ];
+      }
+    }
     setConfig(newConfig);
-    handleSave(type, newConfig);
+    handleSave(newType, newConfig);
   };
 
   return (
     <div className="space-y-4 pt-2 border-t border-border">
+      {/* Widget Type Selector */}
       <div>
-        <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1">Widget Type</label>
+        <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-1">
+          Widget Type
+        </label>
         <select
           value={type}
-          onChange={(e) => {
-            const t = e.target.value;
-            setType(t);
-            handleSave(t, config);
-          }}
-          className="w-full bg-background border border-border rounded-lg p-2 text-xs font-semibold text-brand"
+          onChange={(e) => handleTypeChange(e.target.value)}
+          className="w-full bg-background border border-border rounded-lg p-2 text-xs font-semibold text-brand focus:ring-1 focus:ring-brand focus:outline-none"
         >
           <option value="tabs">Tabs Widget</option>
           <option value="accordion">Accordion Widget</option>
@@ -488,41 +599,665 @@ export function InteractionPayloadEditor({ blockId, payload, onSave, showToast }
         </select>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="block text-xs font-bold text-foreground uppercase tracking-wider">Interactive Items ({items.length})</label>
-          <button onClick={addItem} className="flex items-center gap-1 text-xs text-brand font-bold hover:underline">
-            <Plus className="size-3.5" /> Add Item
-          </button>
-        </div>
+      {/* ─── WIDGET 1: TABS ─── */}
+      {type === "tabs" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Tabs ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ title: `Tab ${items.length + 1}`, content: "" })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Tab
+            </button>
+          </div>
 
-        {items.map((item: any, idx: number) => (
-          <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Tab #{idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Tab">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Tab Title</label>
+                <input
+                  type="text"
+                  value={item.title || ""}
+                  onChange={(e) => updateItem(idx, "title", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="e.g. Overview, Prerequisites, Summary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Tab Content</label>
+                <textarea
+                  rows={3}
+                  value={item.content || ""}
+                  onChange={(e) => updateItem(idx, "content", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Enter content shown when this tab is active..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── WIDGET 2: ACCORDION ─── */}
+      {type === "accordion" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Accordion Sections ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ title: `Section ${items.length + 1}`, content: "" })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Section
+            </button>
+          </div>
+
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Section #{idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Section">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Section Title</label>
+                <input
+                  type="text"
+                  value={item.title || ""}
+                  onChange={(e) => updateItem(idx, "title", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="e.g. Frequently Asked Questions, Safety Checklist"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Section Content</label>
+                <textarea
+                  rows={3}
+                  value={item.content || ""}
+                  onChange={(e) => updateItem(idx, "content", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Enter expandable accordion content..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── WIDGET 3: TIMELINE ─── */}
+      {type === "timeline" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Timeline Points ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ date: `Step ${items.length + 1}`, title: `Milestone ${items.length + 1}`, content: "" })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Timeline Point
+            </button>
+          </div>
+
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Point #{idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Point">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Date / Step / Label</label>
+                <input
+                  type="text"
+                  value={item.date || item.step_label || ""}
+                  onChange={(e) => updateItem(idx, "date", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="e.g. 2024, Phase 1, Step A, 09:00 AM"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Title</label>
+                <input
+                  type="text"
+                  value={item.title || ""}
+                  onChange={(e) => updateItem(idx, "title", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="Milestone Title"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Description</label>
+                <textarea
+                  rows={2}
+                  value={item.content || item.description || ""}
+                  onChange={(e) => updateItem(idx, "content", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Milestone details & description..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── WIDGET 4: FLASHCARDS ─── */}
+      {type === "flashcards" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Flashcards ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ front: `Term ${items.length + 1}`, back: `Definition ${items.length + 1}` })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Flashcard
+            </button>
+          </div>
+
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Card #{idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Card">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-indigo-400 mb-0.5 uppercase tracking-wider">Front Side (Question / Term)</label>
+                <textarea
+                  rows={2}
+                  value={item.front || item.title || ""}
+                  onChange={(e) => updateItem(idx, "front", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="Enter text on front side of the card..."
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-emerald-400 mb-0.5 uppercase tracking-wider">Back Side (Answer / Definition)</label>
+                <textarea
+                  rows={2}
+                  value={item.back || item.content || ""}
+                  onChange={(e) => updateItem(idx, "back", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Enter text revealed on back side of the card..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── WIDGET 5: HOTSPOTS ─── */}
+      {type === "hotspots" && (
+        <div className="space-y-4">
+          {/* Background Image Upload */}
+          <div className="p-3 rounded-xl border border-border bg-background space-y-2">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              A) Background Image
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={config.image_url || ""}
+                onChange={(e) => updateConfig({ ...config, image_url: e.target.value }, false)}
+                onBlur={() => handleSave()}
+                placeholder="https://... image URL"
+                className="flex-1 bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+              />
+              <label className="cursor-pointer bg-brand text-brand-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 inline-flex items-center gap-1 shrink-0">
+                <Upload className="size-3" /> Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = await uploadAsset(file);
+                      if (url) updateConfig({ ...config, image_url: url }, true);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {config.image_url && (
+              <div className="relative rounded-lg overflow-hidden border border-border bg-black/40 mt-2">
+                <p className="text-[10px] text-muted-foreground p-1 text-center bg-card border-b border-border">
+                  💡 Click anywhere on the image below to place or move Hotspot #{selectedHotspotIdx + 1}
+                </p>
+                <div
+                  className="relative cursor-crosshair inline-block w-full select-none"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = Math.min(100, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+                    const y = Math.min(100, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 100)));
+                    if (items.length === 0 || selectedHotspotIdx >= items.length) {
+                      addItem({ label: `Spot ${items.length + 1}`, title: `Hotspot ${items.length + 1}`, content: "", x, y });
+                    } else {
+                      const newItems = items.map((it: any, i: number) => i === selectedHotspotIdx ? { ...it, x, y } : it);
+                      updateItems(newItems, true);
+                    }
+                  }}
+                >
+                  <img src={config.image_url} alt="Hotspot canvas" className="w-full h-auto object-contain max-h-48" />
+                  {items.map((it: any, i: number) => (
+                    <div
+                      key={i}
+                      style={{ left: `${it.x || 50}%`, top: `${it.y || 50}%` }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedHotspotIdx(i);
+                      }}
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 size-5 rounded-full font-black text-[10px] grid place-items-center cursor-pointer shadow-md transition-transform ${
+                        selectedHotspotIdx === i
+                          ? "bg-amber-400 text-black ring-2 ring-white scale-125 z-10"
+                          : "bg-indigo-600 text-white"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Hotspots List */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Item #{idx + 1}</span>
-              <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1">
-                <Trash2 className="size-3.5" />
+              <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+                B) Hotspots ({items.length})
+              </label>
+              <button
+                onClick={() => {
+                  const newIdx = items.length;
+                  addItem({ label: `Spot ${newIdx + 1}`, title: `Hotspot ${newIdx + 1}`, content: "", x: 50, y: 50 });
+                  setSelectedHotspotIdx(newIdx);
+                }}
+                className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+              >
+                <Plus className="size-3.5" /> Add Hotspot
               </button>
             </div>
-            <input
-              type="text"
-              value={item.title || ""}
-              onChange={(e) => updateItem(idx, "title", e.target.value)}
-              onBlur={() => handleSave()}
-              className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
-              placeholder="Item Title"
-            />
-            <textarea
-              rows={2}
-              value={item.content || ""}
-              onChange={(e) => updateItem(idx, "content", e.target.value)}
-              onBlur={() => handleSave()}
-              className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
-              placeholder="Item Body / Description"
-            />
+
+            {items.map((item: any, idx: number) => (
+              <div
+                key={idx}
+                onClick={() => setSelectedHotspotIdx(idx)}
+                className={`p-3 rounded-xl border bg-background space-y-2 relative group cursor-pointer transition-all ${
+                  selectedHotspotIdx === idx ? "border-brand ring-1 ring-brand" : "border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-brand uppercase">
+                    Hotspot #{idx + 1} {selectedHotspotIdx === idx ? "● Selected" : ""}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeItem(idx);
+                      if (selectedHotspotIdx >= idx && selectedHotspotIdx > 0) {
+                        setSelectedHotspotIdx(selectedHotspotIdx - 1);
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-destructive p-1"
+                    title="Delete Hotspot"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Label / Title</label>
+                  <input
+                    type="text"
+                    value={item.title || item.label || ""}
+                    onChange={(e) => updateItem(idx, "title", e.target.value)}
+                    onBlur={() => handleSave()}
+                    className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                    placeholder="Hotspot Title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Description</label>
+                  <textarea
+                    rows={2}
+                    value={item.content || item.description || ""}
+                    onChange={(e) => updateItem(idx, "content", e.target.value)}
+                    onBlur={() => handleSave()}
+                    className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                    placeholder="Description revealed on click..."
+                  />
+                </div>
+
+                {/* X and Y Position Inputs */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase">X Position: {item.x ?? 50}%</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={item.x ?? 50}
+                      onChange={(e) => updateItem(idx, "x", parseInt(e.target.value, 10))}
+                      onMouseUp={() => handleSave()}
+                      onTouchEnd={() => handleSave()}
+                      className="w-full accent-brand"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-muted-foreground uppercase">Y Position: {item.y ?? 50}%</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={item.y ?? 50}
+                      onChange={(e) => updateItem(idx, "y", parseInt(e.target.value, 10))}
+                      onMouseUp={() => handleSave()}
+                      onTouchEnd={() => handleSave()}
+                      className="w-full accent-brand"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* ─── WIDGET 6: BEFORE / AFTER ─── */}
+      {type === "before_after" && (
+        <div className="space-y-4">
+          {/* Before Image */}
+          <div className="p-3 rounded-xl border border-border bg-background space-y-2">
+            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Before Image</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={config.before_image || ""}
+                onChange={(e) => updateConfig({ ...config, before_image: e.target.value }, false)}
+                onBlur={() => handleSave()}
+                placeholder="https://... before image URL"
+                className="flex-1 bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+              />
+              <label className="cursor-pointer bg-brand text-brand-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 inline-flex items-center gap-1 shrink-0">
+                <Upload className="size-3" /> Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = await uploadAsset(file);
+                      if (url) updateConfig({ ...config, before_image: url }, true);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Before Label (Optional)</label>
+              <input
+                type="text"
+                value={config.before_label || ""}
+                onChange={(e) => updateConfig({ ...config, before_label: e.target.value }, false)}
+                onBlur={() => handleSave()}
+                placeholder="Before"
+                className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+              />
+            </div>
+            {config.before_image && (
+              <img src={config.before_image} alt="Before preview" className="w-full h-24 object-cover rounded-lg border border-border mt-1" />
+            )}
+          </div>
+
+          {/* After Image */}
+          <div className="p-3 rounded-xl border border-border bg-background space-y-2">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">After Image</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={config.after_image || ""}
+                onChange={(e) => updateConfig({ ...config, after_image: e.target.value }, false)}
+                onBlur={() => handleSave()}
+                placeholder="https://... after image URL"
+                className="flex-1 bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+              />
+              <label className="cursor-pointer bg-brand text-brand-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 inline-flex items-center gap-1 shrink-0">
+                <Upload className="size-3" /> Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = await uploadAsset(file);
+                      if (url) updateConfig({ ...config, after_image: url }, true);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">After Label (Optional)</label>
+              <input
+                type="text"
+                value={config.after_label || ""}
+                onChange={(e) => updateConfig({ ...config, after_label: e.target.value }, false)}
+                onBlur={() => handleSave()}
+                placeholder="After"
+                className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+              />
+            </div>
+            {config.after_image && (
+              <img src={config.after_image} alt="After preview" className="w-full h-24 object-cover rounded-lg border border-border mt-1" />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── WIDGET 7: CLICKABLE CARDS GRID ─── */}
+      {type === "clickable_cards" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Cards Grid ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ title: `Card ${items.length + 1}`, content: "", image_url: "" })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Card
+            </button>
+          </div>
+
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Card #{idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Card">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Card Title</label>
+                <input
+                  type="text"
+                  value={item.title || ""}
+                  onChange={(e) => updateItem(idx, "title", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="Card Title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Card Content</label>
+                <textarea
+                  rows={2}
+                  value={item.content || ""}
+                  onChange={(e) => updateItem(idx, "content", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Content revealed when card is clicked..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Optional Card Image</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={item.image_url || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const updatedItems = items.map((it: any, i: number) =>
+                        i === idx ? { ...it, image_url: val } : it
+                      );
+                      const updatedConfig = { ...config, items: updatedItems };
+                      setConfig(updatedConfig);
+                      notifyChange(type, updatedConfig);
+                    }}
+                    onBlur={() => handleSave()}
+                    placeholder="https://... or uploaded image URL"
+                    className="flex-1 bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  />
+                  <label className="cursor-pointer bg-brand text-brand-foreground px-2.5 py-1 rounded-lg text-[10px] font-bold hover:opacity-90 inline-flex items-center gap-1 shrink-0">
+                    <Upload className="size-3" /> Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const url = await uploadAsset(file);
+                          if (url) {
+                            const updatedItems = items.map((it: any, i: number) =>
+                              i === idx ? { ...it, image_url: url } : it
+                            );
+                            const updatedConfig = { ...config, items: updatedItems };
+                            setConfig(updatedConfig);
+                            notifyChange(type, updatedConfig);
+                            await handleSave(type, updatedConfig);
+                          }
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {item.image_url && (
+                  <div className="relative mt-2 rounded-lg overflow-hidden border border-border bg-black/20 group/img">
+                    <img
+                      src={normalizeUrl(item.image_url)}
+                      alt={`Card ${idx + 1} preview`}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedItems = items.map((it: any, i: number) =>
+                          i === idx ? { ...it, image_url: "" } : it
+                        );
+                        const updatedConfig = { ...config, items: updatedItems };
+                        setConfig(updatedConfig);
+                        notifyChange(type, updatedConfig);
+                        handleSave(type, updatedConfig);
+                      }}
+                      className="absolute top-1 right-1 size-5 rounded-full bg-black/70 text-white hover:bg-destructive text-[10px] grid place-items-center opacity-80 hover:opacity-100 transition-opacity"
+                      title="Remove Image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── WIDGET 8: PROCESS STEP FLOW ─── */}
+      {type === "process_flow" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+              Process Steps ({items.length})
+            </label>
+            <button
+              onClick={() => addItem({ title: `Step ${items.length + 1}`, content: "" })}
+              className="flex items-center gap-1 text-xs text-brand font-bold hover:underline"
+            >
+              <Plus className="size-3.5" /> Add Step
+            </button>
+          </div>
+
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="p-3 rounded-xl border border-border bg-background space-y-2 relative group">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-brand uppercase">Step {idx + 1}</span>
+                <button onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive p-1" title="Delete Step">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Step Title</label>
+                <input
+                  type="text"
+                  value={item.title || ""}
+                  onChange={(e) => updateItem(idx, "title", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs font-semibold text-foreground"
+                  placeholder="e.g. Initial Inspection, Verification, Final Handover"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Step Description</label>
+                <textarea
+                  rows={2}
+                  value={item.content || ""}
+                  onChange={(e) => updateItem(idx, "content", e.target.value)}
+                  onBlur={() => handleSave()}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="Detailed instructions for this step..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -934,3 +1669,191 @@ export function ScenarioPayloadEditor({ blockId, nodes = [], onSave, showToast }
     </div>
   );
 }
+
+// ─── Lesson-Specific Assessment Payload Editor ─────────────────────────────
+
+interface AssessmentPayloadEditorProps {
+  lessonId?: number | string;
+  blockId: string;
+  showToast: (msg: string, ok?: boolean) => void;
+}
+
+export function AssessmentPayloadEditor({ lessonId, blockId, showToast }: AssessmentPayloadEditorProps) {
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const numLessonId = lessonId ? Number(String(lessonId).replace(/^l/, '')) : null;
+
+  const loadQuestions = React.useCallback(async () => {
+    if (!numLessonId) return;
+    setLoading(true);
+    try {
+      const res = await authFetch(`${API_BASE}/lessons/${numLessonId}/assessment/questions/`);
+      if (res.ok) {
+        const data = await res.json();
+        setQuestions(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [numLessonId]);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
+
+  const handleDownloadTemplate = async () => {
+    if (!numLessonId) {
+      showToast("Lesson ID not available", false);
+      return;
+    }
+    try {
+      const res = await authFetch(`${API_BASE}/lessons/${numLessonId}/assessment/template/`);
+      if (!res.ok) throw new Error("Failed to download template");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lesson_${numLessonId}_assessment_template.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Downloaded CSV Template");
+    } catch (e: any) {
+      showToast(e.message || "Download failed", false);
+    }
+  };
+
+  const handleUploadCsv = async (file: File) => {
+    if (!numLessonId) {
+      showToast("Lesson ID not available", false);
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await authFetch(`${API_BASE}/lessons/${numLessonId}/assessment/import/`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || `Successfully imported ${data.count || 0} questions!`);
+        if (data.questions) {
+          setQuestions(data.questions);
+        } else {
+          await loadQuestions();
+        }
+      } else {
+        showToast(data.error || "Failed to import CSV", false);
+      }
+    } catch (e: any) {
+      showToast(e.message || "CSV import error", false);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-4 pt-2 border-t border-border">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Lesson Assessment Bank</h4>
+          <p className="text-[10px] text-muted-foreground">Configured specifically for this lesson</p>
+        </div>
+        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">
+          {questions.length} Questions
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={handleDownloadTemplate}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-muted/60 hover:bg-muted text-foreground border border-border transition-all"
+        >
+          <Upload className="size-3 rotate-180 text-muted-foreground" />
+          <span>Template CSV</span>
+        </button>
+
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-brand text-brand-foreground hover:bg-brand-hover shadow-sm transition-all disabled:opacity-50"
+        >
+          {uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
+          <span>Import CSV</span>
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleUploadCsv(file);
+          }}
+        />
+      </div>
+
+      {loading ? (
+        <div className="py-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="size-4 animate-spin text-brand" />
+          <span>Loading questions...</span>
+        </div>
+      ) : questions.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-4 text-center space-y-2 bg-muted/20">
+          <CheckSquare className="size-6 text-muted-foreground mx-auto opacity-50" />
+          <p className="text-xs font-bold text-foreground">No questions in this lesson yet</p>
+          <p className="text-[10px] text-muted-foreground max-w-[28ch] mx-auto leading-relaxed">
+            Download the CSV template, add your questions & explanations, and import it here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          {questions.map((q, idx) => (
+            <div key={q.id || idx} className="p-2.5 rounded-xl border border-border bg-card/80 space-y-1.5 text-xs">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-bold text-foreground leading-snug">
+                  {idx + 1}. {q.question_text}
+                </span>
+                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-brand/10 text-brand border border-brand/20 shrink-0">
+                  Ans: {q.correct_option}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground">
+                <div className={`px-1.5 py-0.5 rounded ${q.correct_option === 'A' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold' : ''}`}>
+                  A: {q.option_a}
+                </div>
+                <div className={`px-1.5 py-0.5 rounded ${q.correct_option === 'B' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold' : ''}`}>
+                  B: {q.option_b}
+                </div>
+                <div className={`px-1.5 py-0.5 rounded ${q.correct_option === 'C' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold' : ''}`}>
+                  C: {q.option_c}
+                </div>
+                <div className={`px-1.5 py-0.5 rounded ${q.correct_option === 'D' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold' : ''}`}>
+                  D: {q.option_d}
+                </div>
+              </div>
+              {q.explanation && (
+                <div className="text-[10px] text-muted-foreground bg-muted/40 p-1.5 rounded border border-border/50">
+                  <strong className="text-foreground">Explanation:</strong> {q.explanation}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+

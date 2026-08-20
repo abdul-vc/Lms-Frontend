@@ -113,60 +113,62 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
   const isStarted = percent > 0 || allUnlockedLessons.some((l: Lesson) => isLessonComplete(l.id));
 
   return (
-    <AppShell maxWidth="max-w-5xl">
+    <AppShell>
       <BackButton to="/catalog" label="Back to Course Catalog" />
-      <div className="rounded-3xl border border-border bg-card text-foreground overflow-hidden mb-8 shadow-xl">
-        <div className="grid md:grid-cols-[1fr_1.1fr]">
-          <div className="aspect-video md:aspect-auto bg-background">
-            <img src={course.hero} alt="" className="size-full object-cover" />
-          </div>
-          <div className="p-8 flex flex-col justify-between">
+      <div className="rounded-3xl border border-border bg-card text-foreground overflow-hidden mb-10 shadow-xl">
+        <div className={course.hero ? "grid lg:grid-cols-[460px_1fr] xl:grid-cols-[520px_1fr]" : ""}>
+          {course.hero ? (
+            <div className="aspect-video lg:aspect-auto h-full min-h-[320px] lg:min-h-[380px] bg-background">
+              <img src={course.hero} alt="" className="size-full object-cover" />
+            </div>
+          ) : null}
+          <div className="p-6 sm:p-8 lg:p-10 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] uppercase tracking-widest text-accent-foreground bg-accent px-2.5 py-0.5 rounded-full border border-brand/20 font-extrabold">{course.category}</span>
-                <span className="text-[10px] text-muted-foreground font-bold">· {course.level}</span>
+                <span className="text-xs uppercase tracking-widest text-accent-foreground bg-accent px-3 py-1 rounded-full border border-brand/20 font-extrabold">{course.category}</span>
+                <span className="text-xs text-muted-foreground font-bold">· {course.level}</span>
               </div>
-              <h1 className="text-2xl font-black tracking-tight text-foreground mb-3">{course.title}</h1>
-              <p className="text-sm text-muted-foreground leading-relaxed font-medium mb-6">{course.subtitle}</p>
-              <div className="grid grid-cols-3 gap-4 text-sm mb-6">
-                <Meta icon={<Clock className="size-4 text-brand" />} label="Duration" value={`${course.durationHrs}h`} />
-                <Meta icon={<BookOpen className="size-4 text-brand" />} label="Modules" value={`${course.modules.length}`} />
-                <Meta icon={<Award className="size-4 text-brand" />} label="Pass" value={`${course.passingScore}%`} />
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground mb-3">{course.title}</h1>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-medium mb-6 max-w-4xl">{course.subtitle}</p>
+              <div className="grid grid-cols-3 gap-6 text-sm mb-6 max-w-xl">
+                <Meta icon={<Clock className="size-5 text-brand" />} label="Duration" value={`${course.durationHrs}h`} />
+                <Meta icon={<BookOpen className="size-5 text-brand" />} label="Modules" value={`${course.modules.length}`} />
+                <Meta icon={<Award className="size-5 text-brand" />} label="Pass" value={`${course.passingScore}%`} />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap pt-4 border-t border-border/50">
+            <div className="flex items-center gap-3.5 flex-wrap pt-5 border-t border-border/50">
               {/* SCORM Course Launch Button */}
               {isAccessGranted && course.is_scorm && course.scorm_package?.launch_url ? (
                 <button
                   onClick={() => setShowScormPlayer(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-foreground text-xs font-black px-5 py-3 rounded-xl inline-flex items-center gap-2 transition-all shadow-md"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-foreground text-sm font-black px-6 py-3.5 rounded-xl inline-flex items-center gap-2 transition-all shadow-md"
                 >
-                  <Sparkles className="size-4 text-amber-300 animate-spin-slow" /> Launch SCORM Course 🚀
+                  <Sparkles className="size-5 text-amber-300 animate-spin-slow" /> Launch SCORM Course 🚀
                 </button>
               ) : isAccessGranted && hasLessons ? (
                 <Link
                   to="/courses/$courseId/play/$lessonId"
                   params={{ courseId: course.id, lessonId: resumeLessonId! }}
-                  className="bg-brand text-brand-foreground hover:opacity-90 text-xs font-black px-5 py-3 rounded-xl inline-flex items-center gap-2 transition-opacity shadow-sm"
+                  className="bg-brand text-brand-foreground hover:opacity-90 text-sm sm:text-base font-black px-6 py-3.5 rounded-xl inline-flex items-center gap-2.5 transition-opacity shadow-sm"
                 >
-                  <PlayCircle className="size-4" /> {isStarted ? "Resume Course" : "Start Course"}
+                  <PlayCircle className="size-5" /> {isStarted ? "Resume Course" : "Start Course"}
                 </Link>
               ) : (
                 <span
                   title={isAccessGranted ? "Add modules and lessons in Content Authoring first" : "Course locked — request access from Organization Admin"}
-                  className="bg-muted text-muted-foreground text-xs font-bold px-4 py-2.5 rounded-xl inline-flex items-center gap-2 cursor-not-allowed select-none border border-border"
+                  className="bg-muted text-muted-foreground text-sm font-bold px-5 py-3.5 rounded-xl inline-flex items-center gap-2.5 cursor-not-allowed select-none border border-border"
                 >
-                  <Lock className="size-4 text-muted-foreground" /> Course Locked 🔒
+                  <Lock className="size-5 text-muted-foreground" /> Course Locked 🔒
                 </span>
               )}
 
               {/* Take Assessment */}
-              {isAccessGranted && (
+              {isAccessGranted && Boolean(course.has_assessment) && (
                 <Link
                   to="/courses/$courseId/assessment"
                   params={{ courseId: course.id }}
-                  className="text-xs font-bold px-4 py-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors"
+                  className="text-sm font-bold px-5 py-3.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Take Assessment
                 </Link>
@@ -202,36 +204,36 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
         )}
       </div>
 
-      <h2 className="text-xl font-black tracking-tight text-foreground mb-4">Curriculum</h2>
+      <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground mb-6">Curriculum</h2>
       {!isAccessGranted ? (
-        <div className="rounded-2xl border border-border bg-card/90 p-8 text-center border-dashed border-2 text-foreground">
-          <Lock className="size-10 text-amber-400 mx-auto mb-3" />
-          <h3 className="text-base font-extrabold text-foreground mb-1">Course Curriculum Locked 🔒</h3>
-          <p className="text-xs text-foreground max-w-[48ch] mx-auto font-medium leading-relaxed">
+        <div className="rounded-3xl border border-border bg-card/90 p-8 sm:p-10 text-center border-dashed border-2 text-foreground">
+          <Lock className="size-12 text-amber-400 mx-auto mb-3" />
+          <h3 className="text-lg font-extrabold text-foreground mb-1.5">Course Curriculum Locked 🔒</h3>
+          <p className="text-sm text-foreground max-w-[54ch] mx-auto font-medium leading-relaxed">
             All courses are locked by default. Click <strong>"Request Access 🔒"</strong> above to send an access request to your Organization Admin.
           </p>
         </div>
       ) : course.modules.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card/90 p-8 text-center text-foreground">
-          <BookOpen className="size-8 text-muted-foreground mx-auto mb-3 opacity-40" />
-          <p className="text-sm font-bold text-foreground mb-1">No content yet</p>
-          <p className="text-xs text-muted-foreground max-w-[40ch] mx-auto font-medium">
+        <div className="rounded-3xl border border-border bg-card/90 p-8 sm:p-10 text-center text-foreground">
+          <BookOpen className="size-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+          <p className="text-base font-bold text-foreground mb-1">No content yet</p>
+          <p className="text-sm text-muted-foreground max-w-[46ch] mx-auto font-medium">
             Go to <strong>Content Authoring</strong>, select this course, and add modules and lessons to build the curriculum.
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {course.modules.map((m: Module, idx: number) => (
-            <div key={m.id} className="rounded-2xl border border-border bg-card text-foreground p-6 shadow-md">
-              <div className="flex items-start gap-4">
-                <div className="size-10 rounded-xl grid place-items-center text-sm font-black bg-accent text-accent-foreground border border-brand/20 shrink-0">
+            <div key={m.id} className="rounded-3xl border border-border bg-card text-foreground p-6 sm:p-8 lg:p-10 shadow-md">
+              <div className="flex items-start gap-5">
+                <div className="size-12 sm:size-14 rounded-2xl grid place-items-center text-base sm:text-lg font-black bg-accent text-accent-foreground border border-brand/20 shrink-0">
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-black text-foreground tracking-tight">{m.title}</h3>
-                  <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">{m.summary}</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">{m.title}</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground font-medium mt-1.5 leading-relaxed">{m.summary}</p>
                   {m.lessons.length > 0 && (
-                    <ul className="mt-4 space-y-2 pt-3 border-t border-border/50">
+                    <ul className="mt-6 space-y-3 pt-5 border-t border-border/50">
                       {m.lessons.map((l: Lesson) => {
                         const done = isLessonComplete(l.id);
                         const isCurrent = l.id === resumeLessonId && !done;
@@ -240,16 +242,16 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
                             <Link
                               to="/courses/$courseId/play/$lessonId"
                               params={{ courseId: course.id, lessonId: l.id }}
-                              className={`flex items-center gap-3 text-xs py-2 px-3 rounded-xl transition-all ${
+                              className={`flex items-center gap-4 text-sm sm:text-base py-3.5 px-4 sm:px-5 rounded-2xl transition-all ${
                                 isCurrent
-                                  ? "bg-accent text-accent-foreground font-bold border border-brand/20"
+                                  ? "bg-accent text-accent-foreground font-bold border border-brand/20 shadow-sm"
                                   : "hover:bg-muted text-slate-800 font-semibold"
                               }`}
                             >
-                              <CheckCircle2 className={`size-4 shrink-0 ${done ? "text-emerald-500 fill-emerald-100" : "text-foreground"}`} />
-                              <span className="flex-1 font-bold text-foreground">{l.title}</span>
+                              <CheckCircle2 className={`size-5 shrink-0 ${done ? "text-emerald-500 fill-emerald-100" : "text-foreground"}`} />
+                              <span className="flex-1 font-bold text-foreground truncate">{l.title}</span>
                               {l.type === "video" && (
-                                <span className="text-[9px] uppercase tracking-widest bg-accent text-accent-foreground px-2 py-0.5 rounded font-black border border-brand/20">
+                                <span className="text-[10px] sm:text-xs uppercase tracking-widest bg-accent text-accent-foreground px-2.5 py-1 rounded-md font-black border border-brand/20 shrink-0">
                                   Video
                                 </span>
                               )}
@@ -271,10 +273,10 @@ function CourseOverview({ course }: { course: ReturnType<typeof adaptApiCourse> 
 
 function Meta({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       <div className="text-muted-foreground mb-1">{icon}</div>
-      <div className="text-base font-black text-foreground">{value}</div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-extrabold">{label}</div>
+      <div className="text-lg sm:text-xl font-black text-foreground">{value}</div>
+      <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-extrabold">{label}</div>
     </div>
   );
 }
@@ -309,7 +311,7 @@ function RequestAccessControl({
 
   if (status === 'accepted') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold shadow-sm">
+      <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold shadow-sm">
         <CheckCircle2 className="size-4 text-emerald-600" /> Access Granted ✅
       </span>
     );
@@ -317,7 +319,7 @@ function RequestAccessControl({
 
   if (status === 'pending') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-sm font-semibold shadow-sm">
+      <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-sm font-bold shadow-sm">
         <Clock className="size-4 animate-spin text-amber-600" /> Request Pending ⏳
       </span>
     );
@@ -326,13 +328,13 @@ function RequestAccessControl({
   if (status === 'rejected') {
     return (
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-sm font-semibold shadow-sm">
+        <span className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-sm font-bold shadow-sm">
           <Lock className="size-4 text-rose-600" /> Access Denied ❌
         </span>
         <Link
           to="/messenger"
           search={{ userId: undefined }}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 text-foreground hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 text-foreground hover:bg-indigo-700 transition-colors text-sm font-bold shadow-sm"
         >
           <MessageSquare className="size-4" /> Message Admin 💬
         </Link>
@@ -344,7 +346,7 @@ function RequestAccessControl({
     <button
       onClick={handleRequest}
       disabled={requesting}
-      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand text-brand-foreground hover:opacity-90 transition-opacity text-sm font-medium shadow-sm disabled:opacity-60"
+      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand text-brand-foreground hover:opacity-90 transition-opacity text-sm font-bold shadow-sm disabled:opacity-60"
     >
       {requesting ? <Clock className="size-4 animate-spin text-brand-foreground" /> : <Lock className="size-4 text-brand-foreground" />}
       {requesting ? "Submitting..." : "Request Access 🔒"}

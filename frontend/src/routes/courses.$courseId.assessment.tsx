@@ -66,6 +66,11 @@ function Assessment() {
   const [submittedCurrent, setSubmittedCurrent] = useState(false);
 
   useEffect(() => {
+    if (course && course.has_assessment === false) {
+      navigate({ to: "/courses/$courseId", params: { courseId: course.id } });
+      return;
+    }
+
     async function checkLock() {
       if (!course || !course.modules) return false;
       let allCompleted = true;
@@ -92,34 +97,48 @@ function Assessment() {
           : (typeof course?.id === 'number' ? course.id : NaN);
         
         if (!isNaN(courseIdNum)) {
-          Promise.all([
-            fetchAssessmentQuestions(courseIdNum).catch(() => []),
-            authFetch(`${API_BASE}/courses/${courseIdNum}/assessment/start/`, { method: 'POST' }).then(res => res.ok ? res.json() : null).catch(() => null)
-          ]).then(([apiQs, attemptData]) => {
-            if (apiQs && apiQs.length > 0) {
-               const mappedQs = apiQs.map((q: any) => {
-                 const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
-                 return {
-                   id: q.id.toString(),
-                   kind: 'single',
-                   prompt: q.question_text,
-                   options: [q.option_a, q.option_b, q.option_c, q.option_d],
-                   correct: mapping[q.correct_option] ?? 0
-                 } as Question;
-               });
-               setQuestions(mappedQs);
-            } else {
-               setQuestions([]);
-            }
-            
-            if (attemptData && attemptData.id) {
-              setAttemptId(attemptData.id);
-            }
-            setLoading(false);
-          }).catch(() => {
-            setQuestions([]);
-            setLoading(false);
-          });
+          authFetch(`${API_BASE}/courses/${courseIdNum}/assessment/start/`, { method: 'POST' })
+            .then(async (res) => {
+              if (res.status === 403) {
+                setIsLocked(true);
+                setLoading(false);
+                return;
+              }
+              const attemptData = res.ok ? await res.json() : null;
+              if (attemptData?.questions && attemptData.questions.length > 0) {
+                const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+                const mappedQs = attemptData.questions.map((q: any) => ({
+                  id: q.id.toString(),
+                  kind: 'single',
+                  prompt: q.question_text,
+                  options: [q.option_a, q.option_b, q.option_c, q.option_d],
+                  correct: mapping[q.correct_option] ?? 0,
+                  explanation: q.explanation || '',
+                } as Question));
+                setQuestions(mappedQs);
+              } else {
+                const apiQs = await fetchAssessmentQuestions(courseIdNum).catch(() => []);
+                const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+                const mappedQs = apiQs.map((q: any) => ({
+                  id: q.id.toString(),
+                  kind: 'single',
+                  prompt: q.question_text,
+                  options: [q.option_a, q.option_b, q.option_c, q.option_d],
+                  correct: mapping[q.correct_option] ?? 0,
+                  explanation: q.explanation || '',
+                } as Question));
+                setQuestions(mappedQs);
+              }
+
+              if (attemptData?.id) {
+                setAttemptId(attemptData.id);
+              }
+              setLoading(false);
+            })
+            .catch(() => {
+              setQuestions([]);
+              setLoading(false);
+            });
         } else {
           setQuestions([]);
           setLoading(false);
@@ -253,7 +272,7 @@ function Assessment() {
           <p className="text-muted-foreground mb-6">
             {passed
               ? `You passed the ${course.title} assessment. A certificate has been issued to your account.`
-              : `You scored below the ${course.passingScore}% passing mark. Review the lessons and try again.`}
+              : `You scored below the ${course.passingScore}% passing mark. To retake the assessment, you must review and complete the course lessons again.`}
           </p>
           <div className="flex items-center justify-center gap-8 mb-8">
             <Metric label="Your score" value={`${pct}%`} highlight={passed} />
@@ -270,10 +289,10 @@ function Assessment() {
               </Link>
             ) : (
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => navigate({ to: "/courses/$courseId", params: { courseId: course.id } })}
                 className="px-5 py-2.5 rounded-lg bg-brand text-brand-foreground text-sm font-medium inline-flex items-center gap-2"
               >
-                <RotateCcw className="size-4" /> Retake assessment
+                <RotateCcw className="size-4" /> Review & Complete Lessons
               </button>
             )}
             <button
@@ -394,32 +413,93 @@ function QuestionBody({
   submitted: boolean;
 }) {
   if (q.kind === "single") {
+    const isWrong = submitted && value !== undefined && value !== q.correct;
+    const isRight = submitted && value === q.correct;
+    const selectedIdx = typeof value === "number" ? value : -1;
+
     return (
-      <div className="space-y-2">
-        {q.options.map((opt, i) => {
-          const selected = value === i;
-          const isCorrect = i === q.correct;
-          
-          let style = "ring-1 ring-border bg-background hover:ring-brand/40";
-          if (selected && !submitted) style = "bg-brand/5 ring-1 ring-brand";
-          if (submitted) {
-             if (isCorrect) style = "bg-success/10 ring-1 ring-success text-success";
-             else if (selected) style = "bg-destructive/10 ring-1 ring-destructive text-destructive";
-             else style = "ring-1 ring-border bg-background/50 opacity-50";
-          }
-          
-          return (
-            <button
-              key={opt}
-              onClick={() => onChange(i)}
-              className={`w-full text-left p-4 rounded-xl text-sm transition-all flex items-center justify-between ${style}`}
-            >
-              <span>{opt}</span>
-              {submitted && isCorrect && <Check className="size-4" />}
-              {submitted && selected && !isCorrect && <X className="size-4" />}
-            </button>
-          );
-        })}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          {q.options.map((opt, i) => {
+            const selected = value === i;
+            const isCorrect = i === q.correct;
+            
+            let style = "ring-1 ring-border bg-background hover:ring-brand/40";
+            if (selected && !submitted) style = "bg-brand/5 ring-1 ring-brand";
+            if (submitted) {
+               if (isCorrect) style = "bg-success/10 ring-1 ring-success text-success font-medium";
+               else if (selected) style = "bg-destructive/10 ring-1 ring-destructive text-destructive font-medium";
+               else style = "ring-1 ring-border bg-background/50 opacity-50";
+            }
+            
+            return (
+              <button
+                key={opt}
+                disabled={submitted}
+                onClick={() => onChange(i)}
+                className={`w-full text-left p-4 rounded-xl text-sm transition-all flex items-center justify-between ${style}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-xs opacity-70 w-5 font-semibold">
+                    {String.fromCharCode(65 + i)}.
+                  </span>
+                  <span>{opt}</span>
+                </div>
+                {submitted && isCorrect && <Check className="size-4 shrink-0" />}
+                {submitted && selected && !isCorrect && <X className="size-4 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── WRONG ANSWER EXPLANATION BOX ── */}
+        {isWrong && (
+          <div className="mt-4 p-4 rounded-xl bg-card border border-destructive/20 text-xs space-y-2.5 animate-in fade-in">
+            <div className="flex items-center gap-2 font-semibold uppercase tracking-wider text-destructive">
+              <AlertCircle className="size-4" />
+              <span>Answer Review</span>
+            </div>
+            <div className="space-y-1 font-mono text-xs">
+              <div className="text-destructive font-medium flex items-center gap-1.5">
+                <X className="size-3.5" />
+                <span>Your answer: Option {String.fromCharCode(65 + selectedIdx)}</span>
+              </div>
+              <div className="text-success font-medium flex items-center gap-1.5">
+                <Check className="size-3.5" />
+                <span>Correct answer: Option {String.fromCharCode(65 + q.correct)}</span>
+              </div>
+            </div>
+            {q.explanation ? (
+              <div className="pt-2 border-t border-border/60">
+                <p className="text-xs text-foreground leading-relaxed">
+                  <strong className="text-muted-foreground font-semibold">Explanation: </strong>
+                  {q.explanation}
+                </p>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-border/60">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  <strong className="font-semibold">Explanation: </strong>
+                  Option {String.fromCharCode(65 + q.correct)} ({q.options[q.correct]}) is the correct answer according to the course materials.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CORRECT ANSWER CONFIRMATION WITH EXPLANATION ── */}
+        {isRight && q.explanation && (
+          <div className="mt-4 p-4 rounded-xl bg-card border border-success/20 text-xs space-y-1.5 animate-in fade-in">
+            <div className="flex items-center gap-1.5 font-semibold uppercase tracking-wider text-success">
+              <Check className="size-4" />
+              <span>Correct Answer</span>
+            </div>
+            <p className="text-xs text-foreground leading-relaxed">
+              <strong className="text-muted-foreground font-semibold">Explanation: </strong>
+              {q.explanation}
+            </p>
+          </div>
+        )}
       </div>
     );
   }

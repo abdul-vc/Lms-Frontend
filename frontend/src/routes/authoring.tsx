@@ -13,7 +13,7 @@ import {
   fetchCourses, createCourse, updateCourse, deleteCourse,
   createModule, updateModule, deleteModule,
   createLesson, updateLesson, deleteLesson,
-  downloadAssessmentCsvTemplate, uploadAssessmentCsv, uploadLessonVideo,
+  downloadAssessmentCsvTemplate, uploadAssessmentCsv, deleteAssessmentQuestions, uploadLessonVideo,
   exportScormPackage, fetchCourseVersions,
   rollbackCourseVersion, uploadUniversalImport,
   fetchAssessmentQuestions, type ApiAssessmentQuestion
@@ -152,6 +152,7 @@ function Authoring() {
   const [moduleForm, setModuleForm] = useState<ModuleForm>(defaultModuleForm);
   const [lessonForm, setLessonForm] = useState<LessonForm>(defaultLessonForm);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [isDeletingAssessment, setIsDeletingAssessment] = useState(false);
   const [importedQuestions, setImportedQuestions] = useState<ApiAssessmentQuestion[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
@@ -236,6 +237,8 @@ function Authoring() {
     }
   };
 
+  const search = Route.useSearch();
+
   // ── Load ─────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
@@ -244,8 +247,7 @@ function Authoring() {
       setCourses(data);
 
       // Auto-select course if courseId query param is provided
-      const searchParams = new URLSearchParams(window.location.search);
-      const qCourseId = searchParams.get('courseId');
+      const qCourseId = search.courseId;
       if (qCourseId) {
         const cid = Number(qCourseId);
         const match = data.find((x) => x.id === cid);
@@ -259,9 +261,7 @@ function Authoring() {
     } finally {
       setLoading(false);
     }
-  }, [show]);
-
-  const search = Route.useSearch();
+  }, [search.courseId, show]);
 
   useEffect(() => {
     load();
@@ -329,6 +329,24 @@ function Authoring() {
     setExpandedCourses((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleModule = (id: number) =>
     setExpandedModules((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const handleAddLesson = async (courseId: number, moduleId: number) => {
+    try {
+      const c = courses.find((x) => x.id === courseId);
+      const m = c?.modules.find((x) => x.id === moduleId);
+      const newOrder = m?.lessons.length ?? 0;
+      const created = await createLesson(moduleId, {
+        title: "Untitled Lesson",
+        duration: "5 min",
+        type: "video",
+        order: newOrder,
+      });
+      await load();
+      setSelection({ kind: "lesson", courseId, moduleId, lessonId: created.id });
+    } catch (e: any) {
+      show(e.message || "Failed to initialize lesson", false);
+    }
+  };
 
   // ── Save handlers ─────────────────────────────────────────────────────────
   const save = async () => {
@@ -590,7 +608,7 @@ function Authoring() {
                                   })}
                                   {/* Add lesson button */}
                                   <button
-                                    onClick={() => setSelection({ kind: "new-lesson", courseId: course.id, moduleId: mod.id })}
+                                    onClick={() => handleAddLesson(course.id, mod.id)}
                                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:text-brand hover:bg-brand/5 transition-colors rounded"
                                   >
                                     <Plus className="size-3" /> Add lesson
@@ -633,13 +651,6 @@ function Authoring() {
                   <p className="text-xs text-muted-foreground">Full-width preview of course layout, modules, and interactive lesson player</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsPreviewMode(false)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors"
-              >
-                <FileEdit className="size-3.5 text-brand" />
-                <span>Back to Edit Mode</span>
-              </button>
             </div>
 
             {selectedCourse ? (
@@ -732,19 +743,7 @@ function Authoring() {
                   )}
                 </div>
 
-                {/* Catalog Link Button */}
-                {selectedCourse.status === "published" && (
-                  <div className="pt-2">
-                    <a
-                      href={`/courses/api-${String(selectedCourse.id).replace('api-', '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand text-brand-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
-                    >
-                      <Eye className="size-4" /> View Live in Learner Catalog
-                    </a>
-                  </div>
-                )}
+
               </div>
             ) : (
               <div className="flex-1 grid place-items-center text-center p-12">
@@ -1044,13 +1043,53 @@ function Authoring() {
                                   }}
                                 />
                               </label>
+
+                              {importedQuestions.length > 0 && (
+                                <button
+                                  type="button"
+                                  disabled={isDeletingAssessment}
+                                  onClick={async () => {
+                                    if (!confirm("Are you sure you want to remove the imported assessment question bank for this course?")) return;
+                                    setIsDeletingAssessment(true);
+                                    try {
+                                      const res = await deleteAssessmentQuestions(selection.courseId);
+                                      if (res.error) {
+                                        show(res.error, false);
+                                      } else {
+                                        show(res.message || "Assessment removed successfully", true);
+                                        setImportedQuestions([]);
+                                        try {
+                                          const fresh = await fetchAssessmentQuestions(selection.courseId);
+                                          setImportedQuestions(fresh || []);
+                                        } catch {
+                                          setImportedQuestions([]);
+                                        }
+                                      }
+                                    } catch (err: any) {
+                                      show(err.message || "Failed to remove assessment", false);
+                                    } finally {
+                                      setIsDeletingAssessment(false);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-medium transition-colors disabled:opacity-50"
+                                >
+                                  {isDeletingAssessment ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+                                  <span>{isDeletingAssessment ? "Removing..." : "Remove Assessment"}</span>
+                                </button>
+                              )}
                             </div>
                             {importedQuestions.length > 0 && (
                               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
                                 {importedQuestions.map((q) => (
-                                  <div key={q.id} className="text-xs p-2 rounded border border-border">
-                                    <p className="font-medium">{q.question_text}</p>
-                                    <p className="text-muted-foreground">Correct: {q.correct_option}</p>
+                                  <div key={q.id} className="text-xs p-2.5 rounded border border-border space-y-1">
+                                    <p className="font-medium text-foreground">{q.question_text}</p>
+                                    <p className="text-muted-foreground font-mono">Correct: {q.correct_option}</p>
+                                    {q.explanation && (
+                                      <p className="text-muted-foreground pt-1 border-t border-border/50">
+                                        <strong className="text-foreground font-semibold">Explanation: </strong>
+                                        {q.explanation}
+                                      </p>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -1108,7 +1147,33 @@ function Authoring() {
                             <button
                               key={value}
                               type="button"
-                              onClick={() => setLessonForm((f) => ({ ...f, type: value as ApiLesson["type"], interaction: value === "video" || value === "reading" ? null : f.interaction }))}
+                              onClick={async () => {
+                                const newType = value as ApiLesson["type"];
+                                setLessonForm((f) => ({ ...f, type: newType, interaction: newType === "video" || newType === "reading" ? null : f.interaction }));
+                                if (selection?.kind === "lesson") {
+                                  try {
+                                    await updateLesson(selection.lessonId, { type: newType });
+                                    setCourses((prevCourses) =>
+                                      prevCourses.map((c) => {
+                                        if (!c.modules) return c;
+                                        return {
+                                          ...c,
+                                          modules: c.modules.map((m) => {
+                                            if (!m.lessons) return m;
+                                            return {
+                                              ...m,
+                                              lessons: m.lessons.map((l) => {
+                                                if (l.id !== selection.lessonId) return l;
+                                                return { ...l, type: newType };
+                                              }),
+                                            };
+                                          }),
+                                        };
+                                      })
+                                    );
+                                  } catch {}
+                                }
+                              }}
                               className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-[10px] font-semibold uppercase tracking-wide transition-all ${lessonForm.type === value ? "bg-brand text-brand-foreground border-brand" : "border-border text-muted-foreground hover:border-brand/40 hover:bg-muted/50"}`}
                             >
                               <Icon className="size-4" />
@@ -1118,7 +1183,7 @@ function Authoring() {
                         </div>
                       </Field>
 
-                      {/* Video picker — only for video lessons */}
+                      {/* Video picker — for video lessons */}
                       {lessonForm.type === "video" && (
                         <Field label="Video File" hint="Upload the video for this lesson">
                           <VideoUploadField
@@ -1130,11 +1195,12 @@ function Authoring() {
                         </Field>
                       )}
 
-                      {/* Block Editor Canvas (for non-video lessons) */}
-                      {selectedLesson && selectedLesson.type !== "video" && selectedLesson.block_tree && (
+                      {/* Block Editor Canvas (available immediately for all lesson types) */}
+                      {selectedLesson && selectedLesson.block_tree && (
                         <div className="pt-6 border-t border-border">
                           <BlockEditorCanvas
                             tree={selectedLesson.block_tree}
+                            lessonId={selectedLesson.id}
                             onTreeUpdated={load}
                             onBlockPayloadUpdated={(blockId, newPayload) => {
                               setCourses((prevCourses) =>

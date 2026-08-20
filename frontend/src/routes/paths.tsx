@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { ArrowRight, Lock } from "lucide-react";
-import { fetchLearningPaths, getCourseHeroUrl, FALLBACK_HERO } from "@/lib/courses-api";
+import { fetchLearningPaths, getCourseHeroUrl } from "@/lib/courses-api";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { PaginationControls } from "@/components/ui/PaginationControls";
@@ -121,12 +121,13 @@ function Paths() {
                             {idx + 1}
                           </div>
                           <div className="size-12 rounded-lg bg-background flex-shrink-0 overflow-hidden border border-border">
-                            <img
-                              src={heroUrl}
-                              alt=""
-                              onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_HERO; }}
-                              className="size-full object-cover"
-                            />
+                            {heroUrl ? (
+                              <img
+                                src={heroUrl}
+                                alt=""
+                                className="size-full object-cover"
+                              />
+                            ) : null}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-extrabold text-foreground truncate">{c.title}</h4>

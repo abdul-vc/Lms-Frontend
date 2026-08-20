@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { fetchLearnerDashboard, getCourseHeroUrl, FALLBACK_HERO } from "@/lib/courses-api";
+import { fetchLearnerDashboard, getCourseHeroUrl } from "@/lib/courses-api";
 import { useAuth } from "@/lib/auth";
 import { 
   Flame, Trophy, Zap, BookOpen, Play, ArrowRight, Sparkles, CheckCircle2, 
@@ -217,12 +217,13 @@ function Dashboard() {
                     <div className="space-y-3">
                       {/* Thumbnail / Header Pill */}
                       <div className="relative h-36 rounded-xl overflow-hidden bg-background border border-border">
-                        <img
-                          src={getCourseHeroUrl(course.hero_url)}
-                          alt={course.title}
-                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_HERO; }}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        {course.hero_url ? (
+                          <img
+                            src={getCourseHeroUrl(course.hero_url)}
+                            alt={course.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : null}
                         <div className="absolute top-3 left-3 flex items-center gap-2">
                           <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-background/90 text-brand border border-brand/40 backdrop-blur-md">
                             {course.category}

@@ -53,6 +53,8 @@ export interface Course {
   accent: string;
   is_scorm?: boolean;
   scorm_package?: any;
+  has_assessment?: boolean;
+  assessment_question_count?: number;
 }
 
 export interface LearningPath {

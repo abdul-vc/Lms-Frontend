@@ -79,28 +79,28 @@ function SitesPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card/90 overflow-hidden shadow-xl">
-        <div className="p-5 border-b border-border bg-background/60">
-          <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Filters</div>
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative w-full sm:min-w-[200px] sm:flex-1">
-              <input 
-                type="text" 
-                placeholder="Search site..." 
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 transition-all"
-              />
-            </div>
+        <div className="p-5 border-b border-border bg-background/60 space-y-3">
+          <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Filters</div>
+          <div className="relative w-full">
+            <input 
+              type="text" 
+              placeholder="Search site..." 
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-3">
             <select
               value={productTypeFilter}
               onChange={(e) => {
                 setProductTypeFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full sm:min-w-[200px] bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
+              className="w-56 bg-background border border-border rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
             >
               <option value="">All Product Types</option>
@@ -108,12 +108,14 @@ function SitesPage() {
                 <option key={pt} value={pt}>{pt}</option>
               ))}
             </select>
-            <button 
-              onClick={clearFilters}
-              className="px-5 py-2.5 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-colors font-semibold text-xs"
-            >
-              Clear Filters
-            </button>
+            {(Boolean(searchTerm.trim()) || Boolean(productTypeFilter)) && (
+              <button 
+                onClick={clearFilters}
+                className="px-5 py-2.5 bg-card text-foreground rounded-xl border border-border hover:bg-muted transition-colors font-semibold text-xs"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
         
@@ -124,11 +126,11 @@ function SitesPage() {
                 <th className="px-6 py-4">Site Name</th>
                 <th className="px-6 py-4">Organization</th>
                 <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Product Type</th>
-                <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Created</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4 text-center">Product Type</th>
+                <th className="px-6 py-4 text-center">Contact</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Created At</th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -143,18 +145,21 @@ function SitesPage() {
               ) : paginatedSites.map((site) => (
                 <DataTableRow 
                   key={site.id}
+                  actionsAlign="center"
                   summary={
                     <>
                       <td className="px-6 py-4 font-semibold text-foreground">{site.name || '-'}</td>
                       <td className="px-6 py-4 text-foreground">{site.organization_name || '-'}</td>
                       <td className="px-6 py-4 text-foreground">{site.location_address || '-'}</td>
-                      <td className="px-6 py-4 text-foreground">{site.product_type || '-'}</td>
-                      <td className="px-6 py-4 text-foreground">{site.contact_name || '-'}</td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={site.status} />
+                      <td className="px-6 py-4 text-center text-foreground">{site.product_type || '-'}</td>
+                      <td className="px-6 py-4 text-center text-foreground">{site.contact_name || '-'}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center">
+                          <StatusBadge status={site.status} />
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {site.created_at ? new Date(site.created_at).toLocaleDateString('en-GB') : '-'}
+                      <td className="px-6 py-4 text-center text-muted-foreground">
+                        {site.created_at ? new Date(site.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
                     </>
                   }

@@ -8,9 +8,10 @@ interface DataTableRowProps {
   onEdit?: () => void;
   onDelete?: () => void;
   customActions?: React.ReactNode;
+  actionsAlign?: 'right' | 'center';
 }
 
-export function DataTableRow({ summary, details, onEdit, onDelete, customActions }: DataTableRowProps) {
+export function DataTableRow({ summary, details, onEdit, onDelete, customActions, actionsAlign = 'right' }: DataTableRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -20,8 +21,8 @@ export function DataTableRow({ summary, details, onEdit, onDelete, customActions
         className="cursor-pointer hover:bg-muted/50 border-b border-border transition-colors"
       >
         {summary}
-        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-end gap-2">
+        <td className={cn("px-6 py-4 whitespace-nowrap text-sm font-medium", actionsAlign === 'center' ? "text-center" : "text-right")} onClick={(e) => e.stopPropagation()}>
+          <div className={cn("flex items-center gap-2", actionsAlign === 'center' ? "justify-center" : "justify-end")}>
             {customActions}
             {onEdit && (
               <button 

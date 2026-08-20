@@ -501,6 +501,12 @@ function CourseBuilderPage() {
                         );
                       })}
                     </div>
+                    {q.explanation && (
+                      <p className="text-[11px] text-muted-foreground border-t border-border/40 pt-1.5 font-sans">
+                        <strong className="text-foreground font-medium">Explanation: </strong>
+                        {q.explanation}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

@@ -88,9 +88,13 @@ function Player() {
         params: { courseId: course.id, lessonId: next.id },
       });
     } else if (course?.id) {
-      navigate({ to: "/courses/$courseId/assessment", params: { courseId: course.id } });
+      if (course.has_assessment) {
+        navigate({ to: "/courses/$courseId/assessment", params: { courseId: course.id } });
+      } else {
+        navigate({ to: "/courses/$courseId", params: { courseId: course.id } });
+      }
     }
-  }, [complete, next, navigate, course?.id]);
+  }, [complete, next, navigate, course?.id, course?.has_assessment]);
 
   if (!course || !lesson) {
     return (
@@ -281,7 +285,13 @@ function Player() {
                     : "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
                 }`}
               >
-                <span>{next ? "Mark Complete & Continue" : "Finish Module → Assessment"}</span>
+                <span>
+                  {next
+                    ? "Mark Complete & Continue"
+                    : course.has_assessment
+                      ? "Finish Module → Assessment"
+                      : "Finish Course"}
+                </span>
                 <ChevronRight className="size-4" />
               </button>
             </div>
