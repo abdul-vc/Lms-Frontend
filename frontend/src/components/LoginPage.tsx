@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { User, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, BarChart3, Users, AlertCircle, Loader2, KeyRound, CheckCircle2 } from "lucide-react";
-import { useAuth, API_BASE } from "@/lib/auth";
+import { useAuth, API_BASE, normalizeUrl } from "@/lib/auth";
 
 interface BrandingData {
   organization_name?: string;
@@ -185,7 +185,7 @@ export function LoginPage({ orgSlug }: { orgSlug: string | null }) {
         {/* TOP BRANDING LOGO */}
         <div className="relative z-10 flex flex-col items-center justify-center pt-8 lg:pt-12 text-center">
           {branding?.logo_url ? (
-            <img src={branding.logo_url} alt={platformTitle} className="h-16 w-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
+            <img src={normalizeUrl(branding.logo_url)} alt={platformTitle} className="h-16 w-auto object-contain mb-4 filter drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
           ) : (
             <div className="relative mb-5 group">
               {/* Glowing Futuristic Geometric Box Icon */}

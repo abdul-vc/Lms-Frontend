@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Save, Eye, EyeOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { authFetch, API_BASE } from '@/lib/auth';
+import { authFetch, API_BASE, normalizeUrl } from '@/lib/auth';
 import { ComplianceBadgeListEditor } from '@/components/ComplianceBadgeListEditor';
 import { BackButton } from '@/components/BackButton';
 
@@ -46,7 +46,7 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (url: s
       <label className="block text-xs font-semibold text-foreground mb-1">Organization Logo</label>
       <div className="flex items-center gap-4 bg-background p-3 rounded-xl border border-border">
         {value ? (
-          <img src={value} alt="Organization logo" className="size-14 rounded-lg object-cover border border-border" />
+          <img src={normalizeUrl(value)} alt="Organization logo" className="size-14 rounded-lg object-cover border border-border" />
         ) : (
           <div className="size-14 rounded-lg bg-card border border-border grid place-items-center text-muted-foreground text-xs font-semibold">No logo</div>
         )}

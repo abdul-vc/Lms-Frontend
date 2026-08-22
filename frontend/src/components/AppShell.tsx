@@ -2,7 +2,7 @@ import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { resolveIcon, Icon } from '@/components/IconRegistry';
 import { useState, useEffect } from 'react';
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router';
-import { useAuth, authFetch, API_BASE } from '@/lib/auth';
+import { useAuth, authFetch, API_BASE, normalizeUrl } from '@/lib/auth';
 import { Search, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -204,7 +204,7 @@ export function AppShell({ children, rightRail, maxWidth = "w-full" }: { childre
       <div className="px-3 py-4 border-b border-border/60 shrink-0">
         <div className={cn("flex items-center gap-3 mb-2", !isExpanded && "justify-center mb-0")}>
           {user?.organization?.logo_url ? (
-            <img src={user.organization.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5 shrink-0" />
+            <img src={normalizeUrl(user.organization.logo_url)} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5 shrink-0" />
           ) : (
             <div className="size-8 rounded-lg flex items-center justify-center text-brand-foreground font-bold text-sm bg-brand shadow-sm shrink-0">
               {(data.organization_name || "LMS")[0]}

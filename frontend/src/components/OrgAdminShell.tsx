@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, normalizeUrl } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { ThemeToggle } from "./ThemeToggle";
@@ -66,7 +66,7 @@ export function OrgAdminShell({ children, maxWidth = "w-full" }: { children: Rea
           title="Back to Learner Dashboard"
         >
           {user?.organization?.logo_url ? (
-            <img src={user.organization.logo_url} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5 shrink-0" />
+            <img src={normalizeUrl(user.organization.logo_url)} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm ring-1 ring-border p-0.5 shrink-0" />
           ) : (
             <div
               className="size-8 rounded-lg flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm"
