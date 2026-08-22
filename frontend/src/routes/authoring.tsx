@@ -18,7 +18,7 @@ import {
   rollbackCourseVersion, uploadUniversalImport,
   fetchAssessmentQuestions, type ApiAssessmentQuestion
 } from "@/lib/courses-api";
-import { authFetch, useAuth, API_BASE } from "@/lib/auth";
+import { authFetch, useAuth, API_BASE, normalizeUrl } from "@/lib/auth";
 import { ScormPlayer } from "@/components/ScormPlayer";
 import { PolymorphicLessonRenderer } from "@/components/PolymorphicLessonRenderer";
 import { BlockEditorCanvas } from "@/components/BlockEditorCanvas";
@@ -658,7 +658,7 @@ function Authoring() {
                 {/* Course Banner */}
                 <div className="rounded-2xl overflow-hidden ring-1 ring-border bg-background shadow-sm">
                   {selectedCourse.hero_url ? (
-                    <img src={selectedCourse.hero_url} alt="" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    <img src={normalizeUrl(selectedCourse.hero_url)} alt="" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   ) : (
                     <div className="w-full h-36 bg-gradient-to-r from-brand/20 via-brand/10 to-brand/5 grid place-items-center">
                       <BookOpen className="size-12 text-brand/40" />

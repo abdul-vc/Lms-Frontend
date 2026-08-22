@@ -1,6 +1,6 @@
 import React from "react";
 import { RestrictedVideoPlayer } from "@/components/RestrictedVideoPlayer";
-import { API_BASE, normalizeUrl } from "@/lib/auth";
+import { authFetch, API_BASE, normalizeUrl } from "@/lib/auth";
 import {
   Video, FileText, Puzzle, CheckSquare, GitBranch, Sparkles,
   Heading, AlignLeft, Image as ImageIcon, Music, Table, Quote, Code, AlertTriangle, HelpCircle,
@@ -12,6 +12,7 @@ import {
   fetchLessonAssessmentQuestions,
   type ApiAssessmentQuestion
 } from "@/lib/courses-api";
+import { parseCsvToTable, type StructuredTableData } from "@/lib/table-utils";
 
 export interface PolymorphicLessonProps {
   lesson: {
@@ -109,7 +110,7 @@ export function PolymorphicLessonRenderer({
             <BlockTreeRenderer blocks={blocks} lessonId={lesson.id} isAuthoringPreview={isAuthoringPreview} onComplete={onVideoComplete} />
           ) : lesson.reading_content ? (
             <div
-              className="prose prose-invert max-w-none text-foreground leading-relaxed text-sm md:text-base space-y-4"
+              className="prose prose-invert max-w-none text-foreground leading-relaxed text-sm md:text-base space-y-4 break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap min-w-0 max-w-full [&_p]:break-words [&_p]:[overflow-wrap:anywhere] [&_p]:[word-break:break-word] [&_p]:whitespace-pre-wrap [&_p]:max-w-full [&_p]:min-w-0"
               dangerouslySetInnerHTML={{ __html: lesson.reading_content }}
             />
           ) : (
@@ -213,38 +214,92 @@ function BlockTreeRenderer({
   isVideoCompleted?: boolean;
 }) {
   const [selectedChoices, setSelectedChoices] = React.useState<Record<number | string, string[]>>({});
+  const [typedAnswers, setTypedAnswers] = React.useState<Record<number | string, string>>({});
   const [evaluations, setEvaluations] = React.useState<Record<number | string, any>>({});
+  const [evaluating, setEvaluating] = React.useState<Record<number | string, boolean>>({});
+  const [selectedScenarioChoices, setSelectedScenarioChoices] = React.useState<Record<string, { choiceIndex: number; choice: any }>>({});
+  const [activeScenarioNodeIds, setActiveScenarioNodeIds] = React.useState<Record<string, string>>({});
   const [activeTabIndices, setActiveTabIndices] = React.useState<Record<string, number>>({});
 
-  const handleEvaluate = async (qId: number | string, blockId: string) => {
+  const handleEvaluate = async (q: any, blockId: string) => {
+    const qId = q.id;
+    const qType = q.question_type || q.type || "single_choice";
     const choices = selectedChoices[qId] || [];
+    const typed = typedAnswers[qId] || "";
+
+    setEvaluating(prev => ({ ...prev, [qId]: true }));
+
+    // Local evaluation computation for instantaneous response or fallback
+    let localIsCorrect = false;
+    let localCorrectAnswers: string[] = [];
+    if (qType === "single_choice" || qType === "true_false") {
+      const correctChoice = q.choices?.find((c: any) => c.is_correct);
+      localCorrectAnswers = correctChoice ? [correctChoice.text] : [];
+      localIsCorrect = choices.length === 1 && Boolean(correctChoice && choices[0] === correctChoice.id);
+    } else if (qType === "multiple_select") {
+      const correctIds = q.choices?.filter((c: any) => c.is_correct).map((c: any) => c.id) || [];
+      localCorrectAnswers = q.choices?.filter((c: any) => c.is_correct).map((c: any) => c.text) || [];
+      localIsCorrect = correctIds.length > 0 && choices.length === correctIds.length && correctIds.every((id: string) => choices.includes(id));
+    } else if (qType === "fill_blank") {
+      const correctChoice = q.choices?.find((c: any) => c.is_correct) || q.choices?.[0];
+      const correctText = (correctChoice?.text || "").trim();
+      localCorrectAnswers = correctText ? [correctText] : [];
+      localIsCorrect = Boolean(typed.trim() && typed.trim().toLowerCase() === correctText.toLowerCase());
+    }
+
     try {
-      const res = await authFetch(`${API_BASE}/authoring/kc-questions/${qId}/evaluate/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selected_choices: choices }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        setEvaluations(prev => ({ ...prev, [qId]: result }));
+      if (typeof qId === "number" || (typeof qId === "string" && !String(qId).startsWith("temp_"))) {
+        const res = await authFetch(`${API_BASE}/authoring/kc-questions/${qId}/evaluate/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            selected_choices: choices,
+            text_response: typed,
+          }),
+        });
+        if (res.ok) {
+          const result = await res.json();
+          setEvaluations(prev => ({
+            ...prev,
+            [qId]: {
+              ...result,
+              correct_answers: result.correct_answers || localCorrectAnswers,
+            }
+          }));
+          return;
+        }
       }
     } catch (e) {
-      console.error(e);
+      console.warn("KC question evaluation API fallback to local evaluation:", e);
+    } finally {
+      setEvaluating(prev => ({ ...prev, [qId]: false }));
     }
+
+    // Set local evaluation result
+    setEvaluations(prev => ({
+      ...prev,
+      [qId]: {
+        is_correct: localIsCorrect,
+        correct_answers: localCorrectAnswers,
+        feedback: localIsCorrect ? (q.correct_feedback || "") : (q.incorrect_feedback || ""),
+        hint: q.hint || "",
+      }
+    }));
   };
 
   return (
     <div className="space-y-6">
       {blocks.map((block: any, idx: number) => {
-        const mediaUrl = block.reading_payload?.meta_data?.url;
+        const rawMediaUrl = block.reading_payload?.meta_data?.url || block.reading_payload?.html_content?.match(/src=["']([^"']+)["']/i)?.[1];
+        const mediaUrl = rawMediaUrl ? normalizeUrl(rawMediaUrl) : "";
         const calloutStyle = block.reading_payload?.meta_data?.style || "info";
 
         // Alignment & Layout Width classes
         const align = block.settings?.align || "left";
         const textAlignClass = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
-        const alignClass = align === "right" ? "text-right flex flex-col items-end" : align === "center" ? "text-center flex flex-col items-center" : "text-left flex flex-col items-start";
+        const alignMarginClass = align === "right" ? "ml-auto mr-0" : align === "center" ? "mx-auto" : "mr-auto ml-0";
         const width = block.settings?.width || "full";
-        const widthClass = width === "narrow" ? "max-w-xl mx-auto" : width === "constrained" ? "max-w-3xl mx-auto" : "w-full";
+        const widthClass = width === "narrow" ? `max-w-xl ${alignMarginClass}` : width === "constrained" ? `max-w-2xl ${alignMarginClass}` : "w-full";
 
         // Heading level detection & dynamic HTML rendering
         const rawHtml = block.reading_payload?.html_content || "<h2>Heading</h2>";
@@ -263,23 +318,23 @@ function BlockTreeRenderer({
         const headingStyle = tagStyles[levelTag] || tagStyles.h2;
 
         return (
-          <div key={block.id || idx} className={`rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4 ${widthClass} ${textAlignClass}`}>
+          <div key={block.id || idx} className={`rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4 min-w-0 max-w-full overflow-hidden ${widthClass} ${textAlignClass}`}>
             {/* Heading Block */}
             {block.block_type === "heading" && (
-              <div className={`w-full ${textAlignClass}`}>
-                {levelTag === "h1" && <h1 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h1>}
-                {levelTag === "h2" && <h2 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h2>}
-                {levelTag === "h3" && <h3 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h3>}
-                {levelTag === "h4" && <h4 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h4>}
-                {levelTag === "h5" && <h5 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h5>}
-                {levelTag === "h6" && <h6 className={`${headingStyle} ${textAlignClass} w-full block`}>{cleanHeadingText}</h6>}
+              <div className={`w-full min-w-0 max-w-full break-words [overflow-wrap:anywhere] ${textAlignClass}`}>
+                {levelTag === "h1" && <h1 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h1>}
+                {levelTag === "h2" && <h2 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h2>}
+                {levelTag === "h3" && <h3 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h3>}
+                {levelTag === "h4" && <h4 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h4>}
+                {levelTag === "h5" && <h5 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h5>}
+                {levelTag === "h6" && <h6 className={`${headingStyle} ${textAlignClass} w-full block break-words [overflow-wrap:anywhere]`}>{cleanHeadingText}</h6>}
               </div>
             )}
 
             {/* Paragraph Block */}
             {block.block_type === "paragraph" && (
               <div
-                className="prose prose-invert max-w-none text-foreground leading-relaxed text-sm md:text-base"
+                className="prose prose-invert max-w-none text-foreground leading-relaxed text-sm md:text-base break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap min-w-0 max-w-full [&_p]:break-words [&_p]:[overflow-wrap:anywhere] [&_p]:[word-break:break-word] [&_p]:whitespace-pre-wrap [&_p]:max-w-full [&_p]:min-w-0"
                 dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "<p>Paragraph content</p>" }}
               />
             )}
@@ -298,14 +353,16 @@ function BlockTreeRenderer({
 
             {/* Callout Block */}
             {block.block_type === "callout" && (
-              <div className={`flex items-start gap-3 p-4 rounded-xl border text-xs sm:text-sm font-medium ${
-                calloutStyle === "warning" ? "bg-amber-500/10 border-amber-500/30 text-amber-200" :
-                calloutStyle === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200" :
-                calloutStyle === "tip" ? "bg-purple-500/10 border-purple-500/30 text-purple-200" :
-                "bg-cyan-500/10 border-cyan-500/30 text-cyan-200"
-              }`}>
-                <AlertTriangle className="size-5 shrink-0 mt-0.5 text-amber-400" />
-                <div dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "Callout note" }} />
+              <div className={`w-full flex ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
+                <div className={`w-full flex items-start gap-3 p-4 rounded-xl border text-xs sm:text-sm font-medium ${
+                  calloutStyle === "warning" ? "bg-amber-500/10 border-amber-500/30 text-amber-200" :
+                  calloutStyle === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200" :
+                  calloutStyle === "tip" ? "bg-purple-500/10 border-purple-500/30 text-purple-200" :
+                  "bg-cyan-500/10 border-cyan-500/30 text-cyan-200"
+                }`}>
+                  <AlertTriangle className="size-5 shrink-0 mt-0.5 text-amber-400" />
+                  <div className="break-words [overflow-wrap:anywhere] min-w-0" dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "Callout note" }} />
+                </div>
               </div>
             )}
 
@@ -333,7 +390,27 @@ function BlockTreeRenderer({
             {block.block_type === "video" && (
               <div className="space-y-2">
                 {mediaUrl ? (
-                  <video src={mediaUrl} controls className="w-full rounded-2xl shadow-lg border border-border max-h-[480px]" />
+                  isAuthoringPreview ? (
+                    <div className="space-y-3">
+                      <video src={mediaUrl} controls className="w-full rounded-2xl shadow-xl border border-border max-h-[480px]" />
+                      <div className="text-xs text-muted-foreground text-center font-medium">Video Author Preview Mode</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <RestrictedVideoPlayer
+                        key={String(block.id || lessonId)}
+                        src={mediaUrl}
+                        lessonId={String(lessonId || block.id)}
+                        onComplete={onComplete || (() => {})}
+                      />
+                      <div className="flex items-center gap-3 text-xs text-foreground bg-card border border-border rounded-2xl px-5 py-4 shadow-md">
+                        <div className="size-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                        <span>
+                          <strong className="text-foreground font-bold">Restricted mode:</strong> Video progress is automatically recorded upon full completion.
+                        </span>
+                      </div>
+                    </div>
+                  )
                 ) : (
                   <div dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "" }} />
                 )}
@@ -362,10 +439,7 @@ function BlockTreeRenderer({
 
             {/* Table Block */}
             {block.block_type === "table" && (
-              <div
-                className="overflow-x-auto prose prose-invert max-w-none text-xs sm:text-sm"
-                dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "<table></table>" }}
-              />
+              <TableBlockRenderer block={block} />
             )}
 
             {/* Interaction Block */}
@@ -375,7 +449,7 @@ function BlockTreeRenderer({
 
             {/* Quiz Block */}
             {block.block_type === "quiz" && block.kc_questions && block.kc_questions.length > 0 && (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-5">
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
                   <CheckSquare className="size-4" />
                   <span>Knowledge Check Evaluation</span>
@@ -384,56 +458,118 @@ function BlockTreeRenderer({
                 {block.kc_questions.map((q: any) => {
                   const evalResult = evaluations[q.id];
                   const currentSelected = selectedChoices[q.id] || [];
+                  const qType = q.question_type || q.type || "single_choice";
+                  const isFillBlank = qType === "fill_blank";
+                  const isMultipleSelect = qType === "multiple_select";
 
                   return (
-                    <div key={q.id} className="space-y-3">
+                    <div key={q.id} className="space-y-3 pt-3 border-t border-amber-500/15 first:pt-0 first:border-t-0">
                       <p className="text-sm font-bold text-foreground">{q.prompt}</p>
-                      <div className="space-y-2">
-                        {q.choices?.map((c: any) => {
-                          const isChecked = currentSelected.includes(c.id);
-                          return (
-                            <label
-                              key={c.id}
-                              className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-xs font-medium ${
-                                isChecked ? "border-amber-400 bg-amber-500/10 text-foreground" : "border-border bg-card hover:border-brand/40"
-                              }`}
-                            >
-                              <input
-                                type={q.question_type === "multiple_select" ? "checkbox" : "radio"}
-                                name={`q_${q.id}`}
-                                checked={isChecked}
-                                onChange={() => {
-                                  if (q.question_type === "multiple_select") {
-                                    const next = isChecked ? currentSelected.filter(id => id !== c.id) : [...currentSelected, c.id];
-                                    setSelectedChoices(prev => ({ ...prev, [q.id]: next }));
-                                  } else {
-                                    setSelectedChoices(prev => ({ ...prev, [q.id]: [c.id] }));
-                                  }
-                                }}
-                                className="accent-amber-400 size-4"
-                              />
-                              <span>{c.text}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
 
-                      <div className="flex items-center justify-between pt-2">
+                      {/* Fill in the Blank vs Choices */}
+                      {isFillBlank ? (
+                        <div className="space-y-1.5">
+                          <input
+                            type="text"
+                            value={typedAnswers[q.id] || ""}
+                            onChange={(e) => setTypedAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            placeholder="Type your answer here..."
+                            className="w-full bg-card border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground focus:ring-2 focus:ring-amber-400 font-medium placeholder:text-muted-foreground/60 transition-all"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {q.choices?.map((c: any) => {
+                            const isChecked = currentSelected.includes(c.id);
+                            return (
+                              <label
+                                key={c.id}
+                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-xs font-medium ${
+                                  isChecked ? "border-amber-400 bg-amber-500/10 text-foreground" : "border-border bg-card hover:border-brand/40"
+                                }`}
+                              >
+                                <input
+                                  type={isMultipleSelect ? "checkbox" : "radio"}
+                                  name={`q_${q.id}`}
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isMultipleSelect) {
+                                      const next = isChecked ? currentSelected.filter(id => id !== c.id) : [...currentSelected, c.id];
+                                      setSelectedChoices(prev => ({ ...prev, [q.id]: next }));
+                                    } else {
+                                      setSelectedChoices(prev => ({ ...prev, [q.id]: [c.id] }));
+                                    }
+                                  }}
+                                  className="accent-amber-400 size-4 cursor-pointer"
+                                />
+                                <span>{c.text}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1">
                         <button
-                          onClick={() => handleEvaluate(q.id, block.id)}
-                          className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md"
+                          type="button"
+                          onClick={() => handleEvaluate(q, block.id)}
+                          disabled={evaluating[q.id]}
+                          className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 disabled:opacity-50 transition-all shadow-md flex items-center gap-1.5"
                         >
+                          {evaluating[q.id] && <Loader2 className="size-3.5 animate-spin" />}
                           Submit Answer
                         </button>
 
                         {evalResult && (
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                            evalResult.is_correct ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                            evalResult.is_correct
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                              : "bg-rose-500/20 text-rose-400 border-rose-500/40"
                           }`}>
-                            {evalResult.is_correct ? "Correct! +100%" : "Try Again"}
+                            {evalResult.is_correct ? "Correct!" : "Incorrect"}
                           </span>
                         )}
                       </div>
+
+                      {/* Detailed Feedback & Correct Answer */}
+                      {evalResult && (
+                        <div className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                          evalResult.is_correct
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                            : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                        }`}>
+                          <div className="font-bold flex items-center gap-1.5">
+                            {evalResult.is_correct ? (
+                              <span>✓ Correct!</span>
+                            ) : (
+                              <span>✗ Incorrect</span>
+                            )}
+                          </div>
+
+                          {!evalResult.is_correct && evalResult.correct_answers && evalResult.correct_answers.length > 0 && (
+                            <div className="text-foreground/90 font-medium pt-0.5">
+                              <span className="font-bold text-rose-400">Correct Answer: </span>
+                              <span>{evalResult.correct_answers.join(", ")}</span>
+                            </div>
+                          )}
+
+                          {evalResult.feedback && (
+                            <div className="text-muted-foreground pt-0.5">
+                              {evalResult.feedback}
+                            </div>
+                          )}
+                          {evalResult.explanation && (
+                            <div className="text-muted-foreground pt-0.5">
+                              {evalResult.explanation}
+                            </div>
+                          )}
+                          {evalResult.hint && (
+                            <div className="text-amber-300/80 pt-0.5">
+                              <span className="font-semibold">Hint: </span>{evalResult.hint}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -441,29 +577,147 @@ function BlockTreeRenderer({
             )}
 
             {/* Scenario Block */}
-            {block.block_type === "scenario" && block.scenario_nodes && block.scenario_nodes.length > 0 && (
-              <div className="rounded-2xl border border-teal-500/30 bg-teal-500/5 p-5 space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-teal-400 uppercase tracking-wider">
-                  <GitBranch className="size-4" />
-                  <span>Branching Scenario Simulation</span>
-                </div>
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-foreground">{block.scenario_nodes[0].title}</h4>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{block.scenario_nodes[0].content}</p>
-                  {block.scenario_nodes[0].choices && block.scenario_nodes[0].choices.length > 0 && (
-                    <div className="space-y-2 pt-2">
-                      {block.scenario_nodes[0].choices.map((c: any, i: number) => (
+            {block.block_type === "scenario" && (
+              (() => {
+                const nodes: any[] = block.scenario_nodes || block.payload?.nodes || [];
+                if (!nodes || nodes.length === 0) return null;
+                const blockKey = String(block.id || idx);
+                const startNode = nodes.find((n: any) => n.is_start_node) || nodes[0];
+                const activeNodeId = activeScenarioNodeIds[blockKey] || String(startNode.id);
+                const currentNode = nodes.find((n: any) => String(n.id) === String(activeNodeId)) || startNode;
+                const selectionKey = `${blockKey}_${currentNode.id}`;
+                const selection = selectedScenarioChoices[selectionKey];
+
+                const handleSelectChoice = (c: any, i: number) => {
+                  setSelectedScenarioChoices(prev => ({
+                    ...prev,
+                    [selectionKey]: { choiceIndex: i, choice: c }
+                  }));
+                };
+
+                const handleAdvance = (targetNodeId: string) => {
+                  setActiveScenarioNodeIds(prev => ({
+                    ...prev,
+                    [blockKey]: targetNodeId
+                  }));
+                };
+
+                const handleRestart = () => {
+                  setActiveScenarioNodeIds(prev => ({
+                    ...prev,
+                    [blockKey]: String(startNode.id)
+                  }));
+                  setSelectedScenarioChoices(prev => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach(k => {
+                      if (k.startsWith(`${blockKey}_`)) delete next[k];
+                    });
+                    return next;
+                  });
+                };
+
+                const targetNode = selection?.choice?.target_node_id
+                  ? nodes.find((n: any) => String(n.id) === String(selection.choice.target_node_id))
+                  : null;
+
+                const isEndScenario = selection && (!selection.choice.target_node_id || selection.choice.target_node_id === "end" || !targetNode);
+
+                return (
+                  <div className="rounded-2xl border border-teal-500/30 bg-teal-500/5 p-6 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-teal-400 uppercase tracking-wider">
+                        <GitBranch className="size-4" />
+                        <span>Branching Scenario Simulation</span>
+                      </div>
+                      {String(currentNode.id) !== String(startNode.id) && (
                         <button
-                          key={i}
-                          className="w-full text-left p-3 rounded-xl border border-teal-500/30 bg-card hover:bg-teal-500/10 text-xs font-medium text-foreground transition-all"
+                          type="button"
+                          onClick={handleRestart}
+                          className="text-[11px] text-muted-foreground hover:text-teal-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          👉 {c.text}
+                          <RotateCcw className="size-3" /> Restart
                         </button>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-base font-bold text-foreground">{currentNode.title}</h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">{currentNode.content}</p>
+
+                      {currentNode.choices && currentNode.choices.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          {currentNode.choices.map((c: any, i: number) => {
+                            const isSelected = selection?.choiceIndex === i;
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => handleSelectChoice(c, i)}
+                                className={`w-full text-left p-3.5 rounded-xl border transition-all text-xs font-medium flex items-center justify-between cursor-pointer ${
+                                  isSelected
+                                    ? "border-teal-400 bg-teal-500/20 text-teal-200 ring-2 ring-teal-400/30 shadow-md font-semibold"
+                                    : "border-teal-500/30 bg-card hover:bg-teal-500/10 text-foreground"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2.5">
+                                  <span>👉</span>
+                                  <span>{c.text}</span>
+                                </span>
+                                {isSelected && (
+                                  <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-teal-500/30 text-teal-300 border border-teal-400/40">
+                                    Selected
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Configured Outcome & Branch Progression */}
+                      {selection && (
+                        <div className="mt-4 pt-4 border-t border-teal-500/20 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                          {(selection.choice.feedback || selection.choice.outcome) && (
+                            <div className="p-3.5 rounded-xl bg-teal-950/40 border border-teal-500/30 space-y-1">
+                              <div className="text-[11px] font-bold text-teal-400 uppercase tracking-wider">Outcome:</div>
+                              <p className="text-xs text-teal-100/90 leading-relaxed whitespace-pre-wrap">
+                                {selection.choice.feedback || selection.choice.outcome}
+                              </p>
+                            </div>
+                          )}
+
+                          {targetNode ? (
+                            <div className="flex items-center justify-end pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(String(targetNode.id))}
+                                className="px-4 py-2.5 rounded-xl bg-teal-500 text-slate-950 font-bold text-xs hover:bg-teal-400 active:scale-[0.98] transition-all flex items-center gap-2 shadow-md cursor-pointer"
+                              >
+                                <span>Continue: {targetNode.title || "Next Decision"}</span>
+                                <ChevronRight className="size-3.5" />
+                              </button>
+                            </div>
+                          ) : isEndScenario ? (
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-teal-500/10 border border-teal-500/30">
+                              <div className="flex items-center gap-2 text-xs font-bold text-teal-300">
+                                <Check className="size-4 text-teal-400" />
+                                <span>Scenario Complete</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleRestart}
+                                className="px-3 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 border border-teal-400/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                              >
+                                <RotateCcw className="size-3" /> Restart Scenario
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
             )}
 
             {/* Assessment Block */}
@@ -478,6 +732,57 @@ function BlockTreeRenderer({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Structured Table Block Renderer ────────────────────────────────────────
+
+function TableBlockRenderer({ block }: { block: any }) {
+  const tableData: StructuredTableData = React.useMemo(() => {
+    const metaTable = block.reading_payload?.meta_data?.table_data || block.payload?.meta_data?.table_data;
+    if (metaTable && Array.isArray(metaTable.headers) && Array.isArray(metaTable.rows)) {
+      return metaTable;
+    }
+    const rawContent =
+      block.reading_payload?.html_content ||
+      block.payload?.html ||
+      block.reading_payload?.markdown_content ||
+      block.payload?.markdown ||
+      "";
+    return parseCsvToTable(rawContent);
+  }, [block.reading_payload, block.payload]);
+
+  return (
+    <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-2xl border border-border bg-card/70 shadow-md my-3">
+      <table className="w-full text-left border-collapse min-w-full text-xs sm:text-sm">
+        <thead>
+          <tr className="border-b border-border bg-muted/70">
+            {tableData.headers.map((header: string, idx: number) => (
+              <th
+                key={idx}
+                className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-foreground whitespace-normal break-words [overflow-wrap:anywhere] border-r border-border/30 last:border-r-0"
+              >
+                {header || `Column ${idx + 1}`}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/40">
+          {tableData.rows.map((row: string[], rowIdx: number) => (
+            <tr key={rowIdx} className="hover:bg-muted/20 transition-colors">
+              {row.map((cell: string, cellIdx: number) => (
+                <td
+                  key={cellIdx}
+                  className="px-4 py-3 text-xs sm:text-sm text-foreground/90 whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-word] border-r border-border/20 last:border-r-0 leading-relaxed"
+                >
+                  {cell || <span className="text-muted-foreground/30 italic">-</span>}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   Video, Music, Code, AlertTriangle, Table as TableIcon, Sparkles, CheckSquare, GitBranch, Link2, Eye, MapPin, RotateCw
 } from "lucide-react";
 import { authFetch, API_BASE, normalizeUrl } from "@/lib/auth";
+import { parseCsvToTable, tableToCsv, generateTableHtml, type StructuredTableData } from "@/lib/table-utils";
 
 interface ReadingPayloadEditorProps {
   blockId: string;
@@ -95,14 +96,14 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
 
       if (res.ok) {
         const asset = await res.json();
-        const fileUrl = asset.file.startsWith("http") ? asset.file : `${API_BASE.replace('/api', '')}${asset.file}`;
-        const updatedMeta = { ...metaData, url: fileUrl, filename: asset.original_filename };
+        const relativePath = asset.path ? `/api/media/${asset.path}` : (asset.file?.startsWith('/api/media/') ? asset.file : `/api/media/${(asset.file || '').replace(/^.*\/media\//, '')}`);
+        const updatedMeta = { ...metaData, url: relativePath, filename: asset.original_filename };
 
         let newHtml = htmlContent;
-        if (blockType === "image") newHtml = `<img src="${fileUrl}" alt="${asset.original_filename}" className="max-w-full rounded-xl shadow-md" />`;
-        else if (blockType === "video") newHtml = `<video src="${fileUrl}" controls className="w-full rounded-xl" />`;
-        else if (blockType === "audio") newHtml = `<audio src="${fileUrl}" controls className="w-full" />`;
-        else if (blockType === "pdf") newHtml = `<iframe src="${fileUrl}" className="w-full h-96 rounded-xl border border-border" />`;
+        if (blockType === "image") newHtml = `<img src="${relativePath}" alt="${asset.original_filename}" className="max-w-full rounded-xl shadow-md" />`;
+        else if (blockType === "video") newHtml = `<video src="${relativePath}" controls className="w-full rounded-xl" />`;
+        else if (blockType === "audio") newHtml = `<audio src="${relativePath}" controls className="w-full" />`;
+        else if (blockType === "pdf") newHtml = `<iframe src="${relativePath}" className="w-full h-96 rounded-xl border border-border" />`;
 
         notifyChange(newHtml, updatedMeta, true);
         showToast("File uploaded successfully");
@@ -178,7 +179,7 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
 
   if (blockType === "paragraph" || blockType === "quote") {
     return (
-      <div className="space-y-3 pt-2 border-t border-border">
+      <div className="space-y-3 pt-2 border-t border-border min-w-0 max-w-full">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
             {blockType === "quote" ? "Quote Text" : "Paragraph Content"}
@@ -186,11 +187,11 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
           {saving && <span className="text-[10px] text-brand font-semibold animate-pulse">Saving...</span>}
         </div>
         <textarea
-          rows={5}
+          rows={6}
           value={htmlContent}
           onChange={(e) => notifyChange(e.target.value, metaData, false)}
           onBlur={(e) => notifyChange(e.target.value, metaData, true)}
-          className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:ring-2 focus:ring-brand font-sans leading-relaxed"
+          className="w-full min-w-0 max-w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:ring-2 focus:ring-brand font-sans leading-relaxed resize-y break-words"
           placeholder={blockType === "quote" ? "Enter quote text..." : "Type reading paragraph body..."}
         />
         {blockType === "quote" && (
@@ -364,9 +365,9 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
         {currentUrl && (
           <div className="p-2 rounded-xl border border-border bg-card/60 space-y-1">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Media Preview</div>
-            {blockType === "image" && <img src={currentUrl} alt="Preview" className="max-h-40 rounded-lg mx-auto object-contain" />}
-            {blockType === "video" && <video src={currentUrl} controls className="max-h-40 w-full rounded-lg" />}
-            {blockType === "audio" && <audio src={currentUrl} controls className="w-full" />}
+            {blockType === "image" && <img src={normalizeUrl(currentUrl)} alt="Preview" className="max-h-40 rounded-lg mx-auto object-contain" />}
+            {blockType === "video" && <video src={normalizeUrl(currentUrl)} controls className="max-h-40 w-full rounded-lg" />}
+            {blockType === "audio" && <audio src={normalizeUrl(currentUrl)} controls className="w-full" />}
             {blockType === "pdf" && <p className="text-xs text-brand font-medium flex items-center gap-1"><FileText className="size-3.5" /> PDF document attached</p>}
           </div>
         )}
@@ -376,17 +377,14 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
 
   if (blockType === "table") {
     return (
-      <div className="space-y-3 pt-2 border-t border-border">
-        <label className="block text-xs font-bold text-foreground uppercase tracking-wider">Table Content (HTML / Markdown)</label>
-        <textarea
-          rows={6}
-          value={htmlContent}
-          onChange={(e) => notifyChange(e.target.value, metaData, false)}
-          onBlur={(e) => notifyChange(e.target.value, metaData, true)}
-          className="w-full bg-background border border-border rounded-lg p-2.5 font-mono text-xs text-foreground focus:ring-2 focus:ring-brand"
-          placeholder="<table>...</table> or markdown table"
-        />
-      </div>
+      <TableBlockPayloadEditor
+        metaData={metaData}
+        htmlContent={htmlContent}
+        markdownContent={markdownContent}
+        notifyChange={notifyChange}
+        saving={saving}
+        showToast={showToast}
+      />
     );
   }
 
@@ -400,6 +398,317 @@ export function ReadingPayloadEditor({ blockId, blockType, payload, onSave, onPa
         onBlur={() => handleUpdate(htmlContent)}
         className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:ring-2 focus:ring-brand"
       />
+    </div>
+  );
+}
+
+// ─── STRUCTURED TABLE BLOCK EDITOR ──────────────────────────────────────────
+
+function TableBlockPayloadEditor({
+  metaData,
+  htmlContent,
+  markdownContent,
+  notifyChange,
+  saving,
+  showToast,
+}: {
+  metaData: Record<string, any>;
+  htmlContent: string;
+  markdownContent: string;
+  notifyChange: (newHtml: string, newMeta: any, persist?: boolean) => void;
+  saving: boolean;
+  showToast: (msg: string, ok?: boolean) => void;
+}) {
+  const [tableData, setTableData] = useState<StructuredTableData>(() => {
+    if (metaData?.table_data && Array.isArray(metaData.table_data.headers) && Array.isArray(metaData.table_data.rows)) {
+      return metaData.table_data;
+    }
+    const raw = htmlContent || markdownContent || "";
+    return parseCsvToTable(raw);
+  });
+
+  const [showCsvMode, setShowCsvMode] = useState(false);
+  const [csvText, setCsvText] = useState("");
+
+  useEffect(() => {
+    if (metaData?.table_data && Array.isArray(metaData.table_data.headers) && Array.isArray(metaData.table_data.rows)) {
+      setTableData(metaData.table_data);
+    }
+  }, [metaData?.table_data]);
+
+  const updateTable = (newData: StructuredTableData, persist = false) => {
+    setTableData(newData);
+    const newHtml = generateTableHtml(newData);
+    const newMeta = { ...metaData, table_data: newData };
+    notifyChange(newHtml, newMeta, persist);
+  };
+
+  const handleHeaderChange = (idx: number, val: string, persist = false) => {
+    const nextHeaders = [...tableData.headers];
+    nextHeaders[idx] = val;
+    updateTable({ ...tableData, headers: nextHeaders }, persist);
+  };
+
+  const handleCellChange = (rIdx: number, cIdx: number, val: string, persist = false) => {
+    const nextRows = tableData.rows.map((row, r) => {
+      if (r !== rIdx) return row;
+      const nextRow = [...row];
+      nextRow[cIdx] = val;
+      return nextRow;
+    });
+    updateTable({ ...tableData, rows: nextRows }, persist);
+  };
+
+  const handleAddColumn = () => {
+    const nextHeaders = [...tableData.headers, `Column ${tableData.headers.length + 1}`];
+    const nextRows = tableData.rows.map(r => [...r, ""]);
+    updateTable({ headers: nextHeaders, rows: nextRows }, true);
+    showToast("Column added ✓");
+  };
+
+  const handleDeleteColumn = (colIdx: number) => {
+    if (tableData.headers.length <= 1) {
+      showToast("Table must have at least one column", false);
+      return;
+    }
+    const nextHeaders = tableData.headers.filter((_, i) => i !== colIdx);
+    const nextRows = tableData.rows.map(r => r.filter((_, i) => i !== colIdx));
+    updateTable({ headers: nextHeaders, rows: nextRows }, true);
+    showToast("Column removed");
+  };
+
+  const handleAddRow = () => {
+    const newRow = new Array(tableData.headers.length).fill("");
+    updateTable({ ...tableData, rows: [...tableData.rows, newRow] }, true);
+    showToast("Row added ✓");
+  };
+
+  const handleDeleteRow = (rowIdx: number) => {
+    if (tableData.rows.length <= 1) {
+      showToast("Table must have at least one row", false);
+      return;
+    }
+    const nextRows = tableData.rows.filter((_, i) => i !== rowIdx);
+    updateTable({ ...tableData, rows: nextRows }, true);
+    showToast("Row removed");
+  };
+
+  const handleApplyCsv = () => {
+    if (!csvText.trim()) {
+      showToast("Please enter or paste CSV content", false);
+      return;
+    }
+    const parsed = parseCsvToTable(csvText);
+    updateTable(parsed, true);
+    setShowCsvMode(false);
+    setCsvText("");
+    showToast(`CSV imported: ${parsed.headers.length} columns × ${parsed.rows.length} rows ✓`);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        const parsed = parseCsvToTable(text);
+        updateTable(parsed, true);
+        setShowCsvMode(false);
+        showToast(`CSV file imported: ${parsed.headers.length} columns × ${parsed.rows.length} rows ✓`);
+      }
+    };
+    reader.onerror = () => {
+      showToast("Failed to read CSV file", false);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="space-y-4 pt-2 border-t border-border">
+      {/* Header with Title and Action Buttons */}
+      <div className="flex items-center justify-between">
+        <div>
+          <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+            Structured Table Editor
+          </label>
+          <span className="text-[10px] text-muted-foreground">
+            {tableData.headers.length} cols × {tableData.rows.length} rows
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {saving && <span className="text-[10px] text-brand font-semibold animate-pulse">Saving...</span>}
+          <button
+            type="button"
+            onClick={() => {
+              if (!showCsvMode) {
+                setCsvText(tableToCsv(tableData));
+              }
+              setShowCsvMode(!showCsvMode);
+            }}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all flex items-center gap-1 ${
+              showCsvMode
+                ? "bg-brand text-brand-foreground border-brand shadow-sm"
+                : "bg-muted/40 hover:bg-muted text-foreground border-border"
+            }`}
+            title="Import or paste CSV data"
+          >
+            <Upload className="size-3" />
+            CSV Import
+          </button>
+        </div>
+      </div>
+
+      {/* CSV Import / Paste Box */}
+      {showCsvMode && (
+        <div className="rounded-xl border border-brand/40 bg-brand/5 p-3 space-y-3 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-brand flex items-center gap-1.5">
+              <Upload className="size-3.5" /> CSV Paste / File Import
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowCsvMode(false)}
+              className="text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Paste comma-separated data or upload a .csv file. The first row will automatically become column headers.
+          </p>
+
+          <label className="flex items-center justify-center gap-2 p-2.5 border border-dashed border-brand/40 rounded-lg cursor-pointer bg-background hover:bg-muted/30 transition-colors text-center">
+            <Upload className="size-3.5 text-brand" />
+            <span className="text-xs font-semibold text-foreground">Upload .CSV File</span>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+          </label>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-foreground mb-1">Or Paste CSV Content:</label>
+            <textarea
+              rows={4}
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg p-2 font-mono text-xs text-foreground focus:ring-2 focus:ring-brand leading-relaxed"
+              placeholder={"Question,Option A,Option B,Correct Answer\nWhat is Python?,Language,Database,A"}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleApplyCsv}
+            className="w-full py-2 bg-brand text-brand-foreground hover:opacity-90 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+          >
+            <Check className="size-3.5" /> Parse & Apply to Table
+          </button>
+        </div>
+      )}
+
+      {/* Structured Table Matrix Editor */}
+      <div className="space-y-2">
+        <div className="w-full overflow-x-auto rounded-xl border border-border bg-background p-2 max-w-full">
+          <table className="w-full border-collapse min-w-max text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="p-1 text-[10px] font-bold text-muted-foreground w-6 text-center">#</th>
+                {tableData.headers.map((header, colIdx) => (
+                  <th key={colIdx} className="p-1 min-w-[110px] max-w-[180px]">
+                    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border/60">
+                      <input
+                        type="text"
+                        value={header}
+                        onChange={(e) => handleHeaderChange(colIdx, e.target.value, false)}
+                        onBlur={(e) => handleHeaderChange(colIdx, e.target.value, true)}
+                        className="w-full bg-transparent text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-brand rounded px-1"
+                        placeholder={`Col ${colIdx + 1}`}
+                      />
+                      {tableData.headers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteColumn(colIdx)}
+                          className="text-muted-foreground hover:text-destructive p-0.5 rounded transition-colors shrink-0"
+                          title="Delete column"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      )}
+                    </div>
+                  </th>
+                ))}
+                <th className="p-1 w-8 text-center">
+                  <button
+                    type="button"
+                    onClick={handleAddColumn}
+                    className="p-1 text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                    title="Add Column"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {tableData.rows.map((row, rowIdx) => (
+                <tr key={rowIdx} className="hover:bg-muted/10 transition-colors">
+                  <td className="p-1 text-[10px] font-semibold text-muted-foreground text-center select-none">
+                    {rowIdx + 1}
+                  </td>
+                  {row.map((cell, colIdx) => (
+                    <td key={colIdx} className="p-1 min-w-[110px] max-w-[180px]">
+                      <input
+                        type="text"
+                        value={cell}
+                        onChange={(e) => handleCellChange(rowIdx, colIdx, e.target.value, false)}
+                        onBlur={(e) => handleCellChange(rowIdx, colIdx, e.target.value, true)}
+                        className="w-full bg-background border border-border/60 hover:border-border focus:border-brand rounded-lg p-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand leading-relaxed"
+                        placeholder="Cell value..."
+                      />
+                    </td>
+                  ))}
+                  <td className="p-1 w-8 text-center">
+                    {tableData.rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRow(rowIdx)}
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-lg transition-colors"
+                        title="Delete row"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Action Controls for Table */}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleAddRow}
+            className="flex-1 py-1.5 px-3 bg-muted/40 hover:bg-muted border border-border rounded-lg text-xs font-semibold text-foreground flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Plus className="size-3.5 text-brand" /> Add Row
+          </button>
+          <button
+            type="button"
+            onClick={handleAddColumn}
+            className="flex-1 py-1.5 px-3 bg-muted/40 hover:bg-muted border border-border rounded-lg text-xs font-semibold text-foreground flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Plus className="size-3.5 text-brand" /> Add Column
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -482,9 +791,9 @@ export function InteractionPayloadEditor({
       });
       if (res.ok) {
         const asset = await res.json();
-        const fileUrl = asset.file.startsWith("http") ? asset.file : `${API_BASE.replace('/api', '')}${asset.file}`;
+        const relativePath = asset.path ? `/api/media/${asset.path}` : (asset.file?.startsWith('/api/media/') ? asset.file : `/api/media/${(asset.file || '').replace(/^.*\/media\//, '')}`);
         showToast("Image uploaded successfully ✓");
-        return fileUrl;
+        return relativePath;
       }
       showToast("Asset upload failed", false);
       return null;
@@ -1477,7 +1786,27 @@ export function QuizPayloadEditor({
         <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Question Type</label>
         <select
           value={qType}
-          onChange={(e) => updateQuestionLocally(prompt, e.target.value, choices, true)}
+          onChange={(e) => {
+            const newType = e.target.value;
+            let newChoices = [...choices];
+            if (newType === "fill_blank") {
+              const existingText = choices.find((c: any) => c.is_correct)?.text || choices[0]?.text || "";
+              newChoices = [{ id: "fib_1", text: existingText, is_correct: true }];
+            } else if (newType === "true_false") {
+              newChoices = [
+                { id: "c_true", text: "True", is_correct: true },
+                { id: "c_false", text: "False", is_correct: false },
+              ];
+            } else if (newType === "single_choice" || newType === "multiple_select") {
+              if (newChoices.length === 0 || qType === "fill_blank") {
+                newChoices = [
+                  { id: `c_${Date.now()}_1`, text: "Option A", is_correct: true },
+                  { id: `c_${Date.now()}_2`, text: "Option B", is_correct: false },
+                ];
+              }
+            }
+            updateQuestionLocally(prompt, newType, newChoices, true);
+          }}
           className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground font-semibold"
         >
           <option value="single_choice">Single Choice (Radio)</option>
@@ -1502,49 +1831,77 @@ export function QuizPayloadEditor({
         />
       </div>
 
-      {/* Choices Builder */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="block text-[11px] font-semibold text-muted-foreground">Answer Choices</label>
-          <button type="button" onClick={addChoice} className="text-[10px] text-brand font-semibold hover:underline">+ Add Choice</button>
+      {/* Fill in the Blank vs Choices Builder */}
+      {qType === "fill_blank" ? (
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-semibold text-muted-foreground">Correct Answer</label>
+          <input
+            type="text"
+            value={choices.find((c: any) => c.is_correct)?.text || choices[0]?.text || ""}
+            onChange={(e) => {
+              const updated = [{ id: "fib_1", text: e.target.value, is_correct: true }];
+              updateQuestionLocally(prompt, qType, updated, false);
+            }}
+            onBlur={(e) => {
+              const updated = [{ id: "fib_1", text: e.target.value, is_correct: true }];
+              updateQuestionLocally(prompt, qType, updated, true);
+            }}
+            className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:ring-2 focus:ring-amber-400 font-medium"
+            placeholder="Type the expected correct answer..."
+          />
         </div>
-
-        {choices.map((c: any, i: number) => (
-          <div key={c.id || i} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={c.is_correct || false}
-              onChange={(e) => toggleChoiceCorrectness(i, e.target.checked)}
-              className="accent-emerald-500 size-4 cursor-pointer"
-              title="Mark as correct answer"
-            />
-            <input
-              type="text"
-              value={c.text || ""}
-              onChange={(e) => {
-                const updated = choices.map((item, idx) => idx === i ? { ...item, text: e.target.value } : item);
-                updateQuestionLocally(prompt, qType, updated, false);
-              }}
-              onBlur={(e) => {
-                const updated = choices.map((item, idx) => idx === i ? { ...item, text: e.target.value } : item);
-                updateQuestionLocally(prompt, qType, updated, true);
-              }}
-              className="flex-1 bg-background border border-border rounded-lg p-1.5 text-xs text-foreground"
-              placeholder={`Option #${i + 1}`}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const updated = choices.filter((_, idx) => idx !== i);
-                updateQuestionLocally(prompt, qType, updated, true);
-              }}
-              className="text-muted-foreground hover:text-destructive p-1"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-[11px] font-semibold text-muted-foreground">
+              {qType === "true_false" ? "True / False Options" : "Answer Choices"}
+            </label>
+            {qType !== "true_false" && (
+              <button type="button" onClick={addChoice} className="text-[10px] text-brand font-semibold hover:underline">+ Add Choice</button>
+            )}
           </div>
-        ))}
-      </div>
+
+          {choices.map((c: any, i: number) => (
+            <div key={c.id || i} className="flex items-center gap-2">
+              <input
+                type={qType === "multiple_select" ? "checkbox" : "radio"}
+                name={`correct_choice_${q?.id || editingIndex}`}
+                checked={c.is_correct || false}
+                onChange={(e) => toggleChoiceCorrectness(i, e.target.checked)}
+                className="accent-emerald-500 size-4 cursor-pointer"
+                title="Mark as correct answer"
+              />
+              <input
+                type="text"
+                value={c.text || ""}
+                readOnly={qType === "true_false"}
+                onChange={(e) => {
+                  const updated = choices.map((item, idx) => idx === i ? { ...item, text: e.target.value } : item);
+                  updateQuestionLocally(prompt, qType, updated, false);
+                }}
+                onBlur={(e) => {
+                  const updated = choices.map((item, idx) => idx === i ? { ...item, text: e.target.value } : item);
+                  updateQuestionLocally(prompt, qType, updated, true);
+                }}
+                className={`flex-1 bg-background border border-border rounded-lg p-1.5 text-xs text-foreground ${qType === "true_false" ? "opacity-90 cursor-default" : ""}`}
+                placeholder={`Option #${i + 1}`}
+              />
+              {qType !== "true_false" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = choices.filter((_, idx) => idx !== i);
+                    updateQuestionLocally(prompt, qType, updated, true);
+                  }}
+                  className="text-muted-foreground hover:text-destructive p-1"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1552,45 +1909,81 @@ export function QuizPayloadEditor({
 
 // ─── SCENARIO PAYLOAD EDITOR (Branching Simulation) ───────────────────────
 
-export function ScenarioPayloadEditor({ blockId, nodes = [], onSave, showToast }: { blockId: string; nodes: any[]; onSave: () => void; showToast: (msg: string, ok?: boolean) => void }) {
-  const startNode = nodes.find(n => n.is_start_node) || nodes[0];
-  const [title, setTitle] = useState(startNode?.title || "Decision Node 1");
-  const [content, setContent] = useState(startNode?.content || "Branching scenario narrative text...");
-  const [choices, setChoices] = useState<any[]>(startNode?.choices || []);
+export function ScenarioPayloadEditor({
+  blockId,
+  nodes = [],
+  onSave,
+  onPayloadChange,
+  showToast
+}: {
+  blockId: string;
+  nodes: any[];
+  onSave: () => void;
+  onPayloadChange?: (updatedNodes: any[]) => void;
+  showToast: (msg: string, ok?: boolean) => void;
+}) {
+  const [activeNodeIndex, setActiveNodeIndex] = useState(0);
+  const activeNode = nodes[activeNodeIndex] || nodes[0] || null;
+
+  const [title, setTitle] = useState(activeNode?.title || "Start Decision Point");
+  const [content, setContent] = useState(activeNode?.content || "Branching scenario narrative text...");
+  const [choices, setChoices] = useState<any[]>(activeNode?.choices || []);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (startNode) {
-      setTitle(startNode.title || "");
-      setContent(startNode.content || "");
-      setChoices(startNode.choices || []);
+    if (activeNode) {
+      setTitle(activeNode.title || "");
+      setContent(activeNode.content || "");
+      setChoices(activeNode.choices || []);
+    } else {
+      setTitle("Start Decision Point");
+      setContent("Describe the situation for the learner...");
+      setChoices([
+        { text: "Choice A", feedback: "Outcome description for Choice A", target_node_id: null },
+        { text: "Choice B", feedback: "Outcome description for Choice B", target_node_id: null },
+      ]);
     }
-  }, [startNode]);
+  }, [activeNode?.id, activeNode?.title, activeNode?.content, JSON.stringify(activeNode?.choices), activeNodeIndex]);
 
-  const handleSaveNode = async () => {
+  const handleSaveActiveNode = async (
+    updatedTitle = title,
+    updatedContent = content,
+    updatedChoices = choices
+  ) => {
     setSaving(true);
     try {
-      if (startNode?.id) {
-        await authFetch(`${API_BASE}/authoring/scenario-nodes/${startNode.id}/`, {
+      if (activeNode?.id) {
+        await authFetch(`${API_BASE}/authoring/scenario-nodes/${activeNode.id}/`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, content, choices }),
+          body: JSON.stringify({ title: updatedTitle, content: updatedContent, choices: updatedChoices }),
         });
+        if (onPayloadChange) {
+          const updatedNodes = nodes.map(n => n.id === activeNode.id ? { ...n, title: updatedTitle, content: updatedContent, choices: updatedChoices } : n);
+          onPayloadChange(updatedNodes);
+        }
       } else {
-        await authFetch(`${API_BASE}/authoring/scenario-nodes/`, {
+        const isStart = nodes.length === 0;
+        const res = await authFetch(`${API_BASE}/authoring/scenario-nodes/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             block: blockId,
-            title: title || "Start Decision Point",
-            content: content || "Scenario narrative content",
-            is_start_node: true,
-            choices,
+            title: updatedTitle || "Start Decision Point",
+            content: updatedContent || "Scenario narrative content",
+            is_start_node: isStart,
+            choices: updatedChoices,
           }),
         });
+        if (res.ok) {
+          const created = await res.json();
+          if (onPayloadChange) {
+            onPayloadChange([...nodes, created]);
+          }
+        }
       }
       onSave();
-      showToast("Scenario node saved");
+      showToast("Scenario node saved ✓");
     } catch (e) {
       showToast("Failed to save scenario node", false);
     } finally {
@@ -1598,73 +1991,286 @@ export function ScenarioPayloadEditor({ blockId, nodes = [], onSave, showToast }
     }
   };
 
-  const addChoiceOption = () => {
-    const newChoice = { text: "Option Action", target_node_id: null };
+  const handleAddNode = async () => {
+    setSaving(true);
+    try {
+      const isStart = nodes.length === 0;
+      const res = await authFetch(`${API_BASE}/authoring/scenario-nodes/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          block: blockId,
+          title: `Decision Node ${nodes.length + 1}`,
+          content: "Describe the situation for this decision branch...",
+          is_start_node: isStart,
+          choices: [
+            { text: "Choice A", feedback: "Outcome for Choice A", target_node_id: null },
+            { text: "Choice B", feedback: "Outcome for Choice B", target_node_id: null },
+          ],
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        showToast("New decision node added ✓");
+        onSave();
+        setActiveNodeIndex(nodes.length);
+      }
+    } catch (e) {
+      showToast("Failed to add decision node", false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteNode = async (nodeId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!confirm("Delete this decision node?")) return;
+    setSaving(true);
+    try {
+      const res = await authFetch(`${API_BASE}/authoring/scenario-nodes/${nodeId}/`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Decision node deleted");
+        if (activeNodeIndex > 0) {
+          setActiveNodeIndex(activeNodeIndex - 1);
+        }
+        onSave();
+      }
+    } catch (e) {
+      showToast("Failed to delete node", false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addChoiceOption = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const newChoice = {
+      text: `Choice ${String.fromCharCode(65 + choices.length)}`,
+      feedback: "",
+      target_node_id: null
+    };
     const updated = [...choices, newChoice];
     setChoices(updated);
+    handleSaveActiveNode(title, content, updated);
+  };
+
+  const deleteChoiceOption = (index: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const updated = choices.filter((_, idx) => idx !== index);
+    setChoices(updated);
+    handleSaveActiveNode(title, content, updated);
+  };
+
+  const updateChoice = (index: number, field: string, value: any, save = false) => {
+    const updated = choices.map((c, i) => i === index ? { ...c, [field]: value } : c);
+    setChoices(updated);
+    if (save) {
+      handleSaveActiveNode(title, content, updated);
+    }
+  };
+
+  const handleNextStepChange = async (choiceIndex: number, val: string) => {
+    if (val === "__new__") {
+      setSaving(true);
+      try {
+        const res = await authFetch(`${API_BASE}/authoring/scenario-nodes/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            block: blockId,
+            title: `Decision Node ${nodes.length + 1}`,
+            content: "Describe what happens next in this branch...",
+            is_start_node: false,
+            choices: [
+              { text: "Choice A", feedback: "Outcome description", target_node_id: null },
+            ],
+          }),
+        });
+        if (res.ok) {
+          const newNode = await res.json();
+          const updated = choices.map((c, i) => i === choiceIndex ? { ...c, target_node_id: String(newNode.id) } : c);
+          setChoices(updated);
+          await handleSaveActiveNode(title, content, updated);
+          showToast(`Created & linked ${newNode.title} ✓`);
+        }
+      } catch (e) {
+        showToast("Failed to create new node", false);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      const targetId = val === "end" || !val ? null : val;
+      updateChoice(choiceIndex, "target_node_id", targetId, true);
+    }
   };
 
   return (
     <div className="space-y-4 pt-2 border-t border-border">
-      <label className="block text-xs font-bold text-foreground uppercase tracking-wider">Scenario Builder</label>
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-bold text-foreground uppercase tracking-wider">Scenario Builder</label>
+        <button
+          type="button"
+          onClick={handleAddNode}
+          disabled={saving}
+          className="text-xs text-teal-400 font-bold hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+          Add Decision Node
+        </button>
+      </div>
+
+      {/* Decision Node Selector Tabs */}
+      {nodes.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 border-b border-border">
+          {nodes.map((n, idx) => (
+            <div
+              key={n.id || idx}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all shrink-0 ${
+                idx === activeNodeIndex
+                  ? "bg-teal-500/20 border border-teal-500/40 text-teal-300 shadow-sm"
+                  : "bg-muted/40 text-muted-foreground hover:bg-muted"
+              }`}
+              onClick={() => setActiveNodeIndex(idx)}
+            >
+              <span>{n.is_start_node ? "🏁 Start" : `Node ${idx + 1}`}</span>
+              {nodes.length > 1 && idx === activeNodeIndex && !n.is_start_node && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (n.id) handleDeleteNode(n.id, e);
+                  }}
+                  className="hover:text-destructive p-0.5 rounded cursor-pointer"
+                  title="Delete this node"
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Active Node Form */}
       <div>
-        <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Decision Point Title</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-[11px] font-semibold text-muted-foreground">Decision Point Title</label>
+          {saving && <span className="text-[10px] text-teal-400 font-semibold animate-pulse">Saving...</span>}
+        </div>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={handleSaveNode}
-          className="w-full bg-background border border-border rounded-lg p-2 text-xs font-bold text-foreground"
-          placeholder="e.g. Critical Choice #1"
+          onBlur={() => handleSaveActiveNode(title, content, choices)}
+          className="w-full bg-background border border-border rounded-lg p-2 text-xs font-bold text-foreground focus:ring-2 focus:ring-teal-400"
+          placeholder="e.g. Decision Node 1"
         />
       </div>
 
       <div>
         <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Scenario Narrative</label>
         <textarea
-          rows={4}
+          rows={3}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          onBlur={handleSaveNode}
-          className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground"
+          onBlur={() => handleSaveActiveNode(title, content, choices)}
+          className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:ring-2 focus:ring-teal-400 font-medium"
           placeholder="Describe the situation for the learner..."
         />
       </div>
 
-      <div className="space-y-2">
+      {/* Decision Choices */}
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <label className="block text-[11px] font-semibold text-muted-foreground">Decision Choices</label>
-          <button onClick={addChoiceOption} className="text-[10px] text-teal-400 font-semibold hover:underline">+ Add Choice</button>
+          <label className="block text-[11px] font-semibold text-muted-foreground">Decision Choices & Branching</label>
+          <button
+            type="button"
+            onClick={addChoiceOption}
+            className="text-[10px] text-teal-400 font-semibold hover:underline cursor-pointer"
+          >
+            + Add Choice
+          </button>
         </div>
 
-        {choices.map((c: any, i: number) => (
-          <div key={i} className="p-2.5 rounded-lg border border-border bg-background space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground">Choice #{i + 1}</span>
-              <button
-                onClick={() => {
-                  const updated = choices.filter((_, idx) => idx !== i);
-                  setChoices(updated);
-                  handleSaveNode();
-                }}
-                className="text-muted-foreground hover:text-destructive p-0.5"
-              >
-                <Trash2 className="size-3" />
-              </button>
+        {choices.map((c: any, i: number) => {
+          const targetValue = c.target_node_id ? String(c.target_node_id) : "end";
+          return (
+            <div key={i} className="p-3 rounded-xl border border-border bg-background space-y-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Choice #{i + 1}</span>
+                <button
+                  type="button"
+                  onClick={(e) => deleteChoiceOption(i, e)}
+                  className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-muted cursor-pointer transition-colors"
+                  title="Delete Choice"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+
+              {/* Choice Text */}
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Choice Text</label>
+                <input
+                  type="text"
+                  value={c.text || ""}
+                  onChange={(e) => updateChoice(i, "text", e.target.value, false)}
+                  onBlur={() => handleSaveActiveNode(title, content, choices)}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground font-medium"
+                  placeholder="e.g. Review the invoice"
+                />
+              </div>
+
+              {/* Outcome / Feedback */}
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Outcome / Feedback</label>
+                <textarea
+                  rows={2}
+                  value={c.feedback || c.outcome || ""}
+                  onChange={(e) => updateChoice(i, "feedback", e.target.value, false)}
+                  onBlur={() => handleSaveActiveNode(title, content, choices)}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground"
+                  placeholder="e.g. You identify an incorrect charge and explain it to the customer."
+                />
+              </div>
+
+              {/* Next Step Selector */}
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Next Step</label>
+                <select
+                  value={targetValue}
+                  onChange={(e) => handleNextStepChange(i, e.target.value)}
+                  className="w-full bg-card border border-border rounded-lg p-1.5 text-xs text-foreground font-semibold"
+                >
+                  <option value="end">🏁 End Scenario</option>
+                  {nodes.filter((n: any) => n.id && n.id !== activeNode?.id).length > 0 && (
+                    <optgroup label="Navigate to Node:">
+                      {nodes
+                        .filter((n: any) => n.id && n.id !== activeNode?.id)
+                        .map((n: any, nIdx: number) => (
+                          <option key={n.id} value={String(n.id)}>
+                            ➜ {n.title || `Node ${nIdx + 1}`}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  <option value="__new__">➕ Create New Scenario Node...</option>
+                </select>
+              </div>
             </div>
-            <input
-              type="text"
-              value={c.text || ""}
-              onChange={(e) => {
-                const updated = choices.map((item, idx) => idx === i ? { ...item, text: e.target.value } : item);
-                setChoices(updated);
-              }}
-              onBlur={handleSaveNode}
-              className="w-full bg-card border border-border rounded-md p-1 text-xs text-foreground"
-              placeholder="Choice text option..."
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -73,11 +73,23 @@ export const BACKEND_BASE = getBackendBase();
 export function normalizeUrl(url: string | null | undefined): string {
   if (!url) return '';
   const trimmed = url.trim();
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
   if (trimmed.startsWith('http://127.0.0.1:8000/api') || trimmed.startsWith('http://localhost:8000/api')) {
     return trimmed.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000\/api/, API_BASE);
   }
   if (trimmed.startsWith('http://127.0.0.1:8000') || trimmed.startsWith('http://localhost:8000')) {
     return trimmed.replace(/^http:\/\/(127\.0\.0\.1|localhost):8000/, BACKEND_BASE);
+  }
+  // Normalize full origin URLs containing /api/media/ or /media/
+  const hostApiMediaMatch = trimmed.match(/^https?:\/\/[^\/]+\/api\/media\/(.+)$/i);
+  if (hostApiMediaMatch) {
+    return `${API_BASE}/media/${hostApiMediaMatch[1]}`;
+  }
+  const hostMediaMatch = trimmed.match(/^https?:\/\/[^\/]+\/media\/(.+)$/i);
+  if (hostMediaMatch) {
+    return `${API_BASE}/media/${hostMediaMatch[1]}`;
   }
   if (trimmed.startsWith('/api/')) {
     return `${BACKEND_BASE}${trimmed}`;

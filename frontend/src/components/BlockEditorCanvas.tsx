@@ -4,7 +4,7 @@ import {
   Quote, Code, AlertTriangle, FileText, Puzzle, CheckSquare, GitBranch,
   Trash2, MoveUp, MoveDown, Settings, Plus, Loader2, Sparkles
 } from "lucide-react";
-import { authFetch, API_BASE } from "@/lib/auth";
+import { authFetch, API_BASE, normalizeUrl } from "@/lib/auth";
 import {
   ReadingPayloadEditor,
   InteractionPayloadEditor,
@@ -12,6 +12,7 @@ import {
   ScenarioPayloadEditor,
   AssessmentPayloadEditor
 } from "@/components/BlockPayloadEditors";
+import { parseCsvToTable, type StructuredTableData } from "@/lib/table-utils";
 
 export interface LessonBlockItem {
   id: string;
@@ -220,7 +221,7 @@ export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloa
                   </div>
 
                   {/* Block Content Display */}
-                  <div className="text-sm text-foreground">
+                  <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden">
                     {block.block_type === "assessment" ? (
                       <div className="text-xs text-brand font-semibold bg-brand/10 p-3 rounded-xl border border-brand/20 space-y-1.5">
                         <div className="flex items-center justify-between">
@@ -239,7 +240,12 @@ export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloa
                     ) : block.block_type === "quiz" && block.kc_questions && block.kc_questions.length > 0 ? (
                       <div className="text-xs text-amber-300 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20 space-y-1">
                         <div className="flex items-center gap-1.5"><CheckSquare className="size-3.5 text-amber-400" /> {block.kc_questions[0].prompt || "Knowledge Check Question"}</div>
-                        <div className="text-[10px] text-muted-foreground font-normal">{block.kc_questions[0].choices?.length || 0} choice options configured</div>
+                        <div className="text-[10px] text-muted-foreground font-normal">
+                          {block.kc_questions[0].question_type === "fill_blank"
+                            ? `Fill in the Blank · Answer: "${block.kc_questions[0].choices?.find((c: any) => c.is_correct)?.text || block.kc_questions[0].choices?.[0]?.text || ""}"`
+                            : `${block.kc_questions[0].choices?.length || 0} choice options configured`}
+                          {block.kc_questions.length > 1 ? ` · +${block.kc_questions.length - 1} more question(s)` : ""}
+                        </div>
                       </div>
                     ) : block.block_type === "scenario" && block.scenario_nodes && block.scenario_nodes.length > 0 ? (
                       <div className="text-xs text-teal-300 font-semibold bg-teal-500/10 p-2.5 rounded-lg border border-teal-500/20 space-y-1">
@@ -266,16 +272,20 @@ export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloa
                             : `${block.interaction_payload.config?.items?.length || 0} items`}
                         </span>
                       </div>
+                    ) : block.block_type === "table" ? (
+                      <TableCanvasPreview block={block} />
+                    ) : block.block_type === "callout" ? (
+                      <CalloutCanvasPreview block={block} />
                     ) : block.reading_payload?.meta_data?.url ? (
                       <div className="space-y-1">
                         <span className="text-xs font-bold text-brand flex items-center gap-1"><ImageIcon className="size-3.5" /> Media: {block.reading_payload.meta_data.filename || "Attached asset"}</span>
-                        {block.block_type === "image" && <img src={block.reading_payload.meta_data.url} alt="Canvas preview" className="max-h-32 rounded-lg" />}
-                        {block.block_type === "video" && <video src={block.reading_payload.meta_data.url} controls className="max-h-32 w-full rounded-lg" />}
-                        {block.block_type === "audio" && <audio src={block.reading_payload.meta_data.url} controls className="w-full" />}
+                        {block.block_type === "image" && <img src={normalizeUrl(block.reading_payload.meta_data.url)} alt="Canvas preview" className="max-h-32 rounded-lg" />}
+                        {block.block_type === "video" && <video src={normalizeUrl(block.reading_payload.meta_data.url)} controls className="max-h-32 w-full rounded-lg" />}
+                        {block.block_type === "audio" && <audio src={normalizeUrl(block.reading_payload.meta_data.url)} controls className="w-full" />}
                       </div>
                     ) : block.reading_payload?.html_content ? (
                       <div
-                        className="prose prose-sm prose-invert max-w-none line-clamp-3"
+                        className="prose prose-sm prose-invert max-w-none line-clamp-3 break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap min-w-0 max-w-full [&_p]:break-words [&_p]:[overflow-wrap:anywhere] [&_p]:[word-break:break-word] [&_p]:whitespace-pre-wrap [&_p]:max-w-full [&_p]:min-w-0"
                         dangerouslySetInnerHTML={{ __html: block.reading_payload.html_content }}
                       />
                     ) : (
@@ -423,6 +433,11 @@ export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloa
                 blockId={selectedBlock.id}
                 nodes={selectedBlock.scenario_nodes || []}
                 onSave={onTreeUpdated}
+                onPayloadChange={(updatedNodes) => {
+                  if (onBlockPayloadUpdated) {
+                    onBlockPayloadUpdated(selectedBlock.id, { scenario_nodes: updatedNodes });
+                  }
+                }}
                 showToast={showToast}
               />
             ) : (
@@ -445,6 +460,86 @@ export function BlockEditorCanvas({ tree, lessonId, onTreeUpdated, onBlockPayloa
             Select a block on the canvas to inspect and configure its content & property settings.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function TableCanvasPreview({ block }: { block: any }) {
+  const tableData: StructuredTableData = React.useMemo(() => {
+    const metaTable = block.reading_payload?.meta_data?.table_data;
+    if (metaTable && Array.isArray(metaTable.headers) && Array.isArray(metaTable.rows)) {
+      return metaTable;
+    }
+    const raw = block.reading_payload?.html_content || block.reading_payload?.markdown_content || "";
+    return parseCsvToTable(raw);
+  }, [block.reading_payload]);
+
+  return (
+    <div className="w-full overflow-x-auto rounded-xl border border-border/70 bg-card/60 shadow-sm min-w-0 max-w-full my-1">
+      <table className="w-full text-left text-xs border-collapse min-w-full">
+        <thead>
+          <tr className="border-b border-border bg-muted/60">
+            {tableData.headers.map((h: string, idx: number) => (
+              <th
+                key={idx}
+                className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-foreground whitespace-normal break-words border-r border-border/30 last:border-r-0"
+              >
+                {h || `Column ${idx + 1}`}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/40">
+          {tableData.rows.slice(0, 5).map((row: string[], rIdx: number) => (
+            <tr key={rIdx} className="hover:bg-muted/20 transition-colors">
+              {row.map((cell: string, cIdx: number) => (
+                <td
+                  key={cIdx}
+                  className="px-3 py-2 text-xs text-foreground/90 whitespace-normal break-words [overflow-wrap:anywhere] border-r border-border/20 last:border-r-0"
+                >
+                  {cell || <span className="text-muted-foreground/30 italic">-</span>}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {tableData.rows.length > 5 && (
+        <div className="px-3 py-1 bg-muted/30 text-[10px] text-muted-foreground text-center font-medium border-t border-border/40">
+          + {tableData.rows.length - 5} more rows
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CalloutCanvasPreview({ block }: { block: any }) {
+  const calloutStyle = block.reading_payload?.meta_data?.style || "info";
+  const align = block.settings?.align || "left";
+  const width = block.settings?.width || "full";
+
+  const widthClass = width === "narrow" ? "max-w-xl w-full" : width === "constrained" ? "max-w-2xl w-full" : "w-full";
+  const justifyClass = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+
+  return (
+    <div className={`w-full flex ${justifyClass} min-w-0 max-w-full overflow-hidden my-0.5`}>
+      <div
+        className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs font-medium ${widthClass} ${
+          calloutStyle === "warning"
+            ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
+            : calloutStyle === "success"
+            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+            : calloutStyle === "tip"
+            ? "bg-purple-500/10 border-purple-500/30 text-purple-200"
+            : "bg-cyan-500/10 border-cyan-500/30 text-cyan-200"
+        }`}
+      >
+        <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-400" />
+        <div
+          className="break-words [overflow-wrap:anywhere] min-w-0"
+          dangerouslySetInnerHTML={{ __html: block.reading_payload?.html_content || "Callout message" }}
+        />
       </div>
     </div>
   );
