@@ -44,6 +44,7 @@ import { Route as OrgAdminModuleAccessRouteImport } from './routes/org-admin.mod
 import { Route as OrgAdminDepartmentsRouteImport } from './routes/org-admin.departments'
 import { Route as OrgAdminCoursesRouteImport } from './routes/org-admin.courses'
 import { Route as OrgAdminCertificatesRouteImport } from './routes/org-admin.certificates'
+import { Route as OrgAdminAssessmentActivityRouteImport } from './routes/org-admin.assessment-activity'
 import { Route as OrgAdminActivityRouteImport } from './routes/org-admin.activity'
 import { Route as LoginOrgSlugRouteImport } from './routes/login.$orgSlug'
 import { Route as CoursesCourseIdRouteImport } from './routes/courses.$courseId'
@@ -235,6 +236,12 @@ const OrgAdminCertificatesRoute = OrgAdminCertificatesRouteImport.update({
   path: '/certificates',
   getParentRoute: () => OrgAdminRoute,
 } as any)
+const OrgAdminAssessmentActivityRoute =
+  OrgAdminAssessmentActivityRouteImport.update({
+    id: '/assessment-activity',
+    path: '/assessment-activity',
+    getParentRoute: () => OrgAdminRoute,
+  } as any)
 const OrgAdminActivityRoute = OrgAdminActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/courses/$courseId': typeof CoursesCourseIdRouteWithChildren
   '/login/$orgSlug': typeof LoginOrgSlugRoute
   '/org-admin/activity': typeof OrgAdminActivityRoute
+  '/org-admin/assessment-activity': typeof OrgAdminAssessmentActivityRoute
   '/org-admin/certificates': typeof OrgAdminCertificatesRoute
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
@@ -385,6 +393,7 @@ export interface FileRoutesByTo {
   '/courses/$courseId': typeof CoursesCourseIdRouteWithChildren
   '/login/$orgSlug': typeof LoginOrgSlugRoute
   '/org-admin/activity': typeof OrgAdminActivityRoute
+  '/org-admin/assessment-activity': typeof OrgAdminAssessmentActivityRoute
   '/org-admin/certificates': typeof OrgAdminCertificatesRoute
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
@@ -437,6 +446,7 @@ export interface FileRoutesById {
   '/courses/$courseId': typeof CoursesCourseIdRouteWithChildren
   '/login/$orgSlug': typeof LoginOrgSlugRoute
   '/org-admin/activity': typeof OrgAdminActivityRoute
+  '/org-admin/assessment-activity': typeof OrgAdminAssessmentActivityRoute
   '/org-admin/certificates': typeof OrgAdminCertificatesRoute
   '/org-admin/courses': typeof OrgAdminCoursesRouteWithChildren
   '/org-admin/departments': typeof OrgAdminDepartmentsRoute
@@ -490,6 +500,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/login/$orgSlug'
     | '/org-admin/activity'
+    | '/org-admin/assessment-activity'
     | '/org-admin/certificates'
     | '/org-admin/courses'
     | '/org-admin/departments'
@@ -540,6 +551,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/login/$orgSlug'
     | '/org-admin/activity'
+    | '/org-admin/assessment-activity'
     | '/org-admin/certificates'
     | '/org-admin/courses'
     | '/org-admin/departments'
@@ -591,6 +603,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/login/$orgSlug'
     | '/org-admin/activity'
+    | '/org-admin/assessment-activity'
     | '/org-admin/certificates'
     | '/org-admin/courses'
     | '/org-admin/departments'
@@ -889,6 +902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgAdminCertificatesRouteImport
       parentRoute: typeof OrgAdminRoute
     }
+    '/org-admin/assessment-activity': {
+      id: '/org-admin/assessment-activity'
+      path: '/assessment-activity'
+      fullPath: '/org-admin/assessment-activity'
+      preLoaderRoute: typeof OrgAdminAssessmentActivityRouteImport
+      parentRoute: typeof OrgAdminRoute
+    }
     '/org-admin/activity': {
       id: '/org-admin/activity'
       path: '/activity'
@@ -1028,6 +1048,7 @@ const OrgAdminCoursesRouteWithChildren = OrgAdminCoursesRoute._addFileChildren(
 
 interface OrgAdminRouteChildren {
   OrgAdminActivityRoute: typeof OrgAdminActivityRoute
+  OrgAdminAssessmentActivityRoute: typeof OrgAdminAssessmentActivityRoute
   OrgAdminCertificatesRoute: typeof OrgAdminCertificatesRoute
   OrgAdminCoursesRoute: typeof OrgAdminCoursesRouteWithChildren
   OrgAdminDepartmentsRoute: typeof OrgAdminDepartmentsRoute
@@ -1041,6 +1062,7 @@ interface OrgAdminRouteChildren {
 
 const OrgAdminRouteChildren: OrgAdminRouteChildren = {
   OrgAdminActivityRoute: OrgAdminActivityRoute,
+  OrgAdminAssessmentActivityRoute: OrgAdminAssessmentActivityRoute,
   OrgAdminCertificatesRoute: OrgAdminCertificatesRoute,
   OrgAdminCoursesRoute: OrgAdminCoursesRouteWithChildren,
   OrgAdminDepartmentsRoute: OrgAdminDepartmentsRoute,

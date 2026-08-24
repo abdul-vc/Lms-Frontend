@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Shield, Layers, BookOpen, Award,
-  Search, Activity, ArrowLeft, Menu, X, User,
+  Search, Activity, ArrowLeft, Menu, X, User, CheckSquare,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
@@ -26,6 +26,7 @@ const NAV: NavItem[] = [
   { to: "/org-admin/module-access", label: "Module Access", icon: Layers, show: (role) => role.can_manage_module_access },
   { to: "/org-admin/courses", label: "Course Catalog", icon: BookOpen, show: (role) => role.can_create_courses || role.can_edit_courses || role.can_publish_courses },
   { to: "/org-admin/certificates", label: "Certificates", icon: Award, show: (role) => role.can_manage_certificates },
+  { to: "/org-admin/assessment-activity", label: "Assessment Activity", icon: CheckSquare, show: (role) => role.is_admin_role || role.can_view_reports },
   { to: "/org-admin/activity", label: "Activity Log", icon: Activity, show: (role) => role.is_admin_role },
 ];
 

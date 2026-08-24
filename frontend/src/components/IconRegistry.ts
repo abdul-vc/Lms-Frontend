@@ -1,14 +1,14 @@
 import { 
   Users, Lock, ToggleLeft, BookOpen, Award, History, PenTool, UserPlus,
   LayoutDashboard, Route, Sparkles, ShieldCheck, GraduationCap, Flame,
-  PlayCircle, Trophy, Medal, MessageSquare, User, LucideIcon
+  PlayCircle, Trophy, Medal, MessageSquare, User, CheckSquare, LucideIcon
 } from 'lucide-react';
 import React from 'react';
 
 export const ICON_REGISTRY: Record<string, LucideIcon> = {
   Users, Lock, ToggleLeft, BookOpen, Award, History, PenTool, UserPlus,
   LayoutDashboard, Route, Sparkles, ShieldCheck, GraduationCap, Flame,
-  PlayCircle, Trophy, Medal, MessageSquare, User,
+  PlayCircle, Trophy, Medal, MessageSquare, User, CheckSquare,
 };
 
 export function resolveIcon(key: string): LucideIcon {
