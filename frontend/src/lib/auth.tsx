@@ -8,7 +8,7 @@
  *   - AuthProvider React context + useAuth() hook
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 export const getApiBase = (): string => {
   if (typeof window !== 'undefined') {
@@ -201,14 +201,14 @@ function getRefreshToken(): string | null {
   return typeof window !== 'undefined' ? localStorage.getItem(KEYS.refresh) : null;
 }
 
-function saveTokens(access: string, refresh: string) {
+export function saveTokens(access: string, refresh: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEYS.access, access);
     localStorage.setItem(KEYS.refresh, refresh);
   }
 }
 
-function clearTokens() {
+export function clearTokens() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(KEYS.access);
     localStorage.removeItem(KEYS.refresh);
@@ -338,6 +338,36 @@ export async function fetchMe(): Promise<AuthUser> {
   return res.json();
 }
 
+export async function loginWithSSOCode(code: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/v1/auth/sso/callback/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.error === 'account_frozen' || body?.detail?.error === 'account_frozen') {
+      handleFrozenAccount();
+      throw new Error('Kindly contact admin for assistance.');
+    }
+    const message =
+      (typeof body.detail === 'string' && body.detail) ||
+      (typeof body.message === 'string' && body.message) ||
+      (typeof body.detail?.message === 'string' && body.detail.message) ||
+      'SSO authentication failed. Please try again.';
+    const error: any = new Error(message);
+    if (body.reference_id) {
+      error.referenceId = body.reference_id;
+    }
+    throw error;
+  }
+
+  const data = await res.json();
+  saveTokens(data.access, data.refresh);
+  return fetchMe();
+}
+
 export function logout() {
   clearTokens();
 }
@@ -349,6 +379,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAccountFrozen: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
+  loginWithSSOCode: (code: string) => Promise<AuthUser>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -414,6 +445,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleSsoLogin = useCallback(async (code: string): Promise<AuthUser> => {
+    try {
+      const u = await loginWithSSOCode(code);
+      setUser(u);
+      setIsAccountFrozen(false);
+      return u;
+    } catch (err: any) {
+      if (err?.message === 'Kindly contact admin for assistance.') {
+        setIsAccountFrozen(true);
+      }
+      throw err;
+    }
+  }, []);
+
   const handleLogout = () => {
     logout();
     setUser(null);
@@ -456,7 +501,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, isLoading, isAccountFrozen, login: handleLogin, logout: handleLogout, refreshUser } },
+    { value: { user, isLoading, isAccountFrozen, login: handleLogin, loginWithSSOCode: handleSsoLogin, logout: handleLogout, refreshUser } },
     children
   );
 }

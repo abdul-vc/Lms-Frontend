@@ -36,6 +36,7 @@ import { Route as SuperAdminFeatureRegistryRouteImport } from './routes/super-ad
 import { Route as SuperAdminDashboardRouteImport } from './routes/super-admin.dashboard'
 import { Route as SuperAdminBillingRouteImport } from './routes/super-admin.billing'
 import { Route as SuperAdminActivityRouteImport } from './routes/super-admin.activity'
+import { Route as SsoCallbackRouteImport } from './routes/sso.callback'
 import { Route as OrgAdminUsersRouteImport } from './routes/org-admin.users'
 import { Route as OrgAdminRolesRouteImport } from './routes/org-admin.roles'
 import { Route as OrgAdminProfileRouteImport } from './routes/org-admin.profile'
@@ -196,6 +197,11 @@ const SuperAdminActivityRoute = SuperAdminActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => SuperAdminRoute,
 } as any)
+const SsoCallbackRoute = SsoCallbackRouteImport.update({
+  id: '/sso/callback',
+  path: '/sso/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgAdminUsersRoute = OrgAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -351,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
+  '/sso/callback': typeof SsoCallbackRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
   '/super-admin/billing': typeof SuperAdminBillingRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByTo {
   '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
+  '/sso/callback': typeof SsoCallbackRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
   '/super-admin/billing': typeof SuperAdminBillingRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
@@ -455,6 +463,7 @@ export interface FileRoutesById {
   '/org-admin/profile': typeof OrgAdminProfileRoute
   '/org-admin/roles': typeof OrgAdminRolesRoute
   '/org-admin/users': typeof OrgAdminUsersRoute
+  '/sso/callback': typeof SsoCallbackRoute
   '/super-admin/activity': typeof SuperAdminActivityRoute
   '/super-admin/billing': typeof SuperAdminBillingRoute
   '/super-admin/dashboard': typeof SuperAdminDashboardRoute
@@ -509,6 +518,7 @@ export interface FileRouteTypes {
     | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
+    | '/sso/callback'
     | '/super-admin/activity'
     | '/super-admin/billing'
     | '/super-admin/dashboard'
@@ -560,6 +570,7 @@ export interface FileRouteTypes {
     | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
+    | '/sso/callback'
     | '/super-admin/activity'
     | '/super-admin/billing'
     | '/super-admin/dashboard'
@@ -612,6 +623,7 @@ export interface FileRouteTypes {
     | '/org-admin/profile'
     | '/org-admin/roles'
     | '/org-admin/users'
+    | '/sso/callback'
     | '/super-admin/activity'
     | '/super-admin/billing'
     | '/super-admin/dashboard'
@@ -653,6 +665,7 @@ export interface RootRouteChildren {
   SuperAdminRoute: typeof SuperAdminRouteWithChildren
   UsersRoute: typeof UsersRoute
   CoursesCourseIdRoute: typeof CoursesCourseIdRouteWithChildren
+  SsoCallbackRoute: typeof SsoCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/super-admin/activity'
       preLoaderRoute: typeof SuperAdminActivityRouteImport
       parentRoute: typeof SuperAdminRoute
+    }
+    '/sso/callback': {
+      id: '/sso/callback'
+      path: '/sso/callback'
+      fullPath: '/sso/callback'
+      preLoaderRoute: typeof SsoCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/org-admin/users': {
       id: '/org-admin/users'
@@ -1152,6 +1172,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperAdminRoute: SuperAdminRouteWithChildren,
   UsersRoute: UsersRoute,
   CoursesCourseIdRoute: CoursesCourseIdRouteWithChildren,
+  SsoCallbackRoute: SsoCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
