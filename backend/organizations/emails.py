@@ -1,19 +1,117 @@
 import logging
-from django.core.mail import send_mail
+import mimetypes
+import os
+from email.mime.image import MIMEImage
+from email.mime.base import MIMEBase
+from email import encoders
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
+from django.core.files.storage import default_storage
 
 logger = logging.getLogger(__name__)
+
+def resolve_frontend_url(request=None):
+    """
+    Returns the single source of truth base URL for the frontend application.
+    Loaded exclusively from Django settings (FRONTEND_URL environment variable).
+    Defaults to https://lms.vibesandbox.live and ensures no localhost URLs are emitted in emails.
+    """
+    url = getattr(settings, 'FRONTEND_URL', 'https://lms.vibesandbox.live')
+    if not url or 'localhost' in url or '127.0.0.1' in url:
+        url = 'https://lms.vibesandbox.live'
+    return url.rstrip('/')
+
+def resolve_logo_url(raw_logo_url, frontend_url):
+    """
+    Ensures organization logo URL is a fully qualified absolute URL accessible to email clients.
+    Converts relative paths (/media/...) or local dev hosts (127.0.0.1 / localhost)
+    to use the configured frontend base URL dynamically across local and live environments.
+    """
+    if not raw_logo_url:
+        return ''
+    
+    logo = str(raw_logo_url).strip()
+    if not logo:
+        return ''
+
+    if logo.startswith('/'):
+        return f"{frontend_url}{logo}"
+    
+    for dev_host in ['http://127.0.0.1:8000', 'https://127.0.0.1:8000', 'http://localhost:8000', 'https://localhost:8000']:
+        if logo.startswith(dev_host):
+            relative_path = logo[len(dev_host):]
+            return f"{frontend_url}{relative_path}"
+
+    return logo
+
+def get_logo_mime_and_bytes(raw_logo_url):
+    """
+    Locates and reads binary data of organization logo for CID inline email embedding.
+    Works for local FileSystemStorage, S3/cloud storage, and remote URLs.
+    """
+    if not raw_logo_url:
+        return None, None, None
+        
+    logo_str = str(raw_logo_url).strip()
+    if not logo_str:
+        return None, None, None
+
+    possible_paths = []
+    if 'org_logos/' in logo_str:
+        file_part = logo_str.split('org_logos/')[-1].split('?')[0].split('#')[0]
+        possible_paths.append(f"org_logos/{file_part}")
+    
+    if logo_str.startswith('/media/'):
+        possible_paths.append(logo_str.lstrip('/media/'))
+    elif logo_str.startswith('media/'):
+        possible_paths.append(logo_str.lstrip('media/'))
+
+    for rel_path in possible_paths:
+        try:
+            if default_storage.exists(rel_path):
+                with default_storage.open(rel_path, 'rb') as f:
+                    data = f.read()
+                mime_type, _ = mimetypes.guess_type(rel_path)
+                ext = rel_path.rsplit('.', 1)[-1].lower() if '.' in rel_path else 'png'
+                return data, mime_type or 'image/png', ext
+        except Exception:
+            pass
+
+    for rel_path in possible_paths:
+        try:
+            media_root = getattr(settings, 'MEDIA_ROOT', '')
+            if media_root:
+                full_path = os.path.join(media_root, rel_path)
+                if os.path.exists(full_path):
+                    with open(full_path, 'rb') as f:
+                        data = f.read()
+                    mime_type, _ = mimetypes.guess_type(full_path)
+                    ext = full_path.rsplit('.', 1)[-1].lower() if '.' in full_path else 'png'
+                    return data, mime_type or 'image/png', ext
+        except Exception:
+            pass
+
+    if logo_str.startswith('http://') or logo_str.startswith('https://'):
+        if not any(h in logo_str for h in ['127.0.0.1', 'localhost']):
+            try:
+                import urllib.request
+                req = urllib.request.Request(logo_str, headers={'User-Agent': 'LMS-Mailer/1.0'})
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    data = resp.read()
+                    mime_type = resp.headers.get_content_type() or 'image/png'
+                    ext = mime_type.split('/')[-1] if '/' in mime_type else 'png'
+                    return data, mime_type, ext
+            except Exception as e:
+                logger.warning(f"Could not fetch remote logo from {logo_str}: {e}")
+
+    return None, None, None
 
 def send_tenant_welcome_email(org, recipient_email=None, admin_username=None, raw_password=None, site=None, request=None):
     """
     Sends a fully dynamic welcome email containing the specific tenant's login URL link
     and login credentials to the designated recipient email address.
     """
-    if request:
-        host_ip = request.get_host().split(':')[0]
-        frontend_url = f"{request.scheme}://{host_ip}:8080"
-    else:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:8080').rstrip('/')
+    frontend_url = resolve_frontend_url(request)
     
     # 1. Resolve Recipient Email dynamically
     target_email = recipient_email or getattr(org, 'contact_email', None)
@@ -68,11 +166,18 @@ Best regards,
 
     # 5. HTML Message with Clickable Links and Tenant Branding Styling
     primary_color = getattr(org, 'primary_color', None) or '#4f46e5'
-    logo_url = getattr(org, 'logo_url', None)
+    raw_logo = getattr(org, 'logo_url', None)
+    logo_data, mime_type, ext = get_logo_mime_and_bytes(raw_logo)
+    cid_name = "tenant_logo"
+
+    if logo_data:
+        logo_html = f'<img src="cid:{cid_name}" alt="{tenant_name}" style="max-height: 48px; margin-bottom: 12px; display: inline-block; vertical-align: middle;" />'
+    else:
+        logo_url = resolve_logo_url(raw_logo, frontend_url)
+        logo_html = f'<img src="{logo_url}" alt="{tenant_name}" style="max-height: 48px; margin-bottom: 12px; display: inline-block; vertical-align: middle;" />' if logo_url else ''
+
     tagline = getattr(org, 'tagline', '')
     welcome_msg = getattr(org, 'login_welcome_message', '')
-    
-    logo_html = f'<img src="{logo_url}" alt="{tenant_name}" style="max-height: 48px; margin-bottom: 12px;" />' if logo_url else ''
     
     html_message = f"""<!DOCTYPE html>
 <html>
@@ -132,14 +237,31 @@ Best regards,
 
     try:
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'vtravelofficials@gmail.com'
-        send_mail(
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=text_message,
+            body=text_message,
             from_email=from_email,
-            recipient_list=[target_email],
-            html_message=html_message,
-            fail_silently=False,
+            to=[target_email],
         )
+        msg.attach_alternative(html_message, "text/html")
+
+        if logo_data:
+            try:
+                subtype = mime_type.split('/')[-1] if ('/' in mime_type and not mime_type.endswith('svg+xml')) else 'png'
+                if 'svg' in mime_type or ext == 'svg':
+                    img_attachment = MIMEBase('image', 'svg+xml')
+                    img_attachment.set_payload(logo_data)
+                    encoders.encode_base64(img_attachment)
+                else:
+                    img_attachment = MIMEImage(logo_data, _subtype=subtype)
+
+                img_attachment.add_header('Content-ID', f'<{cid_name}>')
+                img_attachment.add_header('Content-Disposition', 'inline', filename=f'logo.{ext}')
+                msg.attach(img_attachment)
+            except Exception as err:
+                logger.warning(f"Failed to attach inline logo CID: {err}")
+
+        msg.send(fail_silently=False)
         logger.info(f"Successfully sent welcome email for {tenant_name} to {target_email}")
         return True, f"Welcome email successfully sent to {target_email} via Gmail SMTP!"
     except Exception as e:
@@ -157,11 +279,7 @@ def send_user_welcome_credentials_email(user, raw_password=None, request=None):
         logger.warning(f"User ID {user.id} has no email address.")
         return False, "No email address found for user."
 
-    if request:
-        host_ip = request.get_host().split(':')[0]
-        frontend_url = f"{request.scheme}://{host_ip}:8080"
-    else:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:8080').rstrip('/')
+    frontend_url = resolve_frontend_url(request)
 
     org = user.organization
     tenant_name = org.name if org else "Learning Platform"
@@ -204,8 +322,15 @@ Best regards,
 """
 
     primary_color = getattr(org, 'primary_color', None) if org else '#059669'
-    logo_url = getattr(org, 'logo_url', None) if org else None
-    logo_html = f'<img src="{logo_url}" alt="{tenant_name}" style="max-height: 44px; margin-bottom: 12px;" />' if logo_url else ''
+    raw_logo = getattr(org, 'logo_url', None) if org else None
+    logo_data, mime_type, ext = get_logo_mime_and_bytes(raw_logo)
+    cid_name = "user_tenant_logo"
+
+    if logo_data:
+        logo_html = f'<img src="cid:{cid_name}" alt="{tenant_name}" style="max-height: 44px; margin-bottom: 12px; display: inline-block; vertical-align: middle;" />'
+    else:
+        logo_url = resolve_logo_url(raw_logo, frontend_url)
+        logo_html = f'<img src="{logo_url}" alt="{tenant_name}" style="max-height: 44px; margin-bottom: 12px; display: inline-block; vertical-align: middle;" />' if logo_url else ''
 
     html_message = f"""<!DOCTYPE html>
 <html>
@@ -270,14 +395,31 @@ Best regards,
 
     try:
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'vtravelofficials@gmail.com'
-        send_mail(
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=text_message,
+            body=text_message,
             from_email=from_email,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
+            to=[user.email],
         )
+        msg.attach_alternative(html_message, "text/html")
+
+        if logo_data:
+            try:
+                subtype = mime_type.split('/')[-1] if ('/' in mime_type and not mime_type.endswith('svg+xml')) else 'png'
+                if 'svg' in mime_type or ext == 'svg':
+                    img_attachment = MIMEBase('image', 'svg+xml')
+                    img_attachment.set_payload(logo_data)
+                    encoders.encode_base64(img_attachment)
+                else:
+                    img_attachment = MIMEImage(logo_data, _subtype=subtype)
+
+                img_attachment.add_header('Content-ID', f'<{cid_name}>')
+                img_attachment.add_header('Content-Disposition', 'inline', filename=f'logo.{ext}')
+                msg.attach(img_attachment)
+            except Exception as err:
+                logger.warning(f"Failed to attach inline logo CID: {err}")
+
+        msg.send(fail_silently=False)
         logger.info(f"Successfully sent welcome credentials email to {user.email}")
         return True, f"Welcome email sent to {user.email} via SMTP!"
     except Exception as e:
@@ -290,11 +432,7 @@ def send_password_reset_email(user, reset_token, uid_b64, request=None):
     """
     Sends a dynamic password reset email with a unique time-sensitive token link.
     """
-    if request:
-        host_ip = request.get_host().split(':')[0]
-        frontend_url = f"{request.scheme}://{host_ip}:8080"
-    else:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:8080').rstrip('/')
+    frontend_url = resolve_frontend_url(request)
 
     reset_url = f"{frontend_url}/reset-password?uid={uid_b64}&token={reset_token}"
     org = getattr(user, 'organization', None)
@@ -368,11 +506,7 @@ def send_superadmin_welcome_email(user, raw_password, request=None):
     """
     Sends an official credentials & login URL email to newly created Platform Super Admins.
     """
-    if request:
-        host_ip = request.get_host().split(':')[0]
-        frontend_url = f"{request.scheme}://{host_ip}:8080"
-    else:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:8080').rstrip('/')
+    frontend_url = resolve_frontend_url(request)
 
     login_url = f"{frontend_url}/login"
     recipient_name = user.full_name or user.first_name or user.username

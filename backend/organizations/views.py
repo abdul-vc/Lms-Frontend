@@ -1,5 +1,8 @@
 from django.conf import settings
+import csv
+from django.http import HttpResponse
 from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -62,6 +65,55 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         log_activity(self.request, 'org_deleted', target=instance, organization=instance)
         instance.delete()
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export_organizations(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="organizations_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Organization ID',
+            'Organization Name',
+            'Subdomain',
+            'Company Name',
+            'Entity Name',
+            'Contact Name',
+            'Contact Email',
+            'Contact Phone',
+            'Company Address',
+            'City',
+            'State',
+            'Region',
+            'Country',
+            'Total Sites',
+            'Status',
+            'Created At'
+        ])
+
+        for org in queryset:
+            writer.writerow([
+                org.id,
+                org.name or '',
+                org.sub_domain or '',
+                org.company_name or '',
+                org.entity_name or '',
+                org.contact_name or '',
+                org.contact_email or '',
+                org.contact_phone or '',
+                org.company_address or '',
+                org.city or '',
+                org.state or '',
+                org.region or '',
+                org.country or '',
+                org.sites.count() if hasattr(org, 'sites') else 0,
+                org.status or '',
+                org.created_at.strftime('%Y-%m-%d %H:%M:%S') if getattr(org, 'created_at', None) else ''
+            ])
+
+        return response
 
 
 class MyOrganizationView(APIView):
@@ -418,11 +470,14 @@ class MyWorkspacesView(APIView):
         from master_setup.models import Workspace, NavItem, SiteFeatureAccess
         from django.core.management import call_command
 
-        if not NavItem.objects.filter(key='messenger').exists():
-            try:
+        try:
+            from organizations.management.commands.seed_workspaces import ADMIN_NAV_ITEMS, LEARNER_NAV_ITEMS
+            expected_keys = {item[0] for item in ADMIN_NAV_ITEMS} | {item[0] for item in LEARNER_NAV_ITEMS}
+            existing_keys = set(NavItem.objects.values_list('key', flat=True))
+            if not expected_keys.issubset(existing_keys):
                 call_command('seed_workspaces')
-            except Exception:
-                pass
+        except Exception:
+            pass
 
         # Resolve workspaces dynamically based on account type and role
         if user.is_platform_super_admin:
@@ -449,8 +504,8 @@ class MyWorkspacesView(APIView):
 
                 # Gate 1: Dynamic Organization & Site Feature Check
                 if user.organization and not user.is_platform_super_admin:
-                    # Overview / Dashboard is core platform landing page - always accessible
-                    if item.key not in ['overview', 'dashboard']:
+                    # Overview / Dashboard / Profile is core platform landing page - always accessible
+                    if item.key not in ['overview', 'dashboard', 'my_profile', 'profile']:
                         from master_setup.models import OrganizationFeatureAccess
                         feat_key = item.feature.key if item.feature else None
                         if not feat_key:
@@ -467,6 +522,7 @@ class MyWorkspacesView(APIView):
                                 'roles_permissions': 'roles_permissions',
                                 'module_access': 'module_access',
                                 'activity_log': 'activity_log',
+                                'assessment_activity': 'assessment_activity',
                                 'pending_registration': 'pending_registration',
                             }
                             feat_key = key_map.get(item.key, item.key)
@@ -588,6 +644,7 @@ class GlobalSearchView(APIView):
                 {'name': 'Content Authoring', 'route': '/authoring', 'keywords': ['content authoring', 'authoring', 'builder', 'editor', 'create course']},
                 {'name': 'Pending Registration', 'route': '/pending-registration', 'keywords': ['pending registration', 'pending', 'approvals', 'registrations']},
                 {'name': 'Messenger', 'route': '/messenger', 'keywords': ['messenger', 'messages', 'message', 'chat', 'msg', 'm']},
+                {'name': 'My Profile', 'route': '/org-admin/profile', 'keywords': ['my profile', 'profile', 'personal information', 'account', 'password', 'p']},
             ]
             for page in admin_pages:
                 if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
@@ -607,8 +664,8 @@ class GlobalSearchView(APIView):
                 {'name': 'Global Settings', 'route': '/super-admin/settings', 'keywords': ['global settings', 'settings', 'configuration', 'config']},
                 {'name': 'Billing & Payments', 'route': '/super-admin/billing', 'keywords': ['billing', 'payments', 'payment', 'invoices', 'invoice']},
                 {'name': 'Activity Log', 'route': '/super-admin/activity', 'keywords': ['activity log', 'activity', 'audit', 'logs', 'log']},
-                {'name': 'Setup Guide', 'route': '/super-admin/setup', 'keywords': ['setup guide', 'setup', 'guide', 'onboarding']},
                 {'name': 'Master Toolkit', 'route': '/super-admin/toolkit', 'keywords': ['master toolkit', 'toolkit', 'tools', 'utility', 'utilities']},
+                {'name': 'My Profile', 'route': '/super-admin/profile', 'keywords': ['my profile', 'profile', 'personal information', 'account', 'password', 'p']},
             ]
             for page in super_pages:
                 if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
@@ -663,6 +720,7 @@ class GlobalSearchView(APIView):
                 {'name': 'Certifications', 'route': '/certificates', 'keywords': ['certifications', 'certification', 'certificates', 'certificate', 'cert', 'certs', 'qualification']},
                 {'name': 'AI Assistant', 'route': '/ai-assistant', 'keywords': ['ai assistant', 'ai', 'assistant', 'tutor', 'bot', 'gpt', 'a']},
                 {'name': 'Messenger', 'route': '/messenger', 'keywords': ['messenger', 'messages', 'message', 'msg', 'chat', 'm']},
+                {'name': 'My Profile', 'route': '/profile', 'keywords': ['my profile', 'profile', 'personal information', 'account', 'password', 'p']},
             ]
             for page in learner_pages:
                 if any(kw.startswith(lower_q) or lower_q in kw for kw in page['keywords']):
@@ -785,8 +843,8 @@ class SendOrgWelcomeEmailView(APIView):
             raw_password=raw_pass,
             request=request
         )
-        host_ip = request.get_host().split(':')[0]
-        base_url = f"{request.scheme}://{host_ip}:8080"
+        from .emails import resolve_frontend_url
+        base_url = resolve_frontend_url(request)
         return Response({
             'success': success,
             'message': msg,
@@ -810,7 +868,7 @@ class SendSiteWelcomeEmailView(APIView):
         if not site.organization:
             return Response({'detail': 'Site has no associated parent organization'}, status=400)
 
-        from .emails import send_tenant_welcome_email
+        from .emails import send_tenant_welcome_email, resolve_frontend_url
         recipient = request.data.get('recipient_email') or site.contact_email or site.organization.contact_email
         if not recipient:
             return Response({'detail': 'No registered contact email address found for this site.'}, status=400)
@@ -822,8 +880,7 @@ class SendSiteWelcomeEmailView(APIView):
             site=site,
             request=request
         )
-        host_ip = request.get_host().split(':')[0]
-        base_url = f"{request.scheme}://{host_ip}:8080"
+        base_url = resolve_frontend_url(request)
         return Response({
             'success': success,
             'message': msg,

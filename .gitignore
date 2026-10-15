@@ -1,0 +1,64 @@
+# ==========================================
+# Root .gitignore for Multi-Tenant SaaS LMS
+# ==========================================
+
+# Environment variables & secrets (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python & Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Database & Uploaded Media
+*.sqlite3
+db.sqlite3
+media/
+backend/media/
+
+# Test output & temporary logs
+*.log
+logs/
+audit_out.txt
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js & React Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.output/
+frontend/.nitro/
+frontend/.tanstack/
+frontend/.vinxi/
+frontend/*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cloudflare & Deployment
+.wrangler/
+.dev.vars
+
+# Editor & OS files
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+*.sw?

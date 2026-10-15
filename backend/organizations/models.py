@@ -319,3 +319,99 @@ class ActivityLog(models.Model):
             models.Index(fields=['actor', '-created_at']),
             models.Index(fields=['action', '-created_at']),
         ]
+
+
+class ExternalTenantMapping(models.Model):
+    provider = models.CharField(max_length=50)
+    external_tenant_id = models.CharField(max_length=255)
+    organization = models.ForeignKey(
+        'organizations.Organization',
+        on_delete=models.CASCADE,
+        related_name='external_tenant_mappings'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'external_tenant_mapping'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['provider', 'external_tenant_id'],
+                name='uniq_ext_tenant_provider_external_id'
+            ),
+            models.UniqueConstraint(
+                fields=['provider', 'organization'],
+                name='uniq_ext_tenant_provider_organization'
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.external_tenant_id} -> Org {self.organization_id} ({self.organization.name})"
+
+
+class ExternalUserMapping(models.Model):
+    provider = models.CharField(max_length=50)
+    external_user_id = models.CharField(max_length=255)
+    organization = models.ForeignKey(
+        'organizations.Organization',
+        on_delete=models.CASCADE,
+        related_name='external_user_mappings'
+    )
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='external_user_mappings'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'external_user_mapping'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['provider', 'external_user_id'],
+                name='uniq_ext_user_provider_external_id'
+            ),
+            models.UniqueConstraint(
+                fields=['provider', 'user'],
+                name='uniq_ext_user_provider_user'
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.external_user_id} -> User {self.user_id} ({self.user.username})"
+
+
+class LmsLaunchGrant(models.Model):
+    """
+    Transient, single-use launch grant for VibeConnect-initiated SSO.
+    Stores the SHA-256 hash of a cryptographically secure one-time code.
+    Valid for ~60 seconds and atomically consumed during exchange.
+    """
+    code_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    organization = models.ForeignKey(
+        'organizations.Organization',
+        on_delete=models.CASCADE,
+        related_name='launch_grants'
+    )
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='launch_grants'
+    )
+    context = models.CharField(max_length=50, default='standard')  # 'standard' or 'showcase'
+    target_route = models.CharField(max_length=255, blank=True, default='')
+    is_consumed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'lms_launch_grant'
+        indexes = [
+            models.Index(fields=['code_hash', 'is_consumed', 'expires_at']),
+        ]
+
+    def __str__(self):
+        return f"LaunchGrant(user={self.user_id}, org={self.organization_id}, consumed={self.is_consumed})"
+

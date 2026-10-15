@@ -185,8 +185,12 @@ CORS_ALLOW_HEADERS = [
     'range',  # Required for video seeking
 ]
 
+# Proxy SSL & Header Settings for Live Server
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Email Configuration & Frontend Application Base URL
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:8080')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://lms.vibesandbox.live')
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
@@ -195,4 +199,10 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '').replace(' ', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'LMS Support <noreply@lms-platform.com>')
 
-
+# VibeConnect SSO Configuration (Phase 5C)
+VIBECONNECT_API_BASE_URL = os.getenv('VIBECONNECT_API_BASE_URL', '').rstrip('/')
+VIBECONNECT_SSO_CLIENT_ID = os.getenv('VIBECONNECT_SSO_CLIENT_ID', 'pilot_lms_client')
+VIBECONNECT_M2M_SECRET = os.getenv('VIBECONNECT_LMS_M2M_SECRET') or os.getenv('VIBECONNECT_M2M_SECRET', '')
+VIBECONNECT_LAUNCH_GRANT_SECRET = os.getenv('VIBECONNECT_LAUNCH_GRANT_SECRET', '')
+VIBECONNECT_SSO_AUDIENCE = os.getenv('VIBECONNECT_SSO_AUDIENCE', 'vibeconnect-lms')
+VIBECONNECT_HTTP_TIMEOUT = int(os.getenv('VIBECONNECT_HTTP_TIMEOUT', 10))

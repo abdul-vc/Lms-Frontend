@@ -1,5 +1,12 @@
 from django.urls import path
-from .views import CourseViewSet, ModuleViewSet, LessonViewSet, upload_hero_image, upload_lesson_video, download_assessment_template, import_assessment_csv, get_assessment_questions, start_assessment, submit_assessment, AccessRequestViewSet, request_access, MyCertificatesView, OrgIssuedCertificatesView, IssuedCertificateDetailView, dashboard_stats, dashboard_leaderboard, dashboard_badges, learner_dashboard_data, LearningPathViewSet, ScormRuntimeTrackingView, AssessmentQuestionViewSet
+from .views import (
+    CourseViewSet, ModuleViewSet, LessonViewSet, upload_hero_image, upload_lesson_video,
+    download_assessment_template, import_assessment_csv, get_assessment_questions, start_assessment, submit_assessment, restart_course_progress, delete_course_assessment,
+    download_lesson_assessment_template, import_lesson_assessment_csv, get_lesson_assessment_questions, start_lesson_assessment, submit_lesson_assessment,
+    AccessRequestViewSet, request_access, MyCertificatesView, OrgIssuedCertificatesView, IssuedCertificateDetailView,
+    dashboard_stats, dashboard_leaderboard, dashboard_badges, learner_dashboard_data, LearningPathViewSet, ScormRuntimeTrackingView, AssessmentQuestionViewSet,
+    org_admin_assessment_activity, org_admin_assessment_attempt_detail
+)
 from .ai_views import ai_chat
 
 # Manual URL patterns — no extra packages needed.
@@ -57,6 +64,33 @@ urlpatterns = [
         name='lesson-progress',
     ),
 
+    # ── Lesson Assessments ───────────────────────────────────────────────────
+    path(
+        'lessons/<int:lesson_pk>/assessment/template/',
+        download_lesson_assessment_template,
+        name='lesson-assessment-template',
+    ),
+    path(
+        'lessons/<int:lesson_pk>/assessment/import/',
+        import_lesson_assessment_csv,
+        name='lesson-assessment-import',
+    ),
+    path(
+        'lessons/<int:lesson_pk>/assessment/questions/',
+        get_lesson_assessment_questions,
+        name='lesson-assessment-questions',
+    ),
+    path(
+        'lessons/<int:lesson_pk>/assessment/start/',
+        start_lesson_assessment,
+        name='lesson-assessment-start',
+    ),
+    path(
+        'lessons/<int:lesson_pk>/assessment/<int:attempt_id>/submit/',
+        submit_lesson_assessment,
+        name='lesson-assessment-submit',
+    ),
+
     # ── Image & Video upload ─────────────────────────────────────────────────
     path(
         'upload/hero/',
@@ -69,7 +103,7 @@ urlpatterns = [
         name='upload-video',
     ),
 
-    # ── Assessments ──────────────────────────────────────────────────────────
+    # ── Course Assessments ───────────────────────────────────────────────────
     path(
         'courses/<int:course_pk>/questions/',
         AssessmentQuestionViewSet.as_view({'get': 'list', 'post': 'create'}),
@@ -91,6 +125,11 @@ urlpatterns = [
         name='assessment-import',
     ),
     path(
+        'courses/<int:course_pk>/assessment/delete/',
+        delete_course_assessment,
+        name='assessment-delete',
+    ),
+    path(
         'courses/<int:course_pk>/assessment/questions/',
         get_assessment_questions,
         name='assessment-questions',
@@ -104,6 +143,11 @@ urlpatterns = [
         'courses/<int:course_pk>/assessment/<int:attempt_id>/submit/',
         submit_assessment,
         name='assessment-submit',
+    ),
+    path(
+        'courses/<int:course_pk>/restart/',
+        restart_course_progress,
+        name='course-restart',
     ),
     path(
         'courses/<int:course_pk>/request-access/',
@@ -179,5 +223,15 @@ urlpatterns = [
         'ai/chat/',
         ai_chat,
         name='ai-chat',
+    ),
+    path(
+        'org-admin/assessment-activity/',
+        org_admin_assessment_activity,
+        name='org-admin-assessment-activity',
+    ),
+    path(
+        'org-admin/assessment-activity/<int:attempt_id>/',
+        org_admin_assessment_attempt_detail,
+        name='org-admin-assessment-attempt-detail',
     ),
 ]

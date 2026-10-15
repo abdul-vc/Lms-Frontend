@@ -1,9 +1,11 @@
+from django.conf import settings
 from rest_framework import serializers
 from .models import Course, Module, Lesson, AssessmentQuestion, AccessRequest
 
 
 class LessonSerializer(serializers.ModelSerializer):
     block_tree = serializers.SerializerMethodField()
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True, default='Untitled Lesson')
 
     class Meta:
         model = Lesson
@@ -11,8 +13,6 @@ class LessonSerializer(serializers.ModelSerializer):
         read_only_fields = ['module']
 
     def get_block_tree(self, instance):
-        if instance.type == 'video':
-            return None
         from authoring_engine.models import LessonBlockTree
         from authoring_engine.serializers import LessonBlockTreeSerializer
         org = instance.module.course.organization if (instance.module and instance.module.course) else None
@@ -28,11 +28,22 @@ class LessonSerializer(serializers.ModelSerializer):
         ret = super().to_representation(instance)
         request = self.context.get('request')
         if ret.get('video_url'):
-            if not (ret['video_url'].startswith('http://') or ret['video_url'].startswith('https://')):
+            url = str(ret['video_url']).strip()
+            for dev_prefix in ['http://127.0.0.1:8000', 'https://127.0.0.1:8000', 'http://localhost:8000', 'https://localhost:8000']:
+                if url.startswith(dev_prefix):
+                    url = url[len(dev_prefix):]
+                    break
+            if not url.startswith('/api/media/') and (url.startswith('/media/') or url.startswith('media/')):
+                clean_path = url if url.startswith('/') else f'/{url}'
+                url = f"/api{clean_path}"
+            if not (url.startswith('http://') or url.startswith('https://')):
                 if request is not None:
-                    ret['video_url'] = request.build_absolute_uri(ret['video_url'])
+                    ret['video_url'] = request.build_absolute_uri(url)
                 else:
-                    ret['video_url'] = request.build_absolute_uri(ret['video_url'])
+                    frontend_url = getattr(settings, 'FRONTEND_URL', 'https://lms.vibesandbox.live').rstrip('/')
+                    ret['video_url'] = f"{frontend_url}{url}"
+            else:
+                ret['video_url'] = url
         return ret
 
 class ModuleSerializer(serializers.ModelSerializer):
@@ -65,11 +76,21 @@ class CourseSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)
     user_progress = serializers.SerializerMethodField()
     accent = serializers.CharField(required=False, allow_blank=True, default='var(--brand)')
+    has_assessment = serializers.SerializerMethodField()
+    assessment_question_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields = '__all__'
         read_only_fields = ['organization']
+
+    def get_has_assessment(self, obj):
+        from .models import AssessmentQuestion
+        return AssessmentQuestion.objects.filter(course=obj, lesson__isnull=True).exists()
+
+    def get_assessment_question_count(self, obj):
+        from .models import AssessmentQuestion
+        return AssessmentQuestion.objects.filter(course=obj, lesson__isnull=True).count()
 
     def get_user_progress(self, obj):
         request = self.context.get('request')
@@ -99,22 +120,41 @@ class CourseSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
-        if request:
-           if ret.get("hero_url"):
-              if not (
-                ret["hero_url"].startswith("http://")
-                or ret["hero_url"].startswith("https://")
-              ):
-                ret["hero_url"] = request.build_absolute_uri(ret["hero_url"])
-              else:
-                    ret['hero_url'] = request.build_absolute_uri(ret["hero_url"])
+        if ret.get("hero_url"):
+            url = str(ret["hero_url"]).strip()
+            for dev_prefix in ['http://127.0.0.1:8000', 'https://127.0.0.1:8000', 'http://localhost:8000', 'https://localhost:8000']:
+                if url.startswith(dev_prefix):
+                    url = url[len(dev_prefix):]
+                    break
+            if not url.startswith('/api/media/') and (url.startswith('/media/') or url.startswith('media/')):
+                clean_path = url if url.startswith('/') else f'/{url}'
+                url = f"/api{clean_path}"
+            if not (url.startswith("http://") or url.startswith("https://")):
+                if request is not None:
+                    ret["hero_url"] = request.build_absolute_uri(url)
+                else:
+                    frontend_url = getattr(settings, 'FRONTEND_URL', 'https://lms.vibesandbox.live').rstrip('/')
+                    ret["hero_url"] = f"{frontend_url}{url}"
+            else:
+                ret["hero_url"] = url
 
         if hasattr(instance, 'scorm_package') and instance.scorm_package:
             sp = instance.scorm_package
             launch_url = sp.launch_url
-            if launch_url and not (launch_url.startswith('http://') or launch_url.startswith('https://')):
-                if request is not None:
-                    launch_url = request.build_absolute_uri(launch_url)
+            if launch_url:
+                l_url = str(launch_url).strip()
+                for dev_prefix in ['http://127.0.0.1:8000', 'https://127.0.0.1:8000', 'http://localhost:8000', 'https://localhost:8000']:
+                    if l_url.startswith(dev_prefix):
+                        l_url = l_url[len(dev_prefix):]
+                        break
+                if not (l_url.startswith('http://') or l_url.startswith('https://')):
+                    if request is not None:
+                        l_url = request.build_absolute_uri(l_url)
+                    else:
+                        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://lms.vibesandbox.live').rstrip('/')
+                        l_url = f"{frontend_url}{l_url}"
+                launch_url = l_url
+
             ret['scorm_package'] = {
                 'id': sp.id,
                 'version': sp.version,

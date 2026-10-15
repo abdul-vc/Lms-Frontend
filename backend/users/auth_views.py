@@ -8,13 +8,27 @@ from .serializers import UserSerializer
 
 from rest_framework.exceptions import AuthenticationFailed
 
+from rest_framework import serializers
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.CharField(required=False, allow_blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.username_field in self.fields:
+            self.fields[self.username_field].required = False
+
     def validate(self, attrs):
+        username_input = attrs.get('username') or attrs.get('email')
+        if not username_input:
+            raise serializers.ValidationError({'username': 'Username or email is required.'})
+        attrs['username'] = username_input
+
         from django.contrib.auth import get_user_model
         UserModel = get_user_model()
-        username_val = attrs.get(self.username_field, '')
         
-        user_candidate = UserModel.objects.filter(username__iexact=username_val).first() or UserModel.objects.filter(email__iexact=username_val).first()
+        user_candidate = UserModel.objects.filter(username__iexact=username_input).first() or UserModel.objects.filter(email__iexact=username_input).first()
         if user_candidate:
             if not user_candidate.is_active or (user_candidate.organization and user_candidate.organization.status == 'Inactive' and not user_candidate.is_platform_super_admin):
                 raise AuthenticationFailed(
@@ -65,7 +79,35 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={'request': request}).data)
+
+    def patch(self, request):
+        user = request.user
+        data = request.data.copy()
+
+        # Handle explicit removal of profile_picture
+        remove_picture = (
+            data.get('remove_profile_picture') == 'true' or
+            data.get('remove_profile_picture') is True or
+            (data.get('profile_picture') in ['null', 'none', '', 'delete', None] and not request.FILES.get('profile_picture'))
+        )
+
+        if remove_picture:
+            if user.profile_picture:
+                try:
+                    user.profile_picture.delete(save=False)
+                except Exception:
+                    pass
+            user.profile_picture = None
+            user.save()
+            if 'profile_picture' in data:
+                del data['profile_picture']
+
+        serializer = UserSerializer(user, data=data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            updated_user = serializer.save()
+            return Response(UserSerializer(updated_user, context={'request': request}).data)
+        return Response(serializer.errors, status=400)
 
 class RegisterView(APIView):
     """

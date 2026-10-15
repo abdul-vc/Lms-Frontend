@@ -53,6 +53,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
             ('site_management', 'Multi-Site Management', 'Sub-domain routing and portal management', 'administration'),
             ('billing_management', 'Subscription & Billing', 'Tenant plans, subscriptions, and invoicing', 'billing'),
             ('admin_console', 'Admin Console', 'Organization administration console', 'advanced'),
+            ('assessment_activity', 'Assessment Activity', 'Track and review user lesson assessment attempts and performance', 'reporting'),
         ]
         try:
             for key, name, desc, cat in features_to_seed:
@@ -95,6 +96,7 @@ class OrgFeatureAccessView(APIView):
             ('site_management', 'Multi-Site Management', 'Sub-domain routing and portal management', 'administration'),
             ('billing_management', 'Subscription & Billing', 'Tenant plans, subscriptions, and invoicing', 'billing'),
             ('admin_console', 'Admin Console', 'Organization administration console', 'advanced'),
+            ('assessment_activity', 'Assessment Activity', 'Track and review user lesson assessment attempts and performance', 'reporting'),
         ]
         for key, name, desc, cat in features_to_seed:
             Feature.objects.update_or_create(
@@ -344,8 +346,8 @@ class UploadOrgLogoView(APIView):
         ext = file.name.rsplit('.', 1)[-1] if '.' in file.name else 'png'
         safe_filename = f'{uuid.uuid4().hex}.{ext}'
         path = default_storage.save(f'org_logos/{safe_filename}', file)
-        url = request.build_absolute_uri(default_storage.url(path))
-        return Response({'url': url})
+        url = request.build_absolute_uri(f'/api/media/{path}')
+        return Response({'url': url, 'path': path})
 
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
