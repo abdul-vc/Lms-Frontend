@@ -368,6 +368,36 @@ export async function loginWithSSOCode(code: string): Promise<AuthUser> {
   return fetchMe();
 }
 
+export async function loginWithVibeConnectGrant(code: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/v1/auth/sso/vibeconnect/exchange/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.error === 'account_frozen' || body?.detail?.error === 'account_frozen') {
+      handleFrozenAccount();
+      throw new Error('Kindly contact admin for assistance.');
+    }
+    const message =
+      (typeof body.detail === 'string' && body.detail) ||
+      (typeof body.message === 'string' && body.message) ||
+      (typeof body.detail?.message === 'string' && body.detail.message) ||
+      'Launch grant exchange failed. Please launch again from VibeConnect.';
+    const error: any = new Error(message);
+    if (body.reference_id) {
+      error.referenceId = body.reference_id;
+    }
+    throw error;
+  }
+
+  const data = await res.json();
+  saveTokens(data.access, data.refresh);
+  return fetchMe();
+}
+
 export function logout() {
   clearTokens();
 }
@@ -380,6 +410,7 @@ interface AuthContextValue {
   isAccountFrozen: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   loginWithSSOCode: (code: string) => Promise<AuthUser>;
+  loginWithVibeConnectGrant: (code: string) => Promise<AuthUser>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -459,6 +490,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const handleVibeConnectLogin = useCallback(async (code: string): Promise<AuthUser> => {
+    try {
+      const u = await loginWithVibeConnectGrant(code);
+      setUser(u);
+      setIsAccountFrozen(false);
+      return u;
+    } catch (err: any) {
+      if (err?.message === 'Kindly contact admin for assistance.') {
+        setIsAccountFrozen(true);
+      }
+      throw err;
+    }
+  }, []);
+
   const handleLogout = () => {
     logout();
     setUser(null);
@@ -501,7 +546,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, isLoading, isAccountFrozen, login: handleLogin, loginWithSSOCode: handleSsoLogin, logout: handleLogout, refreshUser } },
+    { value: { user, isLoading, isAccountFrozen, login: handleLogin, loginWithSSOCode: handleSsoLogin, loginWithVibeConnectGrant: handleVibeConnectLogin, logout: handleLogout, refreshUser } },
     children
   );
 }

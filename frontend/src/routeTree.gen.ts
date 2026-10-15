@@ -54,6 +54,7 @@ import { Route as SuperAdminSitesAddRouteImport } from './routes/super-admin.sit
 import { Route as SuperAdminSitesSiteIdRouteImport } from './routes/super-admin.sites_.$siteId'
 import { Route as SuperAdminOrganizationsAddRouteImport } from './routes/super-admin.organizations_.add'
 import { Route as SuperAdminOrganizationsOrgIdRouteImport } from './routes/super-admin.organizations_.$orgId'
+import { Route as SsoVibeconnectCallbackRouteImport } from './routes/sso.vibeconnect.callback'
 import { Route as CoursesCourseIdAssessmentRouteImport } from './routes/courses.$courseId.assessment'
 import { Route as SuperAdminSitesSiteIdEditRouteImport } from './routes/super-admin.sites_.$siteId_.edit'
 import { Route as SuperAdminOrganizationsOrgIdEditRouteImport } from './routes/super-admin.organizations_.$orgId_.edit'
@@ -290,6 +291,11 @@ const SuperAdminOrganizationsOrgIdRoute =
     path: '/organizations/$orgId',
     getParentRoute: () => SuperAdminRoute,
   } as any)
+const SsoVibeconnectCallbackRoute = SsoVibeconnectCallbackRouteImport.update({
+  id: '/sso/vibeconnect/callback',
+  path: '/sso/vibeconnect/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoursesCourseIdAssessmentRoute =
   CoursesCourseIdAssessmentRouteImport.update({
     id: '/assessment',
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin/': typeof OrgAdminIndexRoute
   '/courses/$courseId/assessment': typeof CoursesCourseIdAssessmentRoute
+  '/sso/vibeconnect/callback': typeof SsoVibeconnectCallbackRoute
   '/super-admin/organizations/$orgId': typeof SuperAdminOrganizationsOrgIdRoute
   '/super-admin/organizations/add': typeof SuperAdminOrganizationsAddRoute
   '/super-admin/sites/$siteId': typeof SuperAdminSitesSiteIdRoute
@@ -422,6 +429,7 @@ export interface FileRoutesByTo {
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin': typeof OrgAdminIndexRoute
   '/courses/$courseId/assessment': typeof CoursesCourseIdAssessmentRoute
+  '/sso/vibeconnect/callback': typeof SsoVibeconnectCallbackRoute
   '/super-admin/organizations/$orgId': typeof SuperAdminOrganizationsOrgIdRoute
   '/super-admin/organizations/add': typeof SuperAdminOrganizationsAddRoute
   '/super-admin/sites/$siteId': typeof SuperAdminSitesSiteIdRoute
@@ -476,6 +484,7 @@ export interface FileRoutesById {
   '/super-admin/toolkit': typeof SuperAdminToolkitRoute
   '/org-admin/': typeof OrgAdminIndexRoute
   '/courses/$courseId/assessment': typeof CoursesCourseIdAssessmentRoute
+  '/sso/vibeconnect/callback': typeof SsoVibeconnectCallbackRoute
   '/super-admin/organizations_/$orgId': typeof SuperAdminOrganizationsOrgIdRoute
   '/super-admin/organizations_/add': typeof SuperAdminOrganizationsAddRoute
   '/super-admin/sites_/$siteId': typeof SuperAdminSitesSiteIdRoute
@@ -531,6 +540,7 @@ export interface FileRouteTypes {
     | '/super-admin/toolkit'
     | '/org-admin/'
     | '/courses/$courseId/assessment'
+    | '/sso/vibeconnect/callback'
     | '/super-admin/organizations/$orgId'
     | '/super-admin/organizations/add'
     | '/super-admin/sites/$siteId'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/super-admin/toolkit'
     | '/org-admin'
     | '/courses/$courseId/assessment'
+    | '/sso/vibeconnect/callback'
     | '/super-admin/organizations/$orgId'
     | '/super-admin/organizations/add'
     | '/super-admin/sites/$siteId'
@@ -636,6 +647,7 @@ export interface FileRouteTypes {
     | '/super-admin/toolkit'
     | '/org-admin/'
     | '/courses/$courseId/assessment'
+    | '/sso/vibeconnect/callback'
     | '/super-admin/organizations_/$orgId'
     | '/super-admin/organizations_/add'
     | '/super-admin/sites_/$siteId'
@@ -666,6 +678,7 @@ export interface RootRouteChildren {
   UsersRoute: typeof UsersRoute
   CoursesCourseIdRoute: typeof CoursesCourseIdRouteWithChildren
   SsoCallbackRoute: typeof SsoCallbackRoute
+  SsoVibeconnectCallbackRoute: typeof SsoVibeconnectCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -985,6 +998,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperAdminOrganizationsOrgIdRouteImport
       parentRoute: typeof SuperAdminRoute
     }
+    '/sso/vibeconnect/callback': {
+      id: '/sso/vibeconnect/callback'
+      path: '/sso/vibeconnect/callback'
+      fullPath: '/sso/vibeconnect/callback'
+      preLoaderRoute: typeof SsoVibeconnectCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$courseId/assessment': {
       id: '/courses/$courseId/assessment'
       path: '/assessment'
@@ -1173,6 +1193,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRoute: UsersRoute,
   CoursesCourseIdRoute: CoursesCourseIdRouteWithChildren,
   SsoCallbackRoute: SsoCallbackRoute,
+  SsoVibeconnectCallbackRoute: SsoVibeconnectCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
