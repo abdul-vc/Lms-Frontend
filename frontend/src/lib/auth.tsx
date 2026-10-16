@@ -321,7 +321,11 @@ export async function login(username: string, password: string): Promise<AuthUse
 
   const data = await res.json();
   saveTokens(data.access, data.refresh);
-  return fetchMe();
+  const me = await fetchMe();
+  if (data?.target_route && me) {
+    (me as any).target_route = data.target_route;
+  }
+  return me;
 }
 
 export async function fetchMe(): Promise<AuthUser> {
@@ -365,7 +369,11 @@ export async function loginWithSSOCode(code: string): Promise<AuthUser> {
 
   const data = await res.json();
   saveTokens(data.access, data.refresh);
-  return fetchMe();
+  const me = await fetchMe();
+  if (data?.target_route && me) {
+    (me as any).target_route = data.target_route;
+  }
+  return me;
 }
 
 export async function loginWithVibeConnectGrant(code: string): Promise<AuthUser> {
@@ -395,7 +403,11 @@ export async function loginWithVibeConnectGrant(code: string): Promise<AuthUser>
 
   const data = await res.json();
   saveTokens(data.access, data.refresh);
-  return fetchMe();
+  const me = await fetchMe();
+  if (data?.target_route && me) {
+    (me as any).target_route = data.target_route;
+  }
+  return me;
 }
 
 export function logout() {

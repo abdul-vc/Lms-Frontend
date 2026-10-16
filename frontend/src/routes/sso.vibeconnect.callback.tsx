@@ -22,7 +22,7 @@ export function VibeConnectCallbackPage() {
   const search = Route.useSearch();
   const code = search.code;
   const navigate = useNavigate();
-  const { loginWithVibeConnectGrant } = useAuth();
+  const { loginWithVibeConnectGrant, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [referenceId, setReferenceId] = useState<string | null>(null);
 
@@ -33,10 +33,35 @@ export function VibeConnectCallbackPage() {
       window.history.replaceState({}, document.title, cleanUrl);
     }
 
-    // 2. Missing code check: if session is already active, proceed directly to dashboard
+    // Helper to navigate to the appropriate console based on user permissions
+    const navigateToConsole = (authUser?: (AuthUser & { target_route?: string }) | null) => {
+      const activeUser = authUser || user;
+      const target = (activeUser as any)?.target_route;
+      if (activeUser?.is_platform_super_admin) {
+        if (target && typeof target === 'string' && target.startsWith('/super-admin')) {
+          navigate({ to: target as any });
+        } else {
+          navigate({ to: '/super-admin/dashboard' });
+        }
+      } else if (activeUser?.role?.is_admin_role) {
+        if (target && typeof target === 'string' && target.startsWith('/org-admin')) {
+          navigate({ to: target as any });
+        } else {
+          navigate({ to: '/org-admin' });
+        }
+      } else {
+        if (target && typeof target === 'string' && !target.startsWith('/super-admin') && !target.startsWith('/org-admin')) {
+          navigate({ to: target as any });
+        } else {
+          navigate({ to: '/dashboard' });
+        }
+      }
+    };
+
+    // 2. Missing code check: if session is already active, proceed directly to appropriate console
     if (!code) {
       if (getAccessToken()) {
-        navigate({ to: '/dashboard' });
+        navigateToConsole();
         return;
       }
       setError('Missing launch grant code. Please launch LMS from VibeConnect.');
@@ -45,7 +70,7 @@ export function VibeConnectCallbackPage() {
 
     // 3. Already completed code in this session: navigate directly
     if (completedGrantCodes.has(code)) {
-      navigate({ to: '/dashboard' });
+      navigateToConsole();
       return;
     }
 
@@ -66,19 +91,12 @@ export function VibeConnectCallbackPage() {
     exchangePromise
       .then((user) => {
         // Successfully established session; navigate strictly based on real LMS user role
-        // Tenant administrators navigate to /org-admin. Never send tenant users to super-admin console.
-        if (user?.is_platform_super_admin) {
-          navigate({ to: '/super-admin/dashboard' });
-        } else if (user?.role?.is_admin_role) {
-          navigate({ to: '/org-admin' });
-        } else {
-          navigate({ to: '/dashboard' });
-        }
+        navigateToConsole(user);
       })
       .catch((err: any) => {
         // If a valid session is already active, ignore redundant failure
         if (getAccessToken() || completedGrantCodes.has(code)) {
-          navigate({ to: '/dashboard' });
+          navigateToConsole();
           return;
         }
         setError(err.message || 'Launch grant exchange failed. Please try again.');
@@ -86,7 +104,7 @@ export function VibeConnectCallbackPage() {
           setReferenceId(err.referenceId);
         }
       });
-  }, [code, loginWithVibeConnectGrant, navigate]);
+  }, [code, loginWithVibeConnectGrant, navigate, user]);
 
   if (error) {
     return (
